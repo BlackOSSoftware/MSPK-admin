@@ -1,0 +1,41 @@
+[
+    {
+        "id": "plan_demo",
+        "name": "Demo Plan",
+        "price": 0,
+        "validity_days": 7,
+        "features": [
+            "Basic Signals",
+            "Market News",
+            "No Support"
+        ],
+        "isDemo": true
+    },
+    {
+        "id": "plan_basic",
+        "name": "Basic Plan",
+        "price": 4999,
+        "validity_days": 30,
+        "features": [
+            "Intraday Signals",
+            "Market News",
+            "Email Support",
+            "Limited Reports"
+        ],
+        "isDemo": false
+    },
+    {
+        "id": "plan_premium",
+        "name": "Premium Plan",
+        "price": 14999,
+        "validity_days": 90,
+        "features": [
+            "All Signals",
+            "Premium Reports",
+            "Priority Support",
+            "Webinar Access",
+            "Trading Tools"
+        ],
+        "isDemo": false
+    }
+]

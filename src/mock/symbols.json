@@ -1,0 +1,50 @@
+[
+    {
+        "id": 1,
+        "symbol": "BANKNIFTY",
+        "exchange": "NSE",
+        "lotSize": 15
+    },
+    {
+        "id": 2,
+        "symbol": "NIFTY",
+        "exchange": "NSE",
+        "lotSize": 50
+    },
+    {
+        "id": 3,
+        "symbol": "FINNIFTY",
+        "exchange": "NSE",
+        "lotSize": 40
+    },
+    {
+        "id": 4,
+        "symbol": "RELIANCE",
+        "exchange": "NSE",
+        "lotSize": 250
+    },
+    {
+        "id": 5,
+        "symbol": "CRUDEOIL",
+        "exchange": "MCX",
+        "lotSize": 100
+    },
+    {
+        "id": 6,
+        "symbol": "GOLD",
+        "exchange": "MCX",
+        "lotSize": 100
+    },
+    {
+        "id": 7,
+        "symbol": "SILVER",
+        "exchange": "MCX",
+        "lotSize": 30
+    },
+    {
+        "id": 8,
+        "symbol": "BTCUSD",
+        "exchange": "CRYPTO",
+        "lotSize": 1
+    }
+]

@@ -1,0 +1,40 @@
+:root {
+  --tv-indicator-super: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, transparent 100%);
+  --tv-indicator-shadow: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+  --tv-line-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth HHLL Lines with gradient (Used if HTML/SVG overlays are present) */
+.hhll-line-up {
+  stroke: #10b981;
+  stroke-width: 1.5;
+  filter: var(--tv-indicator-shadow);
+  stroke-linecap: round;
+  stroke-dasharray: 0; /* Solid for TV look */
+}
+
+.hhll-line-down {
+  stroke: #ef4444;
+  stroke-width: 1.5;
+  filter: var(--tv-indicator-shadow);
+  stroke-linecap: round;
+}
+
+/* Professional Signal Markers (Used for custom tooltips or HTML overlays) */
+.tv-signal-buy {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  border: 2px solid white;
+}
+
+.tv-signal-sell {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  border: 2px solid white;
+}

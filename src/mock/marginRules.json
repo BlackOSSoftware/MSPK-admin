@@ -1,0 +1,56 @@
+{
+    "intraday": [
+        {
+            "segment": "Equity",
+            "leverage": "5x",
+            "minMargin": "20%"
+        },
+        {
+            "segment": "Futures",
+            "leverage": "2.5x",
+            "minMargin": "40%"
+        },
+        {
+            "segment": "Options Buying",
+            "leverage": "1x",
+            "minMargin": "100%"
+        },
+        {
+            "segment": "Options Selling",
+            "leverage": "4x",
+            "minMargin": "25%"
+        }
+    ],
+    "carryForward": [
+        {
+            "segment": "Equity",
+            "leverage": "1x",
+            "minMargin": "100%"
+        },
+        {
+            "segment": "Futures",
+            "leverage": "1x",
+            "minMargin": "100%"
+        }
+    ],
+    "mcx": [
+        {
+            "symbol": "GOLD",
+            "lotSize": 100,
+            "intradayMargin": 50000,
+            "carryMargin": 200000
+        },
+        {
+            "symbol": "SILVER",
+            "lotSize": 30,
+            "intradayMargin": 40000,
+            "carryMargin": 150000
+        },
+        {
+            "symbol": "CRUDEOIL",
+            "lotSize": 100,
+            "intradayMargin": 25000,
+            "carryMargin": 100000
+        }
+    ]
+}

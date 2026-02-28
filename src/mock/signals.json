@@ -1,0 +1,35 @@
+[
+    {
+        "id": 101,
+        "symbol": "BANKNIFTY",
+        "type": "BUY",
+        "entry": "47500",
+        "stoploss": "47300",
+        "target": "47800",
+        "timestamp": "2024-03-10T09:30:00Z",
+        "status": "Target Hit",
+        "pnl": 300
+    },
+    {
+        "id": 102,
+        "symbol": "RELIANCE",
+        "type": "SELL",
+        "entry": "2950",
+        "stoploss": "2980",
+        "target": "2900",
+        "timestamp": "2024-03-10T10:15:00Z",
+        "status": "Active",
+        "pnl": 0
+    },
+    {
+        "id": 103,
+        "symbol": "CRUDEOIL",
+        "type": "BUY",
+        "entry": "6500",
+        "stoploss": "6450",
+        "target": "6600",
+        "timestamp": "2024-03-10T14:00:00Z",
+        "status": "Stoploss Hit",
+        "pnl": -50
+    }
+]
