@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Radio, Download, List, XCircle, History, Settings, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Radio, Download, List, XCircle, History, Settings, TrendingUp } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SignalTable from '../../components/tables/SignalTable';
 import Button from '../../components/ui/Button';
@@ -7,6 +7,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useToast from '../../hooks/useToast';
 import { clsx } from 'clsx';
 import SignalConfiguration from './SignalConfiguration';
+import TablePageFooter from '../../components/ui/TablePageFooter';
 
 const AllSignals = () => {
     const [searchParams] = useSearchParams();
@@ -269,10 +270,10 @@ const AllSignals = () => {
                                     )}
                                 </div>
                                 <Button
-                                    variant="primary"
+                                    variant="outline"
                                     size="sm"
                                     onClick={() => navigate('/signals/create')}
-                                    className="h-8 text-[11px] gap-1.5 rounded-lg font-bold shadow-lg shadow-primary/20"
+                                    className="h-8 text-[11px] gap-1.5 rounded-lg font-bold btn-cancel"
                                 >
                                     <Plus size={12} /> New Signal
                                 </Button>
@@ -295,71 +296,27 @@ const AllSignals = () => {
                                 )}
                             </div>
 
-                            {/* Footer Stats & Pagination */}
-                            <div className="h-9 bg-muted/30 border border-border rounded-lg flex items-center justify-between px-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1 mt-2 shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <span>
-                                        {pagination.totalResults > 0 ? (
-                                            <>Showing <span className="text-foreground font-bold">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.totalResults)}</span> of <span className="text-foreground font-bold">{pagination.totalResults}</span></>
-                                        ) : (
-                                            <span className="text-muted-foreground">No signals found</span>
-                                        )}
-                                    </span>
-                                    <span className="text-muted-foreground/50">|</span>
-                                    <div className="flex items-center gap-2">
-                                        <span>Show:</span>
-                                        <select
-                                            value={pagination.limit}
-                                            onChange={(e) => {
-                                                setPagination(prev => ({ ...prev, limit: Number(e.target.value), page: 1 }));
-                                                // Trigger reload with new limit is tricky if we don't update state first or pass param. 
-                                                // Actually loadSignals uses pagination.limit state. 
-                                                // React state update is async, so better to pass logic or use effect.
-                                                // For now, let's just update state and let user manually refresh or rely on effect if we add limit to dependency? 
-                                                // Let's add limit dependency to effect below or call loadSignals with explicit limit if we modify signature.
-                                                // Simpler: Just force reload in next render if we added limit to useEffect. 
-                                                // CURRENT useEffect has [searchTerm, filter, segmentFilter, activeTab]. Let's add pagination.limit to it? 
-                                                // No, that might cause loops. 
-                                                // Best: Update state, and effect handles it OR explicitly call loadSignals with new limit.
-                                                // Let's stick to updating state and adding pagination.limit to dependency array of the main debounce effect.
-                                            }}
-                                            className="bg-transparent text-foreground font-bold border-b border-white/10 focus:outline-none focus:border-primary cursor-pointer pb-0.5"
-                                        >
-                                            <option value={10} className="bg-[#0f172a]">10</option>
-                                            <option value={20} className="bg-[#0f172a]">20</option>
-                                            <option value={50} className="bg-[#0f172a]">50</option>
-                                        </select>
+                            <TablePageFooter
+                                total={pagination.totalResults}
+                                page={pagination.page}
+                                totalPages={pagination.totalPages || 1}
+                                perPage={pagination.limit}
+                                perPageOptions={[10, 20, 50]}
+                                onPerPageChange={(value) => {
+                                    setPagination(prev => ({ ...prev, limit: Number(value), page: 1 }));
+                                }}
+                                onPrev={() => handlePageChange(pagination.page - 1)}
+                                onNext={() => handlePageChange(pagination.page + 1)}
+                                rightExtra={
+                                    <div className="hidden md:flex items-center gap-2">
+                                        <span>Success Rate: <span className="text-emerald-500 font-bold">{stats.successRate}%</span></span>
+                                        <span className="text-muted-foreground/40">|</span>
+                                        <span>Active: <span className="text-blue-500 font-bold">{stats.activeSignals}</span></span>
                                     </div>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    {/* Pagination Controls */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="mr-2">Page {pagination.page} of {pagination.totalPages || 1}</span>
-                                        <button
-                                            onClick={() => handlePageChange(pagination.page - 1)}
-                                            disabled={pagination.page === 1}
-                                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronLeft size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => handlePageChange(pagination.page + 1)}
-                                            disabled={pagination.page === pagination.totalPages}
-                                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronRight size={14} />
-                                        </button>
-                                    </div>
-
-                                    <div className="h-4 w-[1px] bg-white/10 mx-2"></div>
-
-                                    <span>Success Rate: <span className="text-emerald-500 font-bold">{stats.successRate}%</span></span>
-                                    <span className="text-muted-foreground/50 mx-1">|</span>
-                                    <span>Active: <span className="text-blue-500 font-bold">{stats.activeSignals}</span></span>
-                                </div>
-                            </div>
+                                }
+                            />
                         </div>
+
                     </div>
                 )}
 
@@ -407,52 +364,18 @@ const AllSignals = () => {
                                 )}
                             </div>
 
-                            {/* History Footer Pagination */}
-                            <div className="h-9 bg-muted/30 border border-border rounded-lg flex items-center justify-between px-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1 mt-2 shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <span>
-                                        {pagination.totalResults > 0 ? (
-                                            <>Showing <span className="text-foreground font-bold">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.totalResults)}</span> of <span className="text-foreground font-bold">{pagination.totalResults}</span></>
-                                        ) : (
-                                            <span className="text-muted-foreground">No records found</span>
-                                        )}
-                                    </span>
-                                    <span className="text-muted-foreground/50">|</span>
-                                    <div className="flex items-center gap-2">
-                                        <span>Show:</span>
-                                        <select
-                                            value={pagination.limit}
-                                            onChange={(e) => setPagination(prev => ({ ...prev, limit: Number(e.target.value), page: 1 }))}
-                                            className="bg-transparent text-foreground font-bold border-b border-white/10 focus:outline-none focus:border-primary cursor-pointer pb-0.5"
-                                        >
-                                            <option value={10} className="bg-[#0f172a]">10</option>
-                                            <option value={20} className="bg-[#0f172a]">20</option>
-                                            <option value={50} className="bg-[#0f172a]">50</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="mr-2">Page {pagination.page} of {pagination.totalPages || 1}</span>
-                                        <button
-                                            onClick={() => handlePageChange(pagination.page - 1)}
-                                            disabled={pagination.page === 1}
-                                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronLeft size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => handlePageChange(pagination.page + 1)}
-                                            disabled={pagination.page === pagination.totalPages}
-                                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronRight size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <TablePageFooter
+                                total={pagination.totalResults}
+                                page={pagination.page}
+                                totalPages={pagination.totalPages || 1}
+                                perPage={pagination.limit}
+                                perPageOptions={[10, 20, 50]}
+                                onPerPageChange={(value) => setPagination(prev => ({ ...prev, limit: Number(value), page: 1 }))}
+                                onPrev={() => handlePageChange(pagination.page - 1)}
+                                onNext={() => handlePageChange(pagination.page + 1)}
+                            />
                         </div>
+
                     </div>
                 )}
 

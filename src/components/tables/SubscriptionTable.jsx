@@ -1,19 +1,22 @@
 import React from 'react';
-import { Download, ShoppingCart, RefreshCcw, CheckCircle, XCircle, Hash, User, CreditCard, DollarSign, Calendar, Wallet, BadgeCheck } from 'lucide-react';
+import { Download, ShoppingCart, RefreshCcw, CheckCircle, XCircle, Hash, User, CreditCard, DollarSign, Calendar, Wallet, BadgeCheck, Mail } from 'lucide-react';
 import TableHeaderCell from '../ui/TableHeaderCell';
+import TablePageFooter from '../ui/TablePageFooter';
 
-const SubscriptionTable = ({ transactions, highlightTerm, isLoading }) => {
+const SubscriptionTable = ({ transactions, highlightTerm, isLoading, footerProps }) => {
     return (
-        <div className="terminal-panel w-full h-full overflow-hidden border border-border bg-card rounded-lg shadow-2xl relative flex flex-col">
+        <div className="terminal-panel w-full h-full min-h-[600px] border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
             {/* Table Header Backdrop */}
             <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
-            <div className="overflow-auto flex-1 custom-scrollbar">
-                <table className="w-full text-left whitespace-nowrap">
+            <div className="flex-1 overflow-hidden">
+                <div className="h-full overflow-auto custom-scrollbar">
+                    <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Hash} label="Transaction ID" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={User} label="User Name" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Mail} label="Email" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={CreditCard} label="Plan" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={DollarSign} label="Amount" align="center" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Calendar} label="Date" align="center" />
@@ -52,7 +55,8 @@ const SubscriptionTable = ({ transactions, highlightTerm, isLoading }) => {
                             transactions.map((txn, index) => {
                                 const isHighlighted = highlightTerm && (
                                     (txn.id && txn.id.toLowerCase().includes(highlightTerm.toLowerCase())) ||
-                                    (txn.user && txn.user.toLowerCase().includes(highlightTerm.toLowerCase()))
+                                    (txn.user && txn.user.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (txn.email && txn.email.toLowerCase().includes(highlightTerm.toLowerCase()))
                                 );
 
                                 return (
@@ -63,6 +67,9 @@ const SubscriptionTable = ({ transactions, highlightTerm, isLoading }) => {
                                         </td>
                                         <td className="px-5 py-3 border-r border-border text-foreground font-sans font-semibold">
                                             {txn.user}
+                                        </td>
+                                        <td className="px-5 py-3 border-r border-border text-muted-foreground font-mono text-[10px]">
+                                            {txn.email || '-'}
                                         </td>
                                         <td className="px-5 py-3 border-r border-border text-primary">
                                             {txn.plan}
@@ -77,20 +84,37 @@ const SubscriptionTable = ({ transactions, highlightTerm, isLoading }) => {
                                             {txn.method || 'UPI'}
                                         </td>
                                         <td className="px-5 py-3 text-center">
-                                            <span className={`px-2 py-0.5 border rounded-[4px] text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 w-fit mx-auto ${txn.status === 'Success'
-                                                ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5'
-                                                : 'border-red-500/20 text-red-500 bg-red-500/5'
-                                                }`}>
-                                                {txn.status === 'Success' ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                                                {txn.status}
-                                            </span>
+                                            {(() => {
+                                                const status = (txn.status || '').toLowerCase();
+                                                const isActive = status === 'active' || status === 'success';
+                                                const isPending = status === 'pending';
+                                                const statusClass = isActive
+                                                    ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5'
+                                                    : isPending
+                                                        ? 'border-amber-500/20 text-amber-500 bg-amber-500/5'
+                                                        : 'border-red-500/20 text-red-500 bg-red-500/5';
+
+                                                return (
+                                                    <span className={`px-2 py-0.5 border rounded-[4px] text-[9px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 w-fit mx-auto ${statusClass}`}>
+                                                        {isActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                                                        {txn.status}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                     </tr>
                                 );
                             }))}
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
+
+            {footerProps && (
+                <div className="mt-2 shrink-0">
+                    <TablePageFooter {...footerProps} />
+                </div>
+            )}
         </div >
     );
 };

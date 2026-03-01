@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, CreditCard,
-    BarChart2, Settings, FileText,
+    BarChart2, Settings,
     RefreshCcw, Radio, MessageSquare, Megaphone,
     ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X
 } from 'lucide-react';
@@ -211,7 +211,6 @@ const Sidebar = ({ isOpen, onClose }) => {
             title: 'Support',
             items: [
                 { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
-                { name: 'Inquiries', path: '/leads/all', icon: Users },
             ],
         },
         {
@@ -225,7 +224,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                         { name: 'Economic Calendar', path: '/announcements/calendar', icon: Calendar },
                     ],
                 },
-                { name: 'CMS', path: '/cms/all', icon: FileText },
             ],
         },
         {
@@ -389,6 +387,36 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </div>
                 ))}
             </nav>
+
+            {/* Panel Footer (Desktop) */}
+            <div className="relative z-10 border-t border-border/60 px-1.5 py-3 hidden md:block">
+                <button
+                    type="button"
+                    onClick={handleLogout}
+                    className={twMerge(
+                        "group relative flex items-center gap-3 w-full rounded-xl border transition-all duration-200 outline-none",
+                        "focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "px-3 py-2.5",
+                        "border-transparent text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+                    )}
+                >
+                    <span
+                        className={twMerge(
+                            "grid place-items-center shrink-0 h-8 w-8 rounded-lg border bg-accent/10",
+                            "border-border/50 text-muted-foreground group-hover:text-destructive"
+                        )}
+                    >
+                        <LogOut size={16} />
+                    </span>
+                    <span className="text-[11px] font-semibold tracking-tight whitespace-nowrap">
+                        Logout
+                    </span>
+                </button>
+
+                <div className="px-4 pt-3 text-[9px] text-muted-foreground/60 font-mono">
+                    v1.0.0
+                </div>
+            </div>
 
             {/* Panel Footer (Mobile) */}
             <div className="relative z-10 border-t border-border/60 px-1.5 py-3 md:hidden">

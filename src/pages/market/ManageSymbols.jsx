@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, BarChart2, Download, List, Settings, Layers, Save, X, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, BarChart2, Download, List, Settings, Sparkles, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MarketTable from '../../components/tables/MarketTable';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Card from '../../components/ui/Card';
-import { clsx } from 'clsx';
 import DataFeedConfig from './DataFeedConfig';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import { getSymbols, getSegments, createSegment, updateSegment, deleteSegment, deleteSymbol } from '../../api/market.api';
+import { getSymbols, deleteSymbol } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
+import TablePageFooter from '../../components/ui/TablePageFooter';
 
 const ManageSymbols = () => {
     const navigate = useNavigate();
@@ -23,12 +21,6 @@ const ManageSymbols = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
-    // Segments State
-    const [segments, setSegments] = useState([]);
-    const [newSegment, setNewSegment] = useState({ name: '', code: '' });
-    const [loadingSegments, setLoadingSegments] = useState(false);
-    const [creatingSegment, setCreatingSegment] = useState(false);
-
     // Delete Modal State
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, type: null, data: null });
 
@@ -38,46 +30,17 @@ const ManageSymbols = () => {
 
     const loadData = async () => {
         setLoadingSymbols(true);
-        setLoadingSegments(true);
         try {
-            const [symData, segData] = await Promise.all([getSymbols(), getSegments()]);
+            const [symData] = await Promise.all([getSymbols()]);
             setSymbols(symData);
-            setSegments(segData);
         } catch (error) {
             console.error("Failed to load market data", error);
             toast.error("Failed to load market data");
         } finally {
             setLoadingSymbols(false);
-            setLoadingSegments(false);
         }
     };
 
-    const handleSaveSegment = async (e) => {
-        e.preventDefault();
-        if (!newSegment.name || !newSegment.code) {
-            toast.error("Name and Code are required");
-            return;
-        }
-        setCreatingSegment(true);
-        try {
-            if (newSegment._id) {
-                await updateSegment(newSegment._id, { name: newSegment.name, code: newSegment.code });
-                toast.success("Segment updated successfully");
-            } else {
-                await createSegment(newSegment);
-                toast.success("Segment created successfully");
-            }
-            setNewSegment({ name: '', code: '' });
-            // Reload segments
-            const updatedSegments = await getSegments();
-            setSegments(updatedSegments);
-        } catch (error) {
-            console.error("Failed to save segment", error);
-            toast.error("Failed to save segment");
-        } finally {
-            setCreatingSegment(false);
-        }
-    };
 
     const handleDeleteClick = (symbol) => {
         setDeleteModal({ isOpen: true, type: 'symbol', data: symbol });
@@ -91,11 +54,6 @@ const ManageSymbols = () => {
                 await deleteSymbol(deleteModal.data._id);
                 toast.success(`Deleted ${deleteModal.data.symbol} successfully`);
                 loadData();
-            } else if (deleteModal.type === 'segment') {
-                await deleteSegment(deleteModal.data._id);
-                toast.success(`Deleted ${deleteModal.data.name} successfully`);
-                const updatedSegments = await getSegments();
-                setSegments(updatedSegments);
             }
             setDeleteModal({ isOpen: false, type: null, data: null });
         } catch (error) {
@@ -109,6 +67,18 @@ const ManageSymbols = () => {
         sym.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (sym.name && sym.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    const totalSymbols = symbols.length;
+    const activeSymbols = symbols.filter(s => s.isActive).length;
+    const inactiveSymbols = totalSymbols - activeSymbols;
+
+    const toneStyles = {
+        emerald: { box: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-500', bar: 'bg-emerald-500/70' },
+        primary: { box: 'bg-primary/10 border-primary/20', text: 'text-primary', bar: 'bg-primary/70' },
+        amber: { box: 'bg-amber-500/10 border-amber-500/20', text: 'text-amber-500', bar: 'bg-amber-500/70' },
+        rose: { box: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-500', bar: 'bg-rose-500/70' },
+        sky: { box: 'bg-sky-500/10 border-sky-500/20', text: 'text-sky-500', bar: 'bg-sky-500/70' }
+    };
 
     return (
         <div className="h-full flex flex-col gap-4">
@@ -126,41 +96,73 @@ const ManageSymbols = () => {
             {/* Header with Tabs */}
             <div className="flex flex-col gap-4 shrink-0">
                 {/* Tab Navigation */}
-                <div className="flex items-center gap-1 border-b border-border">
+                <div className="flex items-center gap-1 border-b border-border overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setActiveTab('watchlist')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2",
-                            activeTab === 'watchlist'
-                                ? "border-primary text-primary bg-primary/5"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
+                        className={`px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 transition-all border-b-2 whitespace-nowrap ${activeTab === 'watchlist'
+                            ? "border-primary text-primary bg-primary/5"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
                     >
                         <List size={14} /> Instruments
                     </button>
                     <button
-                        onClick={() => setActiveTab('segments')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2",
-                            activeTab === 'segments'
-                                ? "border-primary text-primary bg-primary/5"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <Layers size={14} /> Segments
-                    </button>
-                    <button
                         onClick={() => setActiveTab('config')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2",
-                            activeTab === 'config'
-                                ? "border-primary text-primary bg-primary/5"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
+                        className={`px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 transition-all border-b-2 whitespace-nowrap ${activeTab === 'config'
+                            ? "border-primary text-primary bg-primary/5"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
                     >
                         <Settings size={14} /> Data Feed Config
                     </button>
                 </div>
+
+                {activeTab === 'watchlist' && (
+                    <div className="relative rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card/95 to-primary/5 p-3 sm:p-4">
+                        <div className="absolute inset-0 rounded-2xl ring-1 ring-primary/10 pointer-events-none" />
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
+                                    <Sparkles size={16} className="text-primary" />
+                                </div>
+                                <div className="leading-tight">
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Overview</p>
+                                    <h2 className="text-sm sm:text-base font-bold text-foreground">Market Inventory</h2>
+                                </div>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-mono hidden sm:block">
+                                Updated: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                            {[
+                                { label: 'Total Symbols', value: `${totalSymbols}`, icon: BarChart2, tone: 'primary' },
+                                { label: 'Active Feeds', value: `${activeSymbols}`, icon: CheckCircle, tone: 'emerald' },
+                                { label: 'Inactive', value: `${inactiveSymbols}`, icon: XCircle, tone: 'rose' }
+                            ].map((card) => {
+                                const tone = toneStyles[card.tone] || toneStyles.primary;
+                                return (
+                                    <div
+                                        key={card.label}
+                                        className={`rounded-2xl border border-border/70 bg-card/70 p-2.5 sm:p-3 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ${card.tone === 'primary' ? 'bg-amber-400/90 border-amber-300/60' : ''}`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <p className={`text-[9px] uppercase tracking-wider font-semibold ${card.tone === 'primary' ? 'text-foreground/70' : 'text-muted-foreground'}`}>{card.label}</p>
+                                                <p className={`text-base sm:text-lg font-bold mt-0.5 ${card.tone === 'primary' ? 'text-foreground' : 'text-foreground'}`}>{card.value}</p>
+                                            </div>
+                                            <div className={`h-8 w-8 rounded-lg border grid place-items-center ${card.tone === 'primary' ? 'bg-white/60 border-white/60' : tone.box}`}>
+                                                <card.icon size={14} className={card.tone === 'primary' ? 'text-foreground' : tone.text} />
+                                            </div>
+                                        </div>
+                                        <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${card.tone === 'primary' ? 'bg-foreground/10' : 'bg-secondary/50'}`}>
+                                            <div className={`h-full ${card.tone === 'primary' ? 'bg-foreground/40' : tone.bar}`} style={{ width: '70%' }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Main Content */}
@@ -168,14 +170,19 @@ const ManageSymbols = () => {
                 {activeTab === 'watchlist' && (
                     <div className="flex flex-col h-full gap-2">
                         {/* Toolbar */}
-                        <div className="flex items-center justify-between shrink-0 bg-card border border-border p-3 rounded-lg shadow-sm">
-                            <div className="flex items-center gap-4">
-                                <h2 className="text-sm font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
-                                    <BarChart2 size={16} className="text-primary" />
-                                    Market Watchlist
-                                </h2>
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shrink-0 bg-card border border-border p-3 rounded-2xl shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
+                                        <TrendingUp size={16} className="text-primary" />
+                                    </div>
+                                    <div className="leading-tight">
+                                        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Symbols</p>
+                                        <h2 className="text-sm sm:text-base font-bold text-foreground">Market Watchlist</h2>
+                                    </div>
+                                </div>
 
-                                <div className="h-6 w-[1px] bg-white/10"></div>
+                                <div className="hidden sm:block h-7 w-[1px] bg-border/70" />
 
                                 <div className="flex items-center gap-2 text-xs">
                                     <span className="text-muted-foreground font-medium">Total Symbols:</span>
@@ -183,34 +190,36 @@ const ManageSymbols = () => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                <div className="relative group">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+                                <div className="relative group w-full sm:w-64">
                                     <Search className="absolute left-3 top-2 text-muted-foreground" size={12} />
                                     <input
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         type="text"
                                         placeholder="SEARCH INSTRUMENT..."
-                                        className="bg-secondary/30 border border-border h-8 pl-9 pr-3 w-56 text-[11px] font-mono rounded-lg focus:border-primary/50 focus:bg-secondary/50 focus:outline-none focus:ring-0 transition-all placeholder:text-muted-foreground/50"
+                                        className="bg-secondary/30 border border-border h-8 pl-9 pr-3 w-full text-[11px] font-mono rounded-lg focus:border-primary/50 focus:bg-secondary/50 focus:outline-none focus:ring-0 transition-all placeholder:text-muted-foreground/50"
                                     />
                                 </div>
-                                <Button variant="outline" size="sm" className="h-8 text-[11px] border-border gap-1.5 rounded-lg hover:border-primary/50" onClick={loadData}>
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <Button variant="outline" size="sm" className="h-8 text-[10px] border-border gap-1.5 rounded-lg hover:border-primary/50 flex-1 sm:flex-none min-w-0 px-3" onClick={loadData}>
                                     <Download size={12} /> Sync
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    size="sm"
-                                    onClick={() => navigate('/market/add')}
-                                    className="h-8 text-[11px] gap-1.5 rounded-lg font-bold shadow-lg shadow-primary/20"
-                                >
-                                    <Plus size={12} /> Add Symbol
-                                </Button>
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => navigate('/market/add')}
+                                        className="h-8 text-[10px] gap-1.5 rounded-lg font-bold flex-1 sm:flex-none min-w-0 px-3 btn-cancel"
+                                    >
+                                        <Plus size={12} /> Add Symbol
+                                    </Button>
+                                </div>
                             </div>
                         </div>
 
                         {/* Table */}
                         <div className="flex-1 min-h-0 relative flex flex-col">
-                            <div className="flex-1 min-h-0 relative">
+                            <div className="flex-1 min-h-[620px] relative">
                                 <MarketTable
                                     symbols={filteredSymbols.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
                                     onEdit={(sym) => navigate('/market/edit', { state: { symbol: sym } })}
@@ -230,140 +239,22 @@ const ManageSymbols = () => {
 
                             </div>
 
-                            {/* Footer Stats & Pagination */}
-                            <div className="h-9 bg-muted/30 border border-border rounded-lg flex items-center justify-between px-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1 mt-2 shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <span>
-                                        {filteredSymbols.length > 0 ? (
-                                            <>Showing <span className="text-foreground font-bold">{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredSymbols.length)}</span> of <span className="text-foreground font-bold">{filteredSymbols.length}</span></>
-                                        ) : (
-                                            <span className="text-muted-foreground">No symbols found</span>
-                                        )}
-                                    </span>
-                                    <span className="text-muted-foreground/50">|</span>
-                                    <div className="flex items-center gap-2">
-                                        <span>Show:</span>
-                                        <select
-                                            value={itemsPerPage}
-                                            onChange={(e) => {
-                                                setItemsPerPage(Number(e.target.value));
-                                                setCurrentPage(1);
-                                            }}
-                                            className="bg-card text-foreground font-bold border-b border-border focus:outline-none focus:border-primary cursor-pointer pb-0.5 rounded px-1"
-                                        >
-                                            <option value={20} className="bg-card text-foreground">20</option>
-                                            <option value={50} className="bg-card text-foreground">50</option>
-                                            <option value={100} className="bg-card text-foreground">100</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    {/* Pagination Controls */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="mr-2">Page {currentPage} of {Math.ceil(filteredSymbols.length / itemsPerPage) || 1}</span>
-                                        <button
-                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                            disabled={currentPage === 1}
-                                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronLeft size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredSymbols.length / itemsPerPage), p + 1))}
-                                            disabled={currentPage >= Math.ceil(filteredSymbols.length / itemsPerPage)}
-                                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >
-                                            <ChevronRight size={14} />
-                                        </button>
-                                    </div>
-                                </div>
+                            <div className="shrink-0 mt-2">
+                                <TablePageFooter
+                                    total={filteredSymbols.length}
+                                    page={currentPage}
+                                    totalPages={Math.ceil(filteredSymbols.length / itemsPerPage) || 1}
+                                    perPage={itemsPerPage}
+                                    perPageOptions={[20, 50, 100]}
+                                    onPerPageChange={(value) => {
+                                        setItemsPerPage(value);
+                                        setCurrentPage(1);
+                                    }}
+                                    onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    onNext={() => setCurrentPage(p => Math.min(Math.ceil(filteredSymbols.length / itemsPerPage), p + 1))}
+                                />
                             </div>
-                        </div>
-                    </div>
-                )}
 
-                {activeTab === 'segments' && (
-                    <div className="flex flex-col h-full gap-6 p-1 overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Add Segment Form */}
-                            <Card className="p-6 h-fit space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-bold flex items-center gap-2">
-                                        <Plus size={18} className="text-primary" /> {newSegment._id ? 'Edit Segment' : 'Add New Segment'}
-                                    </h3>
-                                    {newSegment._id && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setNewSegment({ name: '', code: '' })}
-                                            className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
-                                        >
-                                            Cancel
-                                        </Button>
-                                    )}
-                                </div>
-                                <form onSubmit={handleSaveSegment} className="space-y-4">
-                                    <Input
-                                        label="Segment Name"
-                                        placeholder="e.g. Crypto Futures"
-                                        value={newSegment.name}
-                                        onChange={e => setNewSegment({ ...newSegment, name: e.target.value })}
-                                    />
-                                    <Input
-                                        label="Segment Code"
-                                        placeholder="e.g. CRYPTO"
-                                        value={newSegment.code}
-                                        onChange={e => setNewSegment({ ...newSegment, code: e.target.value.toUpperCase() })}
-                                        className="uppercase font-mono"
-                                        disabled={!!newSegment._id} // Disable code editing if needed, or allow it. Usually IDs are immutable but codes can be updated if refs handle it. Backend supports update.
-                                    />
-                                    <Button type="submit" variant="primary" className="w-full gap-2" disabled={creatingSegment}>
-                                        {creatingSegment ? 'Saving...' : <><Save size={16} /> {newSegment._id ? 'Update Segment' : 'Create Segment'}</>}
-                                    </Button>
-                                </form>
-                            </Card>
-
-                            {/* Segments List */}
-                            <div className="md:col-span-2 space-y-4">
-                                <h3 className="text-lg font-bold flex items-center gap-2">
-                                    <Layers size={18} className="text-primary" /> Active Segments
-                                </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {segments.map(seg => (
-                                        <div key={seg._id} className="bg-card border border-border p-4 rounded-lg flex items-center justify-between group hover:border-primary/50 transition-all">
-                                            <div>
-                                                <h4 className="font-bold text-foreground">{seg.name}</h4>
-                                                <span className="text-[10px] font-mono bg-secondary px-1.5 py-0.5 rounded text-muted-foreground">{seg.code}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setNewSegment({ name: seg.name, code: seg.code, _id: seg._id });
-                                                        setCreatingSegment(false); // Reset loading state just in case
-                                                    }}
-                                                    className="p-1.5 hover:bg-white/10 rounded text-muted-foreground hover:text-primary transition-all opacity-0 group-hover:opacity-100"
-                                                    title="Edit Segment"
-                                                >
-                                                    <Edit size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteModal({ isOpen: true, type: 'segment', data: seg })}
-                                                    className="p-1.5 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                                    title="Delete Segment"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {segments.length === 0 && !loadingSegments && (
-                                        <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
-                                            No segments found. Add one to get started.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 )}

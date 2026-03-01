@@ -140,7 +140,7 @@ const QuickSignalModal = ({ isOpen, onClose, symbol, type, currentPrice, timefra
                     </div>
 
                     <div className="pt-4 flex gap-3">
-                        <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+                        <Button type="button" variant="outline" className="flex-1 btn-cancel" onClick={onClose}>
                             Cancel
                         </Button>
                         <Button type="submit" variant="primary" disabled={isSubmitting} className={`flex-1 ${type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>

@@ -3,11 +3,17 @@ import { CheckCircle, AlertCircle, Hash, MessageSquare, User, Activity, Calendar
 import { clsx } from 'clsx';
 import TableHeaderCell from '../ui/TableHeaderCell';
 
-const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
+const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadingId }) => {
+    const normalizeStatus = (status) => (status || '').toString().trim().toLowerCase();
+    const isClosedLike = (status) => ['resolved', 'closed', 'rejected'].includes(normalizeStatus(status));
+
     const getStatusColor = (status) => {
-        switch (status) {
-            case 'Open': return 'text-blue-500';
-            case 'Resolved': return 'text-emerald-500';
+        switch (normalizeStatus(status)) {
+            case 'open': return 'text-blue-500';
+            case 'pending': return 'text-amber-500';
+            case 'resolved':
+            case 'closed': return 'text-emerald-500';
+            case 'rejected': return 'text-red-500';
             default: return 'text-muted-foreground';
         }
     };
@@ -23,6 +29,7 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                         <tr>
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Hash} label="Ticket ID" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={MessageSquare} label="Subject" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={MessageSquare} label="Description" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={User} label="User" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Activity} label="Status" align="center" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Calendar} label="Date" align="center" />
@@ -41,6 +48,9 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                                             <div className="h-4 w-48 bg-muted/50 rounded"></div>
                                             <div className="h-3 w-16 bg-muted/50 rounded"></div>
                                         </div>
+                                    </td>
+                                    <td className="px-5 py-3 border-r border-border">
+                                        <div className="h-4 w-56 bg-muted/50 rounded"></div>
                                     </td>
                                     <td className="px-5 py-3 border-r border-border">
                                         <div className="flex items-center gap-2">
@@ -64,19 +74,28 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                             ))
                         ) : (
                             tickets.map((ticket, index) => {
-                                // Safe User Handling
-                                const userName = ticket.user?.name || 'Unknown User';
+                                const subject = ticket.subject || '-';
+                                const description = ticket.description || '-';
+                                const ticketType = ticket.ticketType || ticket.category || '-';
+                                const contactEmail = ticket.contactEmail || ticket.user?.email || '';
+                                const contactNumber = ticket.contactNumber || ticket.user?.phone || '';
+                                const userName = ticket.user?.name || contactEmail || contactNumber || 'Unknown User';
                                 const userInitials = userName.substring(0, 2).toUpperCase();
-                                const userEmail = ticket.user?.email || '';
 
                                 // Safe Date Handling
                                 const dateStr = ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : '-';
 
                                 const isHighlighted = highlightTerm && (
                                     (ticket.ticketId && ticket.ticketId.toLowerCase().includes(highlightTerm.toLowerCase())) ||
-                                    (ticket.subject && ticket.subject.toLowerCase().includes(highlightTerm.toLowerCase())) ||
-                                    (userName && userName.toLowerCase().includes(highlightTerm.toLowerCase()))
+                                    (subject && subject.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (description && description.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (ticketType && ticketType.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (userName && userName.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (contactEmail && contactEmail.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (contactNumber && contactNumber.toLowerCase().includes(highlightTerm.toLowerCase()))
                                 );
+                                const rowLocked = isClosedLike(ticket.status);
+                                const isProcessing = actionLoadingId === ticket._id;
 
                                 return (
                                     <tr key={index} className={`transition-all duration-500 group relative ${isHighlighted ? '!bg-yellow-500/20 shadow-[inset_0_0_20px_rgba(234,179,8,0.1)] border-y border-yellow-500/20' : 'hover:bg-primary/[0.02]'}`}>
@@ -85,11 +104,14 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                                         </td>
                                         <td className="px-5 py-3 border-r border-border">
                                             <div className="flex flex-col gap-0.5">
-                                                <span className="text-foreground font-sans font-bold">{ticket.subject}</span>
+                                                <span className="text-foreground font-sans font-bold">{subject}</span>
                                                 <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
-                                                    <span className="bg-secondary px-1 py-0.5 rounded">{ticket.category}</span>
+                                                    <span className="bg-secondary px-1 py-0.5 rounded">{ticketType}</span>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-5 py-3 border-r border-border text-muted-foreground">
+                                            <span className="block max-w-[420px] truncate">{description}</span>
                                         </td>
                                         <td className="px-5 py-3 border-r border-border">
                                             <div className="flex items-center gap-2">
@@ -98,13 +120,14 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-foreground text-[10px] font-bold">{userName}</span>
-                                                    {userEmail && <span className="text-[9px] text-muted-foreground">{userEmail}</span>}
+                                                    {contactEmail && <span className="text-[9px] text-muted-foreground">{contactEmail}</span>}
+                                                    {contactNumber && <span className="text-[9px] text-muted-foreground">{contactNumber}</span>}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border">
                                             <div className={clsx("flex items-center justify-center gap-1 font-bold uppercase tracking-wider text-[10px]", getStatusColor(ticket.status))}>
-                                                {ticket.status === 'Open' || ticket.status === 'OPEN' ? <AlertCircle size={10} /> : <CheckCircle size={10} />}
+                                                {['open', 'pending'].includes(normalizeStatus(ticket.status)) ? <AlertCircle size={10} /> : <CheckCircle size={10} />}
                                                 {ticket.status}
                                             </div>
                                         </td>
@@ -112,18 +135,24 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                                             {dateStr}
                                         </td>
                                         <td className="px-5 py-3 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    className="px-2.5 py-1 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-emerald-500/20 transition-colors">
-                                                    Approve
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="px-2.5 py-1 rounded border border-red-500/30 text-red-400 bg-red-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-red-500/20 transition-colors">
-                                                    Reject
-                                                </button>
-                                            </div>
+                                            {!rowLocked && (
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={isProcessing}
+                                                        onClick={() => onAction?.(ticket, 'resolve')}
+                                                        className="px-2.5 py-1 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                                        {isProcessing ? 'Updating...' : 'Resolve'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={isProcessing}
+                                                        onClick={() => onAction?.(ticket, 'reject')}
+                                                        className="px-2.5 py-1 rounded border border-red-500/30 text-red-400 bg-red-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 );

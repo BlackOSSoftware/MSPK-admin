@@ -62,12 +62,12 @@ const AdminRevenueGraph = ({ data, totalRevenue, growth }) => {
         <Card className="dashboard-surface soft-shadow soft-shadow-hover h-full relative overflow-hidden" noPadding showAccents={false}>
             <div className="h-full flex flex-col relative">
                 {/* Header */}
-                <div className="relative z-10 px-4 py-3 border-b border-border/70 bg-secondary/40 flex items-start justify-between gap-4 shrink-0">
+                <div className="relative z-10 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/70 bg-secondary/40 flex items-start justify-between gap-3 sm:gap-4 shrink-0">
                     <div className="min-w-0">
-                        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.22em] uppercase">
+                        <p className="text-muted-foreground text-[9px] sm:text-[10px] font-semibold tracking-[0.22em] uppercase">
                             Revenue Analytics
                         </p>
-                        <p className="mt-0.5 text-xl md:text-2xl font-semibold tracking-tight tabular-nums text-foreground truncate">
+                        <p className="mt-0.5 text-lg sm:text-xl md:text-2xl font-semibold tracking-tight tabular-nums text-foreground truncate">
                             {formattedTotal}
                         </p>
                     </div>
@@ -75,9 +75,19 @@ const AdminRevenueGraph = ({ data, totalRevenue, growth }) => {
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         <Badge
                             variant={isPositive ? 'success' : 'danger'}
-                            className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full border border-border/60 bg-card/80"
+                            className="shrink-0 text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-border/60 bg-card/80"
                         >
-                            {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                            {isPositive ? (
+                                <>
+                                    <TrendingUp size={11} className="sm:hidden" />
+                                    <TrendingUp size={12} className="hidden sm:block" />
+                                </>
+                            ) : (
+                                <>
+                                    <TrendingDown size={11} className="sm:hidden" />
+                                    <TrendingDown size={12} className="hidden sm:block" />
+                                </>
+                            )}
                             <span className="ml-1">
                                 {isPositive ? '+' : ''}{numericGrowth}%
                             </span>
@@ -88,7 +98,7 @@ const AdminRevenueGraph = ({ data, totalRevenue, growth }) => {
                                 <button
                                     key={item}
                                     onClick={() => setRange(item)}
-                                    className={`px-2.5 py-1 text-[10px] font-semibold rounded-full transition ${
+                                    className={`px-2 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold rounded-full transition ${
                                         range === item
                                             ? 'bg-primary/10 text-primary'
                                             : 'text-muted-foreground hover:text-foreground'
@@ -102,7 +112,7 @@ const AdminRevenueGraph = ({ data, totalRevenue, growth }) => {
                 </div>
 
                 {/* Chart */}
-                <div className="relative z-10 flex-1 min-h-0 p-4">
+                <div className="relative z-10 flex-1 min-h-0 p-3 sm:p-4">
                     {filteredData.length === 0 ? (
                         <div className="h-full grid place-items-center text-muted-foreground text-xs font-medium">
                             No revenue data

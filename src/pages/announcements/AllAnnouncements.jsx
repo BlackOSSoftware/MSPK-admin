@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Megaphone, Download, Radio, Calendar, History, Trash2, Edit, ChevronLeft, ChevronRight, Activity, XCircle } from 'lucide-react';
+import { Search, Plus, Megaphone, Download, Radio, Calendar, History, Trash2, Edit, Activity, XCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AnnouncementTable from '../../components/tables/AnnouncementTable';
 import Button from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import useToast from '../../hooks/useToast';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import AnnouncementDetailsDialog from './AnnouncementDetailsDialog';
+import TablePageFooter from '../../components/ui/TablePageFooter';
 
 const AllAnnouncements = () => {
     const navigate = useNavigate();
@@ -261,10 +262,10 @@ const AllAnnouncements = () => {
                         {isExporting ? 'Exporting...' : 'Export'}
                     </Button>
                     <Button
-                        variant="primary"
+                        variant="outline"
                         size="sm"
                         onClick={() => navigate('/announcements/create')}
-                        className="h-8 text-[11px] gap-1.5 rounded-lg font-bold shadow-lg shadow-primary/20"
+                        className="h-8 text-[11px] gap-1.5 rounded-lg font-bold btn-cancel"
                     >
                         <Plus size={12} /> New Broadcast
                     </Button>
@@ -291,54 +292,18 @@ const AllAnnouncements = () => {
                 )}
             </div>
 
-            {/* Footer Stats & Pagination (Standardized) */}
-            <div className="h-9 bg-muted/30 border border-border rounded-lg flex items-center justify-between px-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
-                <div className="flex items-center gap-4">
-                    <span>
-                        {announcements.length > 0 ? (
-                            <>Showing <span className="text-foreground font-bold">{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalResults)}</span> of <span className="text-foreground font-bold">{totalResults}</span></>
-                        ) : (
-                            <span className="text-muted-foreground">No events found</span>
-                        )}
-                        <span className="text-muted-foreground/50 mx-2">|</span>
-                        Total: <span className="text-foreground font-bold">{totalResults}</span>
-                    </span>
-                    <div className="ml-4 flex items-center gap-2">
-                        <span>Show:</span>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                            className="bg-card text-foreground font-bold border-b border-border focus:outline-none focus:border-primary cursor-pointer pb-0.5 rounded px-1"
-                        >
-                            <option value={10} className="bg-card text-foreground">10</option>
-                            <option value={20} className="bg-card text-foreground">20</option>
-                            <option value={50} className="bg-card text-foreground">50</option>
-                            <option value={100} className="bg-card text-foreground">100</option>
-                        </select>
-                    </div>
-                </div>
+            <TablePageFooter
+                total={totalResults}
+                overallTotal={totalResults}
+                page={currentPage}
+                totalPages={totalPages}
+                perPage={itemsPerPage}
+                onPerPageChange={setItemsPerPage}
+                onPrev={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onNext={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            />
 
-                <div className="flex items-center gap-4">
-                    {/* Pagination Controls */}
-                    <div className="flex items-center gap-2">
-                        <span className="mr-2">Page {currentPage} of {totalPages || 1}</span>
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                            <ChevronLeft size={14} />
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages || totalPages === 0}
-                            className="p-1 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                            <ChevronRight size={14} />
-                        </button>
-                    </div>
-                </div>
-            </div>
+
 
             <ConfirmDialog
                 isOpen={dialogOpen}

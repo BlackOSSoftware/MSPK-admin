@@ -57,7 +57,7 @@ const AddBroker = () => {
         <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-foreground">Onboard New Partner</h1>
-                <Button variant="outline" onClick={() => navigate('/brokers/all')} className="gap-2">
+                <Button variant="outline" onClick={() => navigate('/brokers/all')} className="gap-2 btn-cancel">
                     <X size={16} /> Cancel
                 </Button>
             </div>
@@ -136,7 +136,7 @@ const AddBroker = () => {
 
                 {/* Form Actions */}
                 <div className="flex justify-end gap-3">
-                    <Button variant="outline" type="button" onClick={() => navigate('/brokers/all')}>
+                    <Button className="btn-cancel" variant="outline" type="button" onClick={() => navigate('/brokers/all')}>
                         Cancel
                     </Button>
                     <Button variant="primary" type="submit" disabled={isSubmitting} className="min-w-[120px] gap-2">

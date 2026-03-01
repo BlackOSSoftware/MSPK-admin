@@ -57,9 +57,6 @@ import { ReplyTicket } from '../pages/tickets/TicketPages'; // Keep others if ne
 import Settings from '../pages/settings/Settings';
 import NotificationTemplates from '../pages/settings/NotificationTemplates';
 
-// CMS
-import CMS from '../pages/cms/CMS';
-import CreateFAQ from '../pages/cms/CreateFAQ';
 
 // Announcements
 import AllAnnouncements from '../pages/announcements/AllAnnouncements';
@@ -75,7 +72,6 @@ import AddBroker from '../pages/brokers/AddBroker';
 import BrokerDetails from '../pages/brokers/BrokerDetails';
 import EditBroker from '../pages/brokers/EditBroker';
 
-import Leads from '../pages/leads/Leads';
 import NotificationDetails from '../pages/notifications/NotificationDetails';
 import MonitoringDashboard from '../components/admin/MonitoringDashboard';
 
@@ -157,10 +153,6 @@ const AppRouter = () => {
                     <Route path="settings/all" element={<Settings />} />
                     <Route path="settings/notifications" element={<NotificationTemplates />} />
 
-                    {/* CMS */}
-                    <Route path="cms/all" element={<CMS />} />
-                    <Route path="cms/faqs/create" element={<CreateFAQ />} />
-
                     {/* Announcements */}
                     <Route path="announcements/all" element={<AllAnnouncements />} />
                     <Route path="announcements/create" element={<CreateAnnouncement />} />
@@ -174,8 +166,6 @@ const AppRouter = () => {
                     <Route path="brokers/details" element={<BrokerDetails />} />
                     <Route path="brokers/edit" element={<EditBroker />} />
 
-                    {/* Leads / Inquiries */}
-                    <Route path="leads/all" element={<Leads />} />
 
                     {/* Notifications */}
                     <Route path="notifications/:id" element={<NotificationDetails />} />

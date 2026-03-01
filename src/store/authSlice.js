@@ -1,6 +1,39 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { login as loginApi } from '../api/auth.api';
 
+const parseJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+};
+
+const isTokenValid = (token) => {
+  if (!token) return false;
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp) return true; // Non-JWT or no exp -> treat as valid
+  return Date.now() < payload.exp * 1000;
+};
+
+const storedToken = localStorage.getItem('token');
+const storedUser = localStorage.getItem('user');
+const tokenValid = isTokenValid(storedToken);
+
+if (!tokenValid) {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+}
+
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
     const response = await loginApi(credentials);
@@ -13,9 +46,9 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
 });
 
 const initialState = {
-  user: JSON.parse(localStorage.getItem('user')) || null,
-  token: localStorage.getItem('token') || null,
-  isAuthenticated: !!localStorage.getItem('token'),
+  user: tokenValid ? (JSON.parse(storedUser) || null) : null,
+  token: tokenValid ? storedToken : null,
+  isAuthenticated: tokenValid,
   loading: false,
   error: null,
 };

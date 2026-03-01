@@ -73,54 +73,54 @@
     /* PREMIUM DAYLIGHT (Soft Warm Whites + Royal Indigo) */
     --font-primary: 'Inter';
 
-    --background: 38 22% 96.8%;          /* Warm soft-white (no harsh pure white) */
+    --background: 214 22% 94%;           /* Soft blue-white (eye relief) */
     --foreground: 222 18% 16.5%;         /* Deep charcoal for long readability */
 
-    --card: 40 22% 98.6%;                /* Slightly lifted surface */
+    --card: 214 22% 96.5%;               /* Cool lifted surface */
     --card-foreground: 222 18% 16.5%;
 
-    --popover: 40 22% 98.6%;
+    --popover: 214 22% 96.5%;
     --popover-foreground: 222 18% 16.5%;
 
-    --primary: 240 74% 58%;              /* Royal indigo accent */
+    --primary: 210 85% 52%;              /* Clean sky-blue accent */
     --primary-foreground: 0 0% 99%;
 
-    --secondary: 220 18% 95.2%;          /* Gentle gray surface */
+    --secondary: 216 16% 92.5%;          /* Gentle cool surface */
     --secondary-foreground: 222 14% 22%;
 
-    --muted: 220 16% 95.8%;
+    --muted: 216 16% 93%;
     --muted-foreground: 222 10% 44.5%;   /* Softer gray for secondary text */
 
-    --accent: 220 18% 94.6%;
+    --accent: 216 16% 91.8%;
     --accent-foreground: 222 14% 22%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 99%;
 
-    --border: 220 12% 88.5%;             /* Diffused borders (no strong contrast) */
-    --input: 220 14% 92%;
-    --ring: 240 74% 58%;
+    --border: 216 12% 85%;               /* Softer borders */
+    --input: 216 14% 90.5%;
+    --ring: 210 85% 52%;
 
     --radius: 0.9rem;
   }
 
   /* Modern Gradient White */
   .light.theme-gradient {
-    --background: 216 24% 96%;
+    --background: 216 20% 93.8%;
     --foreground: 222 18% 17%;
-    --card: 216 28% 98%;
+    --card: 216 22% 96.6%;
     --card-foreground: 222 18% 17%;
-    --primary: 233 80% 60%;
+    --primary: 210 80% 54%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 216 20% 94%;
+    --secondary: 216 18% 92.5%;
     --secondary-foreground: 222 14% 22%;
-    --muted: 216 18% 95%;
+    --muted: 216 18% 93%;
     --muted-foreground: 222 10% 44%;
-    --accent: 216 20% 94%;
+    --accent: 216 18% 92.5%;
     --accent-foreground: 222 14% 22%;
-    --border: 216 16% 86%;
-    --input: 216 18% 92%;
-    --ring: 233 80% 60%;
+    --border: 216 12% 85%;
+    --input: 216 14% 90.5%;
+    --ring: 210 80% 54%;
     --radius: 0.95rem;
   }
 
@@ -129,6 +129,9 @@
 @layer base {
   * {
     @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground;
@@ -139,19 +142,19 @@
   .light body {
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(900px circle at 12% -10%, hsl(var(--primary) / 0.10), transparent 60%),
-      radial-gradient(700px circle at 88% 4%, hsl(var(--primary) / 0.06), transparent 58%),
-      radial-gradient(750px circle at 50% 120%, rgba(15, 23, 42, 0.04), transparent 60%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.65), transparent 55%);
+      radial-gradient(900px circle at 12% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
+      radial-gradient(700px circle at 88% 4%, rgba(99, 102, 241, 0.06), transparent 58%),
+      radial-gradient(750px circle at 50% 120%, rgba(15, 23, 42, 0.03), transparent 60%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.30), transparent 55%);
     background-attachment: fixed;
   }
 
 
   .light.theme-gradient body {
     background-image:
-      radial-gradient(900px circle at 12% -10%, rgba(255, 220, 210, 0.35), transparent 60%),
-      radial-gradient(900px circle at 85% -8%, rgba(206, 226, 255, 0.35), transparent 60%),
-      linear-gradient(180deg, rgba(242, 246, 255, 0.95) 0%, rgba(248, 250, 252, 0.85) 45%, transparent 80%);
+      radial-gradient(900px circle at 12% -10%, rgba(209, 225, 255, 0.30), transparent 60%),
+      radial-gradient(900px circle at 85% -8%, rgba(190, 214, 255, 0.28), transparent 60%),
+      linear-gradient(180deg, rgba(232, 239, 250, 0.92) 0%, rgba(238, 244, 252, 0.78) 45%, transparent 80%);
   }
 
   /* Modern Gradient: add gentle blush/shine on cards */
@@ -161,10 +164,10 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(700px circle at 15% 0%, rgba(255, 226, 220, 0.55), transparent 60%),
-      radial-gradient(800px circle at 85% 0%, rgba(210, 228, 255, 0.55), transparent 60%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 45%);
-    opacity: 0.6;
+      radial-gradient(700px circle at 15% 0%, rgba(214, 229, 255, 0.35), transparent 60%),
+      radial-gradient(800px circle at 85% 0%, rgba(196, 216, 255, 0.35), transparent 60%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent 45%);
+    opacity: 0.45;
   }
 
   
@@ -284,9 +287,9 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(900px circle at 18% 0%, rgba(255, 255, 255, 0.85), transparent 55%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 45%);
-    opacity: 0.55;
+      radial-gradient(900px circle at 18% 0%, rgba(220, 232, 255, 0.45), transparent 55%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 45%);
+    opacity: 0.4;
   }
   .light .terminal-panel:hover {
     border-color: hsl(var(--primary) / 0.22);
@@ -294,8 +297,25 @@
 
 
   .light .ui-btn[data-variant="primary"] {
+    color: hsl(var(--primary-foreground));
     background-image:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.10) 45%, transparent 75%);
+      linear-gradient(180deg, hsl(var(--primary) / 0.98), hsl(var(--primary) / 0.88) 60%, hsl(var(--primary) / 0.8));
+    box-shadow:
+      0 16px 34px -18px hsl(var(--primary) / 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .light .ui-btn[data-variant="primary"]:hover {
+    box-shadow:
+      0 22px 42px -20px hsl(var(--primary) / 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+
+  .light .ui-btn[data-variant="primary"]:active {
+    box-shadow:
+      0 10px 22px -18px hsl(var(--primary) / 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
 
   /* Light mode remaps: keep subtle separators visible (avoid invisible white overlays) */
@@ -339,7 +359,11 @@
     transition: box-shadow 220ms ease, transform 220ms ease, background-color 220ms ease, border-color 220ms ease;
   }
   .dark.theme-moonlight .ui-btn[data-variant="primary"] {
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02) 40%, transparent 70%);
+    background-image:
+      linear-gradient(180deg, hsl(var(--primary) / 0.96), hsl(var(--primary) / 0.82) 60%, hsl(var(--primary) / 0.72));
+    box-shadow:
+      0 18px 46px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
   .dark.theme-moonlight .ui-btn:hover {
     box-shadow:
@@ -363,6 +387,45 @@
     box-shadow:
       0 0 0 3px hsl(var(--primary) / 0.14),
       inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  /* Cancel buttons: subtle blue tint + extra horizontal padding */
+  .btn-cancel {
+    padding-left: 1.1rem !important;
+    padding-right: 1.1rem !important;
+    border-color: rgba(59, 130, 246, 0.35) !important;
+    color: rgba(59, 130, 246, 0.95) !important;
+    background-color: rgba(59, 130, 246, 0.06) !important;
+  }
+  .btn-cancel:hover {
+    border-color: rgba(59, 130, 246, 0.55) !important;
+    background-color: rgba(59, 130, 246, 0.12) !important;
+    color: rgba(59, 130, 246, 1) !important;
+  }
+  .btn-cancel:active {
+    background-color: rgba(59, 130, 246, 0.16) !important;
+  }
+
+  /* Primary soft buttons (Add actions) */
+  .btn-primary-soft {
+    padding-left: 1.1rem !important;
+    padding-right: 1.1rem !important;
+    border-color: hsl(var(--primary) / 0.35) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    background-color: hsl(var(--primary) / 0.16) !important;
+    box-shadow:
+      0 10px 20px -14px hsl(var(--primary) / 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .btn-primary-soft:hover {
+    border-color: hsl(var(--primary) / 0.55) !important;
+    background-color: hsl(var(--primary) / 0.22) !important;
+    box-shadow:
+      0 14px 26px -16px hsl(var(--primary) / 0.75),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .btn-primary-soft:active {
+    background-color: hsl(var(--primary) / 0.26) !important;
   }
 
   .font-mono-numbers {
