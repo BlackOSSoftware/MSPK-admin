@@ -1,5 +1,6 @@
 import React from 'react';
-import { Edit, Trash2, CheckCircle, XCircle, CreditCard, Clock } from 'lucide-react';
+import { Edit, Trash2, CheckCircle, XCircle, CreditCard, Clock, Hash, Radio, DollarSign, Tag, List, Settings } from 'lucide-react';
+import TableHeaderCell from '../ui/TableHeaderCell';
 
 const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
     return (
@@ -11,14 +12,14 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Plan ID</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Plan Name</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Segment</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Price</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Validity</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Type</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Features Included</th>
-                            <th className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm">Actions</th>
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Hash} label="Plan ID" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={CreditCard} label="Plan Name" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Radio} label="Segment" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={DollarSign} label="Price" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Clock} label="Validity" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Tag} label="Type" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={List} label="Features Included" />
+                            <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={Settings} label="Actions" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">

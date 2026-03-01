@@ -9,7 +9,7 @@ import useToast from '../../hooks/useToast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const StatCard = ({ label, value, icon: Icon, subValue, highlight, actionLabel, onAction }) => (
-    <Card className="p-4 bg-[#050505] border-white/5 relative overflow-hidden group">
+    <Card className="p-4 relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
             <Icon size={48} />
         </div>
@@ -172,7 +172,7 @@ const BrokerDetails = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/brokers/all')}
-                        className="p-2 rounded-lg border border-white/5 hover:bg-white/5 text-muted-foreground hover:text-white transition-colors"
+                        className="p-2 rounded-lg border border-border/60 hover:bg-secondary/40 text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <ArrowLeft size={18} />
                     </button>
@@ -207,9 +207,9 @@ const BrokerDetails = () => {
             {/* Info and Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
                 {/* Profile Card */}
-                <Card className="col-span-1 p-5 bg-[#050505] border-white/5 space-y-4">
-                    <div className="flex items-center gap-4 pb-4 border-b border-white/5">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-primary font-bold text-lg border border-white/10 uppercase">
+                <Card className="col-span-1 p-5 space-y-4">
+                    <div className="flex items-center gap-4 pb-4 border-b border-border/70">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-primary font-bold text-lg border border-border/70 uppercase">
                             {broker.name.substring(0, 2)}
                         </div>
                         <div>
@@ -227,7 +227,7 @@ const BrokerDetails = () => {
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <MapPin size={14} className="shrink-0" /> {broker.location || 'N/A'}
                         </div>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/70">
                             <Briefcase size={14} className="shrink-0 text-primary" />
                             <span className="text-foreground font-bold">
                                 {broker.commission?.type === 'FIXED'

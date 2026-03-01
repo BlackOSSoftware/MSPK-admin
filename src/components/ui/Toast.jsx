@@ -9,10 +9,10 @@ const icons = {
 };
 
 const styles = {
-    success: "border-l-4 border-emerald-500 bg-emerald-500/10 text-emerald-100",
-    error: "border-l-4 border-rose-500 bg-rose-500/10 text-rose-100",
-    info: "border-l-4 border-blue-500 bg-blue-500/10 text-blue-100",
-    warning: "border-l-4 border-amber-500 bg-amber-500/10 text-amber-100"
+    success: "border-l-4 border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-100",
+    error: "border-l-4 border-rose-500 bg-rose-500/10 text-rose-800 dark:text-rose-100",
+    info: "border-l-4 border-blue-500 bg-blue-500/10 text-blue-800 dark:text-blue-100",
+    warning: "border-l-4 border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-100"
 };
 
 const Toast = ({ id, message, type = 'info', duration = 5000, onClose }) => {
@@ -25,7 +25,7 @@ const Toast = ({ id, message, type = 'info', duration = 5000, onClose }) => {
     }, [id, duration, onClose]);
 
     return (
-        <div className={`relative flex items-start gap-3 p-4 rounded-md shadow-lg backdrop-blur-md border border-white/5 w-80 mb-3 transition-all animate-in slide-in-from-right-full duration-300 ${styles[type]}`}>
+        <div className={`relative flex items-start gap-3 p-4 rounded-md shadow-lg backdrop-blur-md border border-border/70 w-80 mb-3 transition-all animate-in slide-in-from-right-full duration-300 ${styles[type]}`}>
             <div className="shrink-0 pt-0.5">
                 {icons[type]}
             </div>
@@ -34,7 +34,7 @@ const Toast = ({ id, message, type = 'info', duration = 5000, onClose }) => {
             </div>
             <button
                 onClick={() => onClose(id)}
-                className="shrink-0 text-white/40 hover:text-white transition-colors"
+                className="shrink-0 text-muted-foreground hover:text-foreground dark:text-white/40 dark:hover:text-white transition-colors"
             >
                 <X size={16} />
             </button>

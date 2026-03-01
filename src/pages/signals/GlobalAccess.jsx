@@ -1,7 +1,8 @@
 import React from 'react';
-import { Search, ToggleLeft, ToggleRight, Lock, Unlock, Download } from 'lucide-react';
+import { Search, ToggleLeft, ToggleRight, Lock, Unlock, Download, User, CreditCard, Activity, TrendingUp, BarChart2, Layers, Settings } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import TableHeaderCell from '../../components/ui/TableHeaderCell';
 
 const GlobalAccess = () => {
     // Mock Data: Users and their access status to different categories
@@ -24,29 +25,29 @@ const GlobalAccess = () => {
                         <input
                             type="text"
                             placeholder="Search User..."
-                            className="bg-secondary/30 border border-white/5 h-8 pl-3 pr-3 text-[11px] font-mono rounded-lg focus:border-primary/50 focus:outline-none w-64"
+                            className="bg-secondary/30 border border-border/70 h-8 pl-3 pr-3 text-[11px] font-mono rounded-lg focus:border-primary/50 focus:outline-none w-64"
                         />
                     </div>
                 </div>
             </div>
 
-            <Card className="flex-1 bg-[#050505] border-white/5 overflow-hidden" noPadding>
+            <Card className="flex-1 overflow-hidden" noPadding>
                 <div className="overflow-auto h-full">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-secondary/30 text-xs font-bold uppercase text-muted-foreground sticky top-0">
                             <tr>
-                                <th className="p-4 border-b border-white/5">User</th>
-                                <th className="p-4 border-b border-white/5">Current Plan</th>
-                                <th className="p-4 border-b border-white/5 text-center">Nifty 50</th>
-                                <th className="p-4 border-b border-white/5 text-center">BankNifty</th>
-                                <th className="p-4 border-b border-white/5 text-center">Intraday</th>
-                                <th className="p-4 border-b border-white/5 text-center">Commodity</th>
-                                <th className="p-4 border-b border-white/5 text-center">Action</th>
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={User} label="User" />
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={CreditCard} label="Current Plan" />
+                                <TableHeaderCell className="p-4 border-b border-border/70 text-center" icon={Activity} label="Nifty 50" align="center" />
+                                <TableHeaderCell className="p-4 border-b border-border/70 text-center" icon={TrendingUp} label="BankNifty" align="center" />
+                                <TableHeaderCell className="p-4 border-b border-border/70 text-center" icon={BarChart2} label="Intraday" align="center" />
+                                <TableHeaderCell className="p-4 border-b border-border/70 text-center" icon={Layers} label="Commodity" align="center" />
+                                <TableHeaderCell className="p-4 border-b border-border/70 text-center" icon={Settings} label="Action" align="center" />
                             </tr>
                         </thead>
                         <tbody className="text-sm">
                             {usersAccess.map((user, index) => (
-                                <tr key={index} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                <tr key={index} className="border-b border-border/60 hover:bg-secondary/30 dark:hover:bg-white/[0.02] transition-colors">
                                     <td className="p-4">
                                         <div className="flex flex-col">
                                             <span className="font-bold text-foreground">{user.name}</span>
@@ -61,13 +62,13 @@ const GlobalAccess = () => {
                                     {/* Access Toggles */}
                                     {[user.niftyOptions, user.bankNifty, user.intraday, user.commodity].map((access, i) => (
                                         <td key={i} className="p-4 text-center">
-                                            <button className={`transition-colors ${access ? 'text-emerald-500 hover:text-emerald-400' : 'text-muted-foreground hover:text-white'}`}>
+                                            <button className={`transition-colors ${access ? 'text-emerald-500 hover:text-emerald-400' : 'text-muted-foreground hover:text-foreground'}`}>
                                                 {access ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                                             </button>
                                         </td>
                                     ))}
                                     <td className="p-4 text-center">
-                                        <Button variant="ghost" size="sm" className="text-xs h-7 border-white/10 hover:bg-white/5">
+                                        <Button variant="ghost" size="sm" className="text-xs h-7 border-border/70 hover:bg-secondary/40">
                                             Manage
                                         </Button>
                                     </td>

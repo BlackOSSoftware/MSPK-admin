@@ -4,7 +4,6 @@ import TradingHeader from './TradingHeader';
 import TradingToolbar from './TradingToolbar';
 import TradingChart from './TradingChart';
 import TradingChartGL from './TradingChartGL';
-import PerformanceMonitor from '../dev/PerformanceMonitor';
 import TradingWatchlist from './TradingWatchlist';
 import QuickSignalModal from './QuickSignalModal';
 import SymbolSearchModal from './SymbolSearchModal';
@@ -18,7 +17,7 @@ import { getSymbols, updateSymbol } from '../../api/market.api';
 import { mapStrategyToIndicators } from '../../utils/strategyMapping';
 import chartCache from '../../utils/ChartDataCache';
 
-const TradingLayout = () => {
+const TradingLayout = ({ hideCharts = false }) => {
     const [searchParams, setSearchParams] = useSearchParams();
     // -- Global State --
     const [symbols, setSymbols] = useState([]); // Currently active list (Watchlist)
@@ -817,6 +816,8 @@ const TradingLayout = () => {
 
     if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-background text-foreground font-mono animate-pulse">Initializing Trading Engine...</div>;
 
+    const showCharts = !hideCharts;
+
     return (
         <div className="flex flex-col h-full bg-background text-muted-foreground overflow-hidden font-sans">
             {/* Top Header */}
@@ -840,70 +841,80 @@ const TradingLayout = () => {
                     onSettingsClick={() => setSettingsModalOpen(true)}
                     onResetChart={handleResetChart}
                     onSnapshotClick={() => setSnapshotTrigger(Date.now())}
+                    hideChartControls={hideCharts}
+                    hideWatchlistToggle={hideCharts}
                 />
             </div>
 
             {/* Main Workspace */}
             <div className="flex-1 flex min-h-0 relative">
                 {/* Left Toolbar */}
-                <div className="w-12 border-r border-border flex-none hidden md:flex flex-col items-center py-2 bg-card/30">
-                    <TradingToolbar
-                        activeTool={activeTool}
-                        onToolChange={setActiveTool}
-                        onClearDrawings={() => setClearToggle(p => p + 1)}
-                    />
-                </div>
+                {showCharts && (
+                    <div className="w-12 border-r border-border flex-none hidden md:flex flex-col items-center py-2 bg-card/30">
+                        <TradingToolbar
+                            activeTool={activeTool}
+                            onToolChange={setActiveTool}
+                            onClearDrawings={() => setClearToggle(p => p + 1)}
+                        />
+                    </div>
+                )}
 
                 {/* Center Chart */}
-                <div className="flex-1 relative min-w-0 bg-background/50">
-                    {selectedSymbol && (
-                        <TradingChart
-                            symbol={(() => {
-                                // Find the latest live version of this symbol from marketData
-                                // Flatten marketData values to find the match
-                                const allSymbols = Object.values(marketData).flat();
-                                const liveSymbol = allSymbols.find(s => s.symbol === selectedSymbol.symbol);
-                                // Merge: Static < Live
-                                return liveSymbol ? { ...selectedSymbol, ...liveSymbol } : selectedSymbol;
-                            })()}
-                            latestTick={lastTick?.symbol === selectedSymbol.symbol ? lastTick : null}
-                            activeSignals={filteredActiveSignals}
-                            signalMarkers={filteredSignalMarkers}
-                            onQuickSignal={handleQuickSignal}
-                            timeframe={timeframe}
-                            chartType={chartType}
-                            onChartTypeChange={setChartType}
-                            // Indicators
-                            activeIndicators={activeIndicators}
-                            showVolume={showVolume}
-                            onRemoveIndicator={(uuid) => {
-                                if (uuid === 'VOLUME_ID') setShowVolume(false);
-                                else setActiveIndicators(prev => prev.filter(i => i.uuid !== uuid));
-                            }}
-                            onEditIndicator={(ind) => setEditingIndicator(ind)}
-                            activeTool={activeTool}
-                            clearDrawingsToggle={clearToggle}
-                            chartSettings={chartSettings}
-                            snapshotTrigger={snapshotTrigger}
-                            onSnapshotCaptured={handleSnapshotCaptured}
-                        />
-                    )}
-                </div>
+                {showCharts && (
+                    <div className="flex-1 relative min-w-0 bg-background/50">
+                        {selectedSymbol && (
+                            <TradingChart
+                                symbol={(() => {
+                                    // Find the latest live version of this symbol from marketData
+                                    // Flatten marketData values to find the match
+                                    const allSymbols = Object.values(marketData).flat();
+                                    const liveSymbol = allSymbols.find(s => s.symbol === selectedSymbol.symbol);
+                                    // Merge: Static < Live
+                                    return liveSymbol ? { ...selectedSymbol, ...liveSymbol } : selectedSymbol;
+                                })()}
+                                latestTick={lastTick?.symbol === selectedSymbol.symbol ? lastTick : null}
+                                activeSignals={filteredActiveSignals}
+                                signalMarkers={filteredSignalMarkers}
+                                onQuickSignal={handleQuickSignal}
+                                timeframe={timeframe}
+                                chartType={chartType}
+                                onChartTypeChange={setChartType}
+                                // Indicators
+                                activeIndicators={activeIndicators}
+                                showVolume={showVolume}
+                                onRemoveIndicator={(uuid) => {
+                                    if (uuid === 'VOLUME_ID') setShowVolume(false);
+                                    else setActiveIndicators(prev => prev.filter(i => i.uuid !== uuid));
+                                }}
+                                onEditIndicator={(ind) => setEditingIndicator(ind)}
+                                activeTool={activeTool}
+                                clearDrawingsToggle={clearToggle}
+                                chartSettings={chartSettings}
+                                snapshotTrigger={snapshotTrigger}
+                                onSnapshotCaptured={handleSnapshotCaptured}
+                            />
+                        )}
+                    </div>
+                )}
 
                 {/* Resizer Handle (Desktop Only) */}
-                <div
-                    className={`hidden md:block w-1 hover:w-1.5 cursor-col-resize z-50 transition-all hover:bg-primary/50 ${isResizing ? 'bg-primary w-1.5' : 'bg-transparent'}`}
-                    onMouseDown={startResizing}
-                />
+                {showCharts && (
+                    <div
+                        className={`hidden md:block w-1 hover:w-1.5 cursor-col-resize z-50 transition-all hover:bg-primary/50 ${isResizing ? 'bg-primary w-1.5' : 'bg-transparent'}`}
+                        onMouseDown={startResizing}
+                    />
+                )}
 
                 {/* Right Watchlist */}
                 <div
                     className={`
-                        fixed inset-y-0 right-0 top-12 bottom-0 z-40 bg-card border-l border-border transition-transform duration-300 ease-in-out font-sans
-                        md:relative md:top-0 md:translate-x-0 md:flex-col md:flex-none md:transition-none
-                        ${rightSidebarOpen ? 'translate-x-0 md:flex' : 'translate-x-full md:hidden'}
+                        ${showCharts
+                            ? `fixed inset-y-0 right-0 top-12 bottom-0 z-40 bg-card border-l border-border transition-transform duration-300 ease-in-out font-sans
+                               md:relative md:top-0 md:translate-x-0 md:flex-col md:flex-none md:transition-none
+                               ${rightSidebarOpen ? 'translate-x-0 md:flex' : 'translate-x-full md:hidden'}`
+                            : 'relative flex-1 min-w-0 bg-card font-sans'}
 `}
-                    style={{ width: window.innerWidth >= 768 ? sidebarWidth : '288px' }} // 288px = w-72 (mobile default)
+                    style={showCharts ? { width: window.innerWidth >= 768 ? sidebarWidth : '288px' } : { width: '100%' }} // 288px = w-72 (mobile default)
                 >
                     <div className="flex flex-col h-full relative" ref={sidebarRef}>
                         {/* Top Half: Watchlist */}
@@ -916,9 +927,9 @@ const TradingLayout = () => {
                                 selectedSymbol={selectedSymbol}
                                 onSelect={(s) => {
                                     setSelectedSymbol(s);
-                                    if (window.innerWidth < 768) setRightSidebarOpen(false);
+                                    if (showCharts && window.innerWidth < 768) setRightSidebarOpen(false);
                                 }}
-                                onClose={() => setRightSidebarOpen(false)}
+                                onClose={showCharts ? () => setRightSidebarOpen(false) : undefined}
                                 onAddSymbol={() => setSearchModal({ isOpen: true, mode: 'ADD' })} // Open Search to ADD
                                 onRemoveSymbol={handleRemoveSymbol}
                                 onReorder={handleWatchlistReorder}
@@ -945,7 +956,7 @@ const TradingLayout = () => {
 
 
                 {/* Mobile Overlay */}
-                {rightSidebarOpen && (
+                {showCharts && rightSidebarOpen && (
                     <div
                         className="fixed inset-0 top-12 bg-black/50 z-30 md:hidden backdrop-blur-[1px]"
                         onClick={() => setRightSidebarOpen(false)}
@@ -979,45 +990,47 @@ const TradingLayout = () => {
                 }}
             />
 
-            <IndicatorsModal
-                isOpen={indicatorsModalOpen}
-                onClose={() => setIndicatorsModalOpen(false)}
-                onAddIndicator={(ind) => {
-                    if (ind.id === 'VOL') {
-                        setShowVolume(true);
-                    } else {
-                        setActiveIndicators(prev => [...prev, ind]);
-                    }
-                }}
-            />
+            {showCharts && (
+                <>
+                    <IndicatorsModal
+                        isOpen={indicatorsModalOpen}
+                        onClose={() => setIndicatorsModalOpen(false)}
+                        onAddIndicator={(ind) => {
+                            if (ind.id === 'VOL') {
+                                setShowVolume(true);
+                            } else {
+                                setActiveIndicators(prev => [...prev, ind]);
+                            }
+                        }}
+                    />
 
-            <TradingChartSettings
-                isOpen={settingsModalOpen}
-                onClose={() => setSettingsModalOpen(false)}
-                chartType={chartType}
-                onChartTypeChange={setChartType}
-                settings={chartSettings}
-                onSettingsChange={setChartSettings}
-            />
+                    <TradingChartSettings
+                        isOpen={settingsModalOpen}
+                        onClose={() => setSettingsModalOpen(false)}
+                        chartType={chartType}
+                        onChartTypeChange={setChartType}
+                        settings={chartSettings}
+                        onSettingsChange={setChartSettings}
+                    />
 
-            <IndicatorSettingsModal
-                isOpen={!!editingIndicator}
-                onClose={() => setEditingIndicator(null)}
-                indicator={editingIndicator}
-                onSave={(uuid, newSettings) => {
-                    setActiveIndicators(prev => prev.map(i => i.uuid === uuid ? { ...i, ...newSettings } : i));
-                }}
-            />
+                    <IndicatorSettingsModal
+                        isOpen={!!editingIndicator}
+                        onClose={() => setEditingIndicator(null)}
+                        indicator={editingIndicator}
+                        onSave={(uuid, newSettings) => {
+                            setActiveIndicators(prev => prev.map(i => i.uuid === uuid ? { ...i, ...newSettings } : i));
+                        }}
+                    />
 
-            <SnapshotModal
-                isOpen={snapshotModal.isOpen}
-                onClose={() => setSnapshotModal({ ...snapshotModal, isOpen: false })}
-                imageSrc={snapshotModal.image}
-                fileName={`MSPK_Chart_${selectedSymbol?.symbol || 'Chart'}_${parseFloat(timeframe) ? timeframe + 'm' : timeframe}_${new Date().toISOString().slice(0, 10)}.png`}
-            />
+                    <SnapshotModal
+                        isOpen={snapshotModal.isOpen}
+                        onClose={() => setSnapshotModal({ ...snapshotModal, isOpen: false })}
+                        imageSrc={snapshotModal.image}
+                        fileName={`MSPK_Chart_${selectedSymbol?.symbol || 'Chart'}_${parseFloat(timeframe) ? timeframe + 'm' : timeframe}_${new Date().toISOString().slice(0, 10)}.png`}
+                    />
+                </>
+            )}
 
-            {/* Phase 5 Performance Monitor */}
-            <PerformanceMonitor />
         </div>
     );
 };

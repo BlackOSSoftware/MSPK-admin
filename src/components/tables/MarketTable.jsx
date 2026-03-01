@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MoreVertical, CheckCircle, XCircle, Trash2, Edit, TrendingUp, TrendingDown } from 'lucide-react';
+import { MoreVertical, CheckCircle, XCircle, Trash2, Edit, TrendingUp, TrendingDown, Activity, Globe, Tag, Layers, Radio, Settings } from 'lucide-react';
 import { socket } from '../../api/socket';
+import TableHeaderCell from '../ui/TableHeaderCell';
 
 const MarketTable = ({ symbols, onEdit, onDelete, isLoading }) => {
     const [ltpData, setLtpData] = useState({});
@@ -44,13 +45,13 @@ const MarketTable = ({ symbols, onEdit, onDelete, isLoading }) => {
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Instrument</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24">LTP</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Exchange</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Segment</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Lot Size</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Data Feed</th>
-                            <th className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm">Actions</th>
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Activity} label="Instrument" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24" icon={TrendingUp} label="LTP" align="right" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Globe} label="Exchange" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Tag} label="Segment" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Layers} label="Lot Size" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Radio} label="Data Feed" align="center" />
+                            <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={Settings} label="Actions" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">

@@ -1,251 +1,470 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, CreditCard,
-    BarChart2, Settings, FileText, X, AlignLeft,
-    RefreshCcw, Radio, MessageSquare, Megaphone, PieChart,
-    ChevronLeft, ChevronRight, Activity, Command, Cpu, Wifi, Calendar
+    BarChart2, Settings, FileText,
+    RefreshCcw, Radio, MessageSquare, Megaphone,
+    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X
 } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../store/authSlice';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { getSystemHealth } from '../../api/system.api';
 
-const SidebarItem = ({ icon: Icon, label, to, collapsed }) => (
+const isPathActive = (pathname, targetPath) =>
+    pathname === targetPath || pathname.startsWith(`${targetPath}/`);
+
+const SidebarItem = ({ icon: Icon, label, to, collapsed, onNavigate, variant = 'item' }) => (
     <NavLink
         to={to}
+        onClick={onNavigate}
+        title={collapsed ? label : undefined}
         className={({ isActive }) =>
             twMerge(
-                "flex items-center gap-3 px-4 py-2.5 w-full border-b border-border transition-all duration-300 group relative",
+                "group relative flex items-center gap-3 w-full rounded-xl border transition-all duration-200 outline-none",
+                "focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                variant === 'sub'
+                    ? (collapsed ? "my-0.5 px-2 py-2" : "my-0.5 px-3 py-2")
+                    : "my-0.5 px-3 py-2.5",
+                collapsed && "justify-center",
                 isActive
-                    ? "bg-primary/10 text-primary border-r-2 border-r-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                    ? "bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border-primary/25 text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/10 hover:border-border/60"
             )
         }
     >
         {({ isActive }) => (
             <>
-                <Icon
-                    size={16}
-                    className={clsx(
-                        "shrink-0 transition-all duration-300 z-10",
-                        isActive ? "text-primary drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" : "group-hover:text-foreground"
+                <span
+                    className={twMerge(
+                        "grid place-items-center shrink-0 rounded-lg border bg-accent/10",
+                        variant === 'sub' ? "h-7 w-7" : "h-8 w-8",
+                        isActive
+                            ? "border-primary/30 text-primary bg-primary/10"
+                            : "border-border/50 text-muted-foreground group-hover:text-foreground"
                     )}
-                />
+                >
+                    <Icon size={16} />
+                </span>
 
-                <span className={clsx(
-                    "text-[11px] font-semibold tracking-tight transition-all duration-300 z-10 whitespace-nowrap",
-                    collapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block"
-                )}>
+                <span
+                    className={clsx(
+                        "min-w-0 text-[11px] font-semibold tracking-tight whitespace-nowrap transition-all duration-200",
+                        collapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block"
+                    )}
+                >
                     {label}
                 </span>
 
-                {/* Glow effect */}
-                {!isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                )}
+                
             </>
         )}
     </NavLink>
 );
 
-const SidebarGroup = ({ icon: Icon, label, children, collapsed }) => {
-    const [isGroupOpen, setIsGroupOpen] = useState(false);
+const SidebarGroup = ({ icon: Icon, label, submenu = [], collapsed, onNavigate }) => {
+    const location = useLocation();
+    const hasActiveChild = submenu.some((subItem) => isPathActive(location.pathname, subItem.path));
+    const [isGroupOpen, setIsGroupOpen] = useState(hasActiveChild);
+
+    useEffect(() => {
+        if (hasActiveChild) setIsGroupOpen(true);
+    }, [hasActiveChild]);
 
     return (
         <div className="w-full">
             <button
-                onClick={() => setIsGroupOpen(!isGroupOpen)}
+                type="button"
+                onClick={() => setIsGroupOpen((prev) => !prev)}
+                title={collapsed ? label : undefined}
                 className={twMerge(
-                    "flex items-center gap-3 px-4 py-2.5 w-full text-left border-b border-border transition-all duration-300 group relative hover:bg-accent/10",
-                    isGroupOpen ? "text-foreground bg-accent/5" : "text-muted-foreground"
+                    "group relative flex items-center gap-3 w-full rounded-xl border transition-all duration-200 outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "my-0.5 px-3 py-2.5",
+                    collapsed && "justify-center",
+                    hasActiveChild
+                        ? "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20 text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/10 hover:border-border/60"
                 )}
             >
-                <Icon size={16} className={clsx("shrink-0 transition-colors", isGroupOpen && "text-primary")} />
-                <span className={clsx("text-[11px] font-semibold tracking-tight transition-all duration-300", collapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block")}>
+                <span
+                    className={twMerge(
+                        "grid place-items-center shrink-0 rounded-lg border bg-accent/10",
+                        "h-8 w-8",
+                        hasActiveChild || isGroupOpen
+                            ? "border-primary/30 text-primary bg-primary/10"
+                            : "border-border/50 text-muted-foreground group-hover:text-foreground"
+                    )}
+                >
+                    <Icon size={16} />
+                </span>
+
+                <span
+                    className={clsx(
+                        "min-w-0 text-[11px] font-semibold tracking-tight whitespace-nowrap transition-all duration-200",
+                        collapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block"
+                    )}
+                >
                     {label}
                 </span>
+
                 {!collapsed && (
-                    <div className={clsx("ml-auto transition-transform duration-300", isGroupOpen ? "rotate-90" : "")}>
-                        <ChevronRight size={12} />
-                    </div>
+                    <span className={clsx("ml-auto transition-transform duration-200", isGroupOpen ? "rotate-180" : "rotate-0")}>
+                        <ChevronDown size={14} />
+                    </span>
                 )}
+
+                
             </button>
-            <div className={clsx("overflow-hidden transition-all duration-300 bg-black/20", isGroupOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0")}>
-                <div className="">
-                    {children}
+
+            <div
+                className={clsx(
+                    "grid transition-all duration-300",
+                    isGroupOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                )}
+            >
+                <div className="overflow-hidden">
+                    <div className={twMerge("mt-1 space-y-1 pb-1", collapsed ? "px-0" : "pl-6 pr-2")}>
+                        {submenu.map((subItem) => (
+                            <SidebarItem
+                                key={subItem.name}
+                                icon={subItem.icon}
+                                label={subItem.name}
+                                to={subItem.path}
+                                collapsed={collapsed}
+                                onNavigate={onNavigate}
+                                variant="sub"
+                            />
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
+const RailLink = ({ icon: Icon, label, to, active, onNavigate }) => (
+    <NavLink
+        to={to}
+        onClick={onNavigate}
+        title={label}
+        className={twMerge(
+            "relative mx-2 my-1 grid place-items-center h-10 w-10 rounded-xl border transition-all duration-200 outline-none",
+            "focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            active
+                ? "bg-gradient-to-br from-primary/15 to-transparent border-primary/25 text-primary"
+                : "bg-accent/5 border-border/40 text-muted-foreground hover:text-foreground hover:bg-accent/10 hover:border-border/70"
+        )}
+        aria-current={active ? "page" : undefined}
+    >
+        <Icon size={18} />
+    </NavLink>
+);
+
 const Sidebar = ({ isOpen, onClose }) => {
     const [collapsed, setCollapsed] = useState(false);
-    const [systemHealth, setSystemHealth] = useState({ serverLoad: 0, memoryUsage: 0 });
+    const location = useLocation();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    useEffect(() => {
-        const fetchHealth = async () => {
-            try {
-                const data = await getSystemHealth();
-                setSystemHealth(data);
-            } catch (error) {
-                console.error("Failed to fetch system health", error);
-            }
-        };
+    const handleLogout = () => {
+        dispatch(logout());
+        onClose?.();
+        navigate('/login');
+    };
 
-        fetchHealth();
-        const interval = setInterval(fetchHealth, 30000); // Update every 30s
-        return () => clearInterval(interval);
-    }, []);
+    const handleNavigate = () => {
+        onClose?.();
+    };
 
-    const navigation = [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'All Users', path: '/users/all', icon: Users },
-        { name: 'Plans', path: '/plans/all', icon: CreditCard },
-        { name: 'Subscriptions', path: '/subscriptions/all', icon: RefreshCcw },
-        { name: 'Signals', path: '/signals/all', icon: Radio },
-        { name: 'Strategies', path: '/strategies/all', icon: Cpu },
+    const navigationSections = [
         {
-            name: 'Market Data',
-            icon: BarChart2,
-            submenu: [
-                { name: 'Live Market', path: '/market/data', icon: Activity },
-                { name: 'Manage Symbols', path: '/market/symbols', icon: Settings }
-            ]
+            title: 'Overview',
+            items: [
+                { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+            ],
         },
-        { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
-        { name: 'Inquiries', path: '/leads/all', icon: Users }, // Added Leads
-        { name: 'Reports', path: '/reports/all', icon: PieChart },
         {
-            name: 'Announcements',
-            icon: Megaphone,
-            submenu: [
-                { name: 'All News', path: '/announcements/all', icon: Megaphone },
-                { name: 'Economic Calendar', path: '/announcements/calendar', icon: Calendar }
-            ]
+            title: 'Management',
+            items: [
+                { name: 'All Users', path: '/users/all', icon: Users },
+                { name: 'Plans', path: '/plans/all', icon: CreditCard },
+                { name: 'Subscriptions', path: '/subscriptions/all', icon: RefreshCcw },
+                { name: 'Sub Brokers', path: '/brokers/all', icon: Users },
+            ],
         },
-        { name: 'CMS', path: '/cms/all', icon: FileText },
-        { name: 'Sub Brokers', path: '/brokers/all', icon: Users }, // Reusing Users icon or similar
         {
-            name: 'Settings',
-            icon: Settings,
-            submenu: [
-                { name: 'General', path: '/settings/all', icon: Settings },
-                { name: 'System Monitor', path: '/monitor', icon: Activity },
-                { name: 'Notifications', path: '/settings/notifications', icon: MessageSquare }
-            ]
+            title: 'Trading',
+            items: [
+                { name: 'Signals', path: '/signals/all', icon: Radio },
+                {
+                    name: 'Market Data',
+                    icon: BarChart2,
+                    submenu: [
+                        { name: 'Live Market', path: '/market/data', icon: Activity },
+                        { name: 'Manage Symbols', path: '/market/symbols', icon: Settings },
+                    ],
+                },
+            ],
+        },
+        {
+            title: 'Support',
+            items: [
+                { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
+                { name: 'Inquiries', path: '/leads/all', icon: Users },
+            ],
+        },
+        {
+            title: 'Content',
+            items: [
+                {
+                    name: 'Announcements',
+                    icon: Megaphone,
+                    submenu: [
+                        { name: 'All News', path: '/announcements/all', icon: Megaphone },
+                        { name: 'Economic Calendar', path: '/announcements/calendar', icon: Calendar },
+                    ],
+                },
+                { name: 'CMS', path: '/cms/all', icon: FileText },
+            ],
+        },
+        {
+            title: 'Preferences',
+            items: [
+                {
+                    name: 'Settings',
+                    icon: Settings,
+                    submenu: [
+                        { name: 'General', path: '/settings/all', icon: Settings },
+                        { name: 'Notifications', path: '/settings/notifications', icon: MessageSquare },
+                    ],
+                },
+            ],
         },
     ];
+
+    const railLinks = [
+        { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, isActive: (p) => p === '/' || p.startsWith('/dashboard') },
+        { label: 'Users', to: '/users/all', icon: Users, isActive: (p) => p.startsWith('/users') },
+        { label: 'Plans', to: '/plans/all', icon: CreditCard, isActive: (p) => p.startsWith('/plans') },
+        { label: 'Subscriptions', to: '/subscriptions/all', icon: RefreshCcw, isActive: (p) => p.startsWith('/subscriptions') },
+        { label: 'Signals', to: '/signals/all', icon: Radio, isActive: (p) => p.startsWith('/signals') },
+        { label: 'Market', to: '/market/data', icon: Activity, isActive: (p) => p.startsWith('/market') },
+        { label: 'Tickets', to: '/tickets/all', icon: MessageSquare, isActive: (p) => p.startsWith('/tickets') },
+        { label: 'News', to: '/announcements/all', icon: Megaphone, isActive: (p) => p.startsWith('/announcements') },
+    ];
+
+    const railContent = (
+        <>
+            <div className="relative z-10 px-2 pt-3 pb-2 flex flex-col items-center gap-2">
+                <div className="h-10 w-10 rounded-xl bg-accent/10 border border-border/60 flex items-center justify-center overflow-hidden shrink-0">
+                    <img
+                        src="/logo.jpeg"
+                        alt="MSPK Trade Solutions"
+                        className="h-6 w-6 object-contain"
+                    />
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => setCollapsed((prev) => !prev)}
+                    className={twMerge(
+                        "h-10 w-10 rounded-xl border transition-colors cursor-grab active:cursor-grabbing",
+                        "text-muted-foreground hover:text-foreground hover:bg-accent/10",
+                        "border-border/40 bg-accent/5"
+                    )}
+                    title={collapsed ? "Expand" : "Collapse"}
+                >
+                    {collapsed ? <ChevronRight size={18} className="mx-auto" /> : <ChevronLeft size={18} className="mx-auto" />}
+                </button>
+            </div>
+
+            <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar pb-2">
+                {railLinks.map((link) => (
+                    <RailLink
+                        key={link.label}
+                        icon={link.icon}
+                        label={link.label}
+                        to={link.to}
+                        active={link.isActive(location.pathname)}
+                        onNavigate={handleNavigate}
+                    />
+                ))}
+            </div>
+
+            <div className="relative z-10 border-t border-border/60 px-2 py-3 flex flex-col items-center gap-2">
+                <RailLink
+                    icon={Settings}
+                    label="Settings"
+                    to="/settings/all"
+                    active={location.pathname.startsWith('/settings')}
+                    onNavigate={handleNavigate}
+                />
+                <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="Logout"
+                    className={twMerge(
+                        "relative mx-2 my-1 grid place-items-center h-10 w-10 rounded-xl border transition-all duration-200 outline-none",
+                        "focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "bg-accent/5 border-border/40 text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+                    )}
+                >
+                    <LogOut size={18} />
+                </button>
+            </div>
+        </>
+    );
+
+    const panelContent = (
+        <>
+            {/* Panel Header */}
+            <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-4 border-b border-border/60 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-xl bg-accent/10 border border-border/60 flex items-center justify-center overflow-hidden shrink-0">
+                        <img
+                            src="/logo.jpeg"
+                            alt="MSPK Trade Solutions"
+                            className="h-6 w-6 object-contain"
+                        />
+                    </div>
+                    <div className="min-w-0 leading-tight">
+                        <p className="text-sm font-bold tracking-tight text-foreground truncate">MSPK Trade Solutions</p>
+                        <p className="text-[10px] text-muted-foreground font-medium truncate">Admin Console</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setCollapsed((prev) => !prev)}
+                        className={twMerge(
+                            "hidden md:inline-flex p-2 rounded-lg border transition-colors cursor-grab active:cursor-grabbing",
+                            "text-muted-foreground hover:text-foreground hover:bg-accent/10",
+                            "border-border/40 bg-accent/5"
+                        )}
+                        title={collapsed ? "Expand" : "Minimize"}
+                    >
+                        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
+                        title="Close"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Navigation */}
+            <nav className="relative z-10 flex-1 overflow-y-auto no-scrollbar px-1.5 py-3">
+                {navigationSections.map((section) => (
+                    <div key={section.title} className="mb-2">
+                        <div className="space-y-0.5">
+                            {section.items.map((item) => (
+                                <React.Fragment key={item.name}>
+                                    {item.submenu ? (
+                                        <SidebarGroup
+                                            icon={item.icon}
+                                            label={item.name}
+                                            submenu={item.submenu}
+                                            collapsed={false}
+                                            onNavigate={handleNavigate}
+                                        />
+                                    ) : (
+                                        <SidebarItem
+                                            icon={item.icon}
+                                            label={item.name}
+                                            to={item.path}
+                                            collapsed={false}
+                                            onNavigate={handleNavigate}
+                                        />
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </nav>
+
+            {/* Panel Footer (Mobile) */}
+            <div className="relative z-10 border-t border-border/60 px-1.5 py-3 md:hidden">
+                <button
+                    type="button"
+                    onClick={handleLogout}
+                    className={twMerge(
+                        "group relative flex items-center gap-3 w-full rounded-xl border transition-all duration-200 outline-none",
+                        "focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "px-3 py-2.5",
+                        "border-transparent text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+                    )}
+                >
+                    <span
+                        className={twMerge(
+                            "grid place-items-center shrink-0 h-8 w-8 rounded-lg border bg-accent/10",
+                            "border-border/50 text-muted-foreground group-hover:text-destructive"
+                        )}
+                    >
+                        <LogOut size={16} />
+                    </span>
+                    <span className="text-[11px] font-semibold tracking-tight whitespace-nowrap">
+                        Logout
+                    </span>
+                </button>
+
+                <div className="px-4 pt-3 text-[9px] text-muted-foreground/60 font-mono">
+                    v1.0.0
+                </div>
+            </div>
+        </>
+    );
 
     return (
         <>
             {/* Mobile Backdrop */}
             <div
                 className={clsx(
-                    "fixed inset-0 bg-black/80 backdrop-blur-sm z-30 transition-opacity md:hidden",
+                    "fixed inset-0 z-30 bg-background/40 backdrop-blur-sm transition-opacity md:hidden",
                     isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
                 )}
                 onClick={onClose}
             />
 
-            <div
+            <aside
                 className={clsx(
-                    "fixed inset-y-0 left-0 z-40 flex flex-col bg-card border-r border-border transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] shadow-2xl md:shadow-none",
-                    isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-                    collapsed ? "md:w-14" : "md:w-60",
-                    "w-60 md:static"
+                    "fixed inset-y-0 left-0 z-40 shrink-0 md:static md:translate-x-0",
+                    "transition-transform duration-300 ease-out",
+                    isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
                 )}
             >
-                {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-b from-primary/2 via-transparent to-transparent pointer-events-none opacity-20" />
-
-                {/* Header / Brand */}
-                <div className={clsx("h-8 flex items-center border-b border-border px-4 shrink-0 relative z-10", collapsed ? "justify-center px-0" : "justify-between")}>
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <img
-                            src="/logo.jpeg"
-                            alt="MSPK Trade Solutions"
-                            className="w-6 h-6 object-contain rounded-sm shrink-0"
-                        />
-                        <div className={clsx("flex flex-col transition-all duration-300", collapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block")}>
-                            <span className="text-[10px] font-black tracking-tighter text-foreground leading-none">MSPK <span className="text-primary">TRADE SOLUTIONS</span></span>
-                        </div>
-                    </div>
-                    <div className={clsx("transition-all duration-300", collapsed ? "hidden" : "block")}>
-                        <span className="text-[8px] font-bold text-muted-foreground tracking-wider border border-border bg-accent/5 px-1 rounded-sm">v1.0.0</span>
-                    </div>
-                </div>
-
-                {/* Section Divider */}
-                {!collapsed && <div className="px-4 py-2 text-[8px] font-bold text-muted-foreground uppercase tracking-widest relative z-10 border-b border-border opacity-50">Main Menu</div>}
-
-                {/* Navigation Items */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
-                    {navigation.map((item, index) => (
-                        <React.Fragment key={item.name}>
-                            {item.submenu ? (
-                                <SidebarGroup icon={item.icon} label={item.name} collapsed={collapsed}>
-                                    {item.submenu.map((subItem) => (
-                                        <SidebarItem
-                                            key={subItem.name}
-                                            icon={subItem.icon}
-                                            label={subItem.name}
-                                            to={subItem.path}
-                                            collapsed={collapsed}
-                                        />
-                                    ))}
-                                </SidebarGroup>
-                            ) : (
-                                <SidebarItem
-                                    icon={item.icon}
-                                    label={item.name}
-                                    to={item.path}
-                                    collapsed={collapsed}
-                                />
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
-
-
-                <button
-                    onClick={() => setCollapsed(!collapsed)}
-                    className="absolute -right-2 top-10 w-4 h-4 bg-card border border-primary/50 rounded-full flex items-center justify-center text-primary shadow-lg hover:scale-110 transition-transform z-50 md:flex hidden"
-                >
-                    {collapsed ? <ChevronRight size={10} /> : <ChevronLeft size={10} />}
-                </button>
-
-                {/* System Status */}
-                <div className="border-t border-border bg-accent/5 backdrop-blur-sm">
-                    {(!collapsed) ? (
-                        <div className="px-4 py-3 space-y-3">
-                            <div className="space-y-2">
-                                {/* CPU Load */}
-                                <div className="space-y-1">
-                                    <div className="flex items-center justify-between text-[9px] text-muted-foreground">
-                                        <div className="flex items-center gap-2">
-                                            <Cpu size={10} />
-                                            <span>Server Load</span>
-                                        </div>
-                                        <span className="text-xs font-mono text-foreground">{systemHealth.serverLoad}%</span>
-                                    </div>
-                                    <div className="h-1 w-full bg-accent/10 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-primary to-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-1000 ease-out"
-                                            style={{ width: `${Math.min(systemHealth.serverLoad, 100)}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
+                <div className="h-full p-2">
+                    {/* Desktop */}
+                    <div className="hidden md:block h-full">
+                        {collapsed ? (
+                            <div className="h-full w-16 flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
+                                <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none" />
+                                {railContent}
                             </div>
+                        ) : (
+                            <div className="h-full w-72 flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
+                                <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none" />
+                                {panelContent}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mobile */}
+                    <div className="md:hidden h-full">
+                        <div className="h-full w-[85vw] max-w-[360px] flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
+                            <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none opacity-60" />
+                            {panelContent}
                         </div>
-                    ) : (
-                        <div className="flex flex-col items-center gap-2 py-3">
-                            <Activity size={14} className="text-primary hover:animate-spin cursor-pointer" />
-                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>
-                        </div>
-                    )}
+                    </div>
                 </div>
-            </div>
+            </aside>
         </>
     );
 };

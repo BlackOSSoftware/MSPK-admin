@@ -2,7 +2,7 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-const Card = ({ children, className, title, action, noPadding = false, ...props }) => {
+const Card = ({ children, className, title, action, noPadding = false, showAccents = true, ...props }) => {
     return (
         <div
             {...props}
@@ -20,11 +20,14 @@ const Card = ({ children, className, title, action, noPadding = false, ...props 
                 {children}
             </div>
 
-            {/* Corner Accents for Tech Feel */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-primary/50 opacity-50"></div>
-            <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-primary/50 opacity-50"></div>
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-primary/50 opacity-50"></div>
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-primary/50 opacity-50"></div>
+            {showAccents && (
+                <>
+                    <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-primary/30 dark:border-primary/50 opacity-20 dark:opacity-50"></div>
+                    <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-primary/30 dark:border-primary/50 opacity-20 dark:opacity-50"></div>
+                    <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-primary/30 dark:border-primary/50 opacity-20 dark:opacity-50"></div>
+                    <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-primary/30 dark:border-primary/50 opacity-20 dark:opacity-50"></div>
+                </>
+            )}
         </div>
     );
 };

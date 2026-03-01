@@ -2,15 +2,30 @@ import React from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts';
 import { useTheme } from '../theme-provider';
 import Card from '../ui/Card';
-import Badge from '../ui/Badge';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 
-const VisualStatCard = ({ title, value, change, type = 'area', data, color = '#f59e0b', subtext, onClick }) => {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
+const toRgba = (hex, alpha) => {
+    if (typeof hex !== 'string') return `rgba(99, 102, 241, ${alpha})`;
+    let value = hex.replace('#', '').trim();
+    if (value.length === 3) {
+        value = value.split('').map((c) => c + c).join('');
+    }
+    if (value.length !== 6) return `rgba(99, 102, 241, ${alpha})`;
+    const r = parseInt(value.slice(0, 2), 16);
+    const g = parseInt(value.slice(2, 4), 16);
+    const b = parseInt(value.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const VisualStatCard = ({ title, value, change, type = 'area', data, color = '#f59e0b', subtext, onClick, icon: Icon }) => {
+    const { resolvedMode } = useTheme();
+    const isDark = resolvedMode === 'dark';
 
     // Theme color adjustment
     const chartColor = color;
+    const StatIcon = Icon || Activity;
+    const iconBg = toRgba(chartColor, 0.12);
+    const iconBorder = toRgba(chartColor, 0.24);
 
     const renderChart = () => {
         // Data normalization
@@ -54,55 +69,60 @@ const VisualStatCard = ({ title, value, change, type = 'area', data, color = '#f
         }
     };
 
-    const isPositive = !change.startsWith('-');
+    const isPositive = change && !change.startsWith('-');
 
     return (
         <Card
-            className={`h-full relative overflow-hidden group hover:border-primary/50 transition-all duration-500 bg-background/50 ${onClick ? 'cursor-pointer' : ''}`}
+            showAccents={false}
+            className={`dashboard-surface soft-shadow soft-shadow-hover h-full relative overflow-hidden group transition-all duration-300 bg-card/90 border border-border/70 ring-1 ring-transparent hover:ring-primary/15 ${onClick ? 'cursor-pointer' : ''}`}
             noPadding
             onClick={onClick}
         >
-            {/* Cyber Grid Background */}
-            <div className="absolute inset-0 bg-cyber-grid opacity-20 pointer-events-none"></div>
-
-            {/* Top Shine */}
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-            <div className="p-3 relative z-10 flex flex-col h-full justify-between">
-                <div className="flex justify-between items-start">
+            <div className="p-4 relative z-10 flex flex-col h-full justify-between">
+                <div className="flex items-start justify-between gap-3">
                     <div>
-                        <h3 className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase mb-0.5 flex items-center gap-1.5">
-                            {type === 'area' && <Activity size={10} className="text-primary" />}
-                            {title}
-                        </h3>
-                        <p className="text-2xl font-bold text-foreground font-mono tracking-tighter tabular-nums" style={{ textShadow: `0 0 10px ${chartColor}40` }}>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span
+                                className="h-7 w-7 rounded-lg border flex items-center justify-center"
+                                style={{ backgroundColor: iconBg, borderColor: iconBorder, color: chartColor }}
+                            >
+                                <StatIcon size={13} />
+                            </span>
+                            <h3 className="text-muted-foreground text-[10px] font-semibold tracking-[0.2em] uppercase">
+                                {title}
+                            </h3>
+                        </div>
+                        <p className="text-2xl md:text-[26px] font-semibold text-foreground tracking-tight tabular-nums">
                             {value}
                         </p>
                     </div>
                     {change && (
-                        <div className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-sm border ${isPositive ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' : 'text-red-500 border-red-500/20 bg-red-500/5'}`}>
-                            {isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        <div
+                            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full border ${
+                                isPositive
+                                    ? 'text-emerald-600 border-emerald-500/20 bg-emerald-500/10'
+                                    : 'text-rose-600 border-rose-500/20 bg-rose-500/10'
+                            }`}
+                        >
+                            {isPositive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                             {change}
                         </div>
                     )}
                 </div>
 
                 {subtext && (
-                    <div className="flex items-center gap-2 mt-1">
-                        <div className="h-1 w-1 rounded-full bg-primary animate-pulse"></div>
-                        <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-wider opacity-70">{subtext}</p>
+                    <div className="flex items-center gap-2 mt-3">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                        <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-[0.18em]">
+                            {subtext}
+                        </p>
                     </div>
                 )}
             </div>
 
-            {/* Visual Background / Sparkline */}
-            {/* Fixed positioning for radial chart to be bottom-right instead of top-right to avoid overlap */}
-            <div className={`absolute bottom-0 right-0 z-0 opacity-30 transition-opacity group-hover:opacity-50 ${type === 'radial' ? 'w-16 h-16 right-1 bottom-1' : 'w-full h-16 bottom-0'}`}>
+            <div className={`absolute bottom-0 right-0 z-0 opacity-35 transition-opacity group-hover:opacity-50 ${type === 'radial' ? 'w-16 h-16 right-1 bottom-1' : 'w-full h-16 bottom-0'}`}>
                 {renderChart()}
             </div>
-
-            {/* Bottom Accent Line */}
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-primary transition-all duration-700 group-hover:w-full"></div>
         </Card>
     );
 };

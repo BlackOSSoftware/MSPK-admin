@@ -209,8 +209,8 @@ const NotificationTemplates = () => {
                                 className={clsx(
                                     "px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all border break-words",
                                     selectedType === key
-                                        ? "bg-primary/10 border-primary text-primary shadow-[0_0_10px_rgba(16,185,129,0.2)]"
-                                        : "bg-secondary/30 border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-white"
+                                        ? "bg-primary/10 border-primary text-primary shadow-[0_0_10px_hsl(var(--primary)/0.14)]"
+                                        : "bg-secondary/30 border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                                 )}
                             >
                                 {key.replace(/_/g, ' ')}
@@ -218,7 +218,7 @@ const NotificationTemplates = () => {
                         ))}
                     </div>
 
-                    <div className="bg-card border border-white/5 rounded-xl p-4 sm:p-6 shadow-sm space-y-6">
+                    <div className="bg-card border border-border/70 rounded-xl p-4 sm:p-6 shadow-sm space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <h3 className="text-sm font-bold text-foreground">Message Content</h3>
                             <div className="flex flex-wrap gap-1.5 bg-secondary/20 p-2 rounded-lg">
@@ -228,7 +228,7 @@ const NotificationTemplates = () => {
                                         key={variable}
                                         onTouchStart={(e) => { e.preventDefault(); insertVariable(variable); }}
                                         onClick={() => insertVariable(variable)}
-                                        className="px-2 py-1 rounded bg-secondary/50 border border-white/5 text-[10px] text-primary font-mono hover:bg-primary/20 hover:border-primary/30 active:scale-95 transition-all"
+                                        className="px-2 py-1 rounded bg-secondary/50 border border-border/70 text-[10px] text-primary font-mono hover:bg-primary/20 hover:border-primary/30 active:scale-95 transition-all"
                                         title="Click to insert"
                                     >
                                         {variable}
@@ -244,7 +244,7 @@ const NotificationTemplates = () => {
                                     type="text"
                                     value={templates[selectedType].title}
                                     onChange={(e) => handleChange('title', e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                    className="w-full bg-secondary/30 border border-border/70 rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium"
                                     placeholder="Enter notification title..."
                                 />
                             </div>
@@ -256,7 +256,7 @@ const NotificationTemplates = () => {
                                     value={templates[selectedType].body}
                                     onChange={(e) => handleChange('body', e.target.value)}
                                     rows={6}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all resize-none leading-relaxed"
+                                    className="w-full bg-secondary/30 border border-border/70 rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all resize-none leading-relaxed"
                                     placeholder="Enter message body..."
                                 />
                                 <p className="text-[10px] text-muted-foreground pl-1">

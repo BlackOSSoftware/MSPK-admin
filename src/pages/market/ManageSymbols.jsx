@@ -297,7 +297,7 @@ const ManageSymbols = () => {
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => setNewSegment({ name: '', code: '' })}
-                                            className="h-6 text-[10px] text-muted-foreground hover:text-white"
+                                            className="h-6 text-[10px] text-muted-foreground hover:text-foreground"
                                         >
                                             Cancel
                                         </Button>

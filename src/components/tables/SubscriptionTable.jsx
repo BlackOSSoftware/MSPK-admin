@@ -1,5 +1,6 @@
 import React from 'react';
-import { Download, ShoppingCart, RefreshCcw, CheckCircle, XCircle } from 'lucide-react';
+import { Download, ShoppingCart, RefreshCcw, CheckCircle, XCircle, Hash, User, CreditCard, DollarSign, Calendar, Wallet, BadgeCheck } from 'lucide-react';
+import TableHeaderCell from '../ui/TableHeaderCell';
 
 const SubscriptionTable = ({ transactions, highlightTerm, isLoading }) => {
     return (
@@ -11,13 +12,13 @@ const SubscriptionTable = ({ transactions, highlightTerm, isLoading }) => {
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Transaction ID</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">User Name</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Plan</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Amount</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Date</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Method</th>
-                            <th className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm">Status</th>
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Hash} label="Transaction ID" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={User} label="User Name" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={CreditCard} label="Plan" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={DollarSign} label="Amount" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Calendar} label="Date" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Wallet} label="Method" align="center" />
+                            <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={BadgeCheck} label="Status" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">

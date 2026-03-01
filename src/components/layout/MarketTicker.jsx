@@ -2,10 +2,10 @@ import React from 'react';
 import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
 
 const TickerItem = ({ symbol, price, change, isPositive }) => (
-    <div className="flex items-center gap-3 px-6 border-r border-white/5 min-w-max">
-        <span className="font-bold text-slate-300 font-mono tracking-tight">{symbol}</span>
-        <span className="font-mono text-white">{price}</span>
-        <span className={`text-xs flex items-center gap-1 font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+    <div className="flex items-center gap-3 px-6 border-r border-border/60 min-w-max">
+        <span className="font-bold text-muted-foreground font-mono tracking-tight">{symbol}</span>
+        <span className="font-mono text-foreground">{price}</span>
+        <span className={`text-xs flex items-center gap-1 font-medium ${isPositive ? 'text-up' : 'text-down'}`}>
             {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {change}%
         </span>
@@ -24,8 +24,8 @@ const MarketTicker = () => {
     ];
 
     return (
-        <div className="h-9 bg-slate-950/50 border-b border-white/5 flex items-center overflow-hidden relative backdrop-blur-md">
-            <div className="flex items-center px-4 bg-slate-900 h-full border-r border-slate-800 text-amber-500 gap-2 shrink-0 z-10">
+        <div className="h-9 bg-card/60 border-b border-border/70 flex items-center overflow-hidden relative backdrop-blur-md">
+            <div className="flex items-center px-4 bg-secondary/60 h-full border-r border-border/60 text-primary gap-2 shrink-0 z-10">
                 <Clock size={12} />
                 <span className="text-[10px] font-bold tracking-wider uppercase hidden md:inline">Market Feed</span>
             </div>
@@ -37,8 +37,8 @@ const MarketTicker = () => {
             </div>
 
             {/* Gradients */}
-            <div className="absolute left-[100px] top-0 bottom-0 w-12 bg-gradient-to-r from-slate-950/90 to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-950/90 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute left-[100px] top-0 bottom-0 w-12 bg-gradient-to-r from-background/90 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background/90 to-transparent z-10 pointer-events-none"></div>
         </div>
     );
 };

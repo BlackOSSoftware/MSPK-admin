@@ -1,7 +1,8 @@
 import React from 'react';
-import { History, Download } from 'lucide-react';
+import { History, Download, Hash, CreditCard, DollarSign, Calendar, BadgeCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import TableHeaderCell from '../../components/ui/TableHeaderCell';
 
 const SubscriptionHistory = ({ isEmbedded = false, data = [] }) => {
     // Fallback or Empty state handled in rendering
@@ -22,21 +23,21 @@ const SubscriptionHistory = ({ isEmbedded = false, data = [] }) => {
                 </div>
             )}
 
-            <Card className="flex-1 bg-[#050505] border-white/5 overflow-hidden" noPadding>
+            <Card className="flex-1 overflow-hidden" noPadding>
                 <div className="overflow-auto h-full">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-secondary/30 text-xs font-bold uppercase text-muted-foreground sticky top-0">
                             <tr>
-                                <th className="p-4 border-b border-white/5">Subscription ID</th>
-                                <th className="p-4 border-b border-white/5">Plan Name</th>
-                                <th className="p-4 border-b border-white/5">Amount</th>
-                                <th className="p-4 border-b border-white/5">Purchase Date</th>
-                                <th className="p-4 border-b border-white/5">Status</th>
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={Hash} label="Subscription ID" />
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={CreditCard} label="Plan Name" />
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={DollarSign} label="Amount" />
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={Calendar} label="Purchase Date" />
+                                <TableHeaderCell className="p-4 border-b border-border/70" icon={BadgeCheck} label="Status" />
                             </tr>
                         </thead>
                         <tbody className="text-sm">
                             {history.map((item, index) => (
-                                <tr key={index} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                <tr key={index} className="border-b border-border/60 hover:bg-secondary/30 dark:hover:bg-white/[0.02] transition-colors">
                                     <td className="p-4 font-mono text-muted-foreground">{item.id.slice(-6).toUpperCase()}</td>
                                     <td className="p-4 font-medium text-foreground">{item.plan}</td>
                                     <td className="p-4 text-foreground font-mono">{item.amount}</td>

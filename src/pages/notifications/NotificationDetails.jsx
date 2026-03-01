@@ -86,7 +86,7 @@ const NotificationDetails = () => {
                 </Button>
             </div>
 
-            <Card className="bg-[#050505] border-white/5 relative overflow-hidden">
+            <Card className="relative overflow-hidden">
                 {/* Decorative Background Element */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
 
@@ -117,16 +117,16 @@ const NotificationDetails = () => {
                         </div>
                     </div>
 
-                    <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                    <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border/70 to-transparent" />
 
-                    <div className="prose prose-invert max-w-none">
+                    <div className="prose dark:prose-invert max-w-none">
                         <p className="text-sm leading-relaxed text-foreground/80 whitespace-pre-wrap font-sans">
                             {notification.message}
                         </p>
                     </div>
 
                     {notification.link && (
-                        <div className="pt-4 border-t border-white/5">
+                        <div className="pt-4 border-t border-border/70">
                             <Button
                                 variant="primary"
                                 onClick={() => navigate(notification.link)}

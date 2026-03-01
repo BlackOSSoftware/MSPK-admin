@@ -1,6 +1,6 @@
 import React from 'react';
+import { Users, CreditCard, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../components/theme-provider';
 import VisualStatCard from '../../components/dashboard/VisualStatCard';
 import AdminRevenueGraph from '../../components/dashboard/AdminRevenueGraph';
 import RecentOrdersTable from '../../components/dashboard/RecentOrdersTable';
@@ -45,52 +45,46 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="space-y-4 flex flex-col h-auto lg:h-full lg:overflow-hidden pb-4 lg:pb-0">
+        <div className="space-y-5 flex flex-col h-auto lg:h-full lg:overflow-hidden pb-4 lg:pb-0">
             {error && (
                 <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg text-sm text-center">
                     {error} <button onClick={() => window.location.reload()} className="underline font-bold ml-2">Retry</button>
                 </div>
             )}
+
             {/* ... */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 h-auto lg:h-36 shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 h-auto shrink-0">
                 <VisualStatCard
-                    title="Revenue"
-                    value={`₹${(stats.revenue?.total || 0).toLocaleString()}`}
-                    change={`${stats.revenue?.growth || 0}%`}
-                    type="area"
-                    color="#10b981"
-                    data={stats.revenueGraph}
-                    onClick={() => navigate('/subscriptions/all')}
-                />
-                <VisualStatCard
-                    title="Users"
+                    title="Total Users"
                     value={stats.users?.total || 0}
                     change={`${stats.users?.growth || 0}%`}
                     type="bar"
-                    color="#3b82f6"
+                    color="#4f46e5"
+                    icon={Users}
                     onClick={() => navigate('/users/all')}
                 />
                 <VisualStatCard
-                    title="Subs"
+                    title="Active Subscriptions"
                     value={stats.subscriptions?.active || 0}
                     change={`${stats.subscriptions?.growth || 0}%`}
                     type="radial"
-                    color="#f59e0b"
+                    color="#2563eb"
+                    icon={CreditCard}
                     onClick={() => navigate('/subscriptions/active')}
                 />
                 <VisualStatCard
-                    title="Tickets"
+                    title="Pending Tickets"
                     value={stats.tickets?.pending || 0}
-                    change="Pending"
                     type="area"
-                    color="#ef4444"
+                    color="#f97316"
+                    icon={MessageSquare}
                     onClick={() => navigate('/tickets/all')}
                 />
             </div>
 
             {/* Main Content Grid - Trading Layout with Admin Data */}
             {/* Layout Grid */}
-            <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 lg:pb-2">
+            <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:pb-2">
                 {/* Left Column: Graph & Orders (8/12) */}
                 <div className="lg:col-span-9 flex flex-col gap-3 h-auto lg:h-full lg:min-h-0">
                     {/* Revenue Graph */}

@@ -360,7 +360,7 @@ const Leads = () => {
                                             required
                                             value={editData.name}
                                             onChange={e => setEditData({ ...editData, name: e.target.value })}
-                                            className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
+                                            className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -370,7 +370,7 @@ const Leads = () => {
                                             required
                                             value={editData.email}
                                             onChange={e => setEditData({ ...editData, email: e.target.value })}
-                                            className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
+                                            className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
                                         />
                                     </div>
                                 </div>
@@ -383,7 +383,7 @@ const Leads = () => {
                                             required
                                             value={editData.phone}
                                             onChange={e => setEditData({ ...editData, phone: e.target.value })}
-                                            className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
+                                            className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -392,7 +392,7 @@ const Leads = () => {
                                             type="text"
                                             value={editData.city}
                                             onChange={e => setEditData({ ...editData, city: e.target.value })}
-                                            className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
+                                            className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
                                         />
                                     </div>
                                 </div>
@@ -403,7 +403,7 @@ const Leads = () => {
                                         <select
                                             value={editData.segment}
                                             onChange={e => setEditData({ ...editData, segment: e.target.value })}
-                                            className="w-full bg-black/20 border border-white/5 rounded px-3 py-1.5 text-xs focus:border-primary/50 outline-none"
+                                            className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-1.5 text-xs focus:border-primary/50 outline-none"
                                         >
                                             <option value="EQUITY_INTRA">Equity Intra</option>
                                             <option value="NIFTY_OPT">Nifty Option</option>
@@ -418,7 +418,7 @@ const Leads = () => {
                                             type="text"
                                             value={editData.plan}
                                             onChange={e => setEditData({ ...editData, plan: e.target.value })}
-                                            className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
+                                            className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none"
                                             placeholder="Demo / Basic / Pro"
                                         />
                                     </div>
@@ -430,7 +430,7 @@ const Leads = () => {
                                         value={editData.notes}
                                         onChange={e => setEditData({ ...editData, notes: e.target.value })}
                                         rows={3}
-                                        className="w-full bg-black/20 border border-white/5 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none resize-none"
+                                        className="w-full bg-secondary/30 border border-border/70 rounded px-3 py-2 text-xs focus:border-primary/50 outline-none resize-none"
                                         placeholder="Conversation notes..."
                                     />
                                 </div>

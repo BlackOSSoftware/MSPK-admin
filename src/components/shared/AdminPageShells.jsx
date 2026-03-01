@@ -7,9 +7,9 @@ const PageShell = ({ title, description }) => (
             <h1 className="text-2xl font-bold text-foreground">{title}</h1>
             <p className="text-muted-foreground text-sm">{description}</p>
         </div>
-        <Card className="min-h-[400px] flex items-center justify-center border-dashed border-white/10 bg-[#050505]">
+        <Card className="min-h-[400px] flex items-center justify-center border-dashed border-border/70 bg-secondary/30">
             <div className="text-center space-y-2 opacity-60">
-                <h3 className="text-lg font-medium text-white">Module Ready</h3>
+                <h3 className="text-lg font-medium text-foreground">Module Ready</h3>
                 <p className="text-xs text-muted-foreground">Detailed implementation coming in next phase.</p>
             </div>
         </Card>

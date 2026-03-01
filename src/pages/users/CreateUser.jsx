@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, User, MapPin } from 'lucide-react';
+import { X, User, MapPin } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -43,7 +43,6 @@ const CreateUser = () => {
             const payload = {
                 ...data,
                 role: 'user', // Default role
-                equity: Number(data.equity),
                 planId: data.planId === 'none' ? undefined : data.planId,
                 subBrokerId: data.subBrokerId === 'none' ? undefined : data.subBrokerId
             };
@@ -114,13 +113,6 @@ const CreateUser = () => {
                             placeholder="e.g. MS-2023"
                             {...register("clientId")}
                         />
-                        <Input
-                            label="Initial Equity (₹)"
-                            type="number"
-                            placeholder="0"
-                            {...register("equity")}
-                        />
-
                         <div className="space-y-1">
                             <label className="text-xs font-medium text-muted-foreground block">Subscription Plan</label>
                             <select
@@ -147,17 +139,6 @@ const CreateUser = () => {
                             </select>
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground block">Status</label>
-                            <select
-                                {...register("status")}
-                                className="w-full h-10 px-3 rounded-md bg-secondary/50 border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Suspended">Suspended</option>
-                            </select>
-                        </div>
                     </div>
                 </Card>
 

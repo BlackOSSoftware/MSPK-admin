@@ -42,7 +42,6 @@ const EditUser = () => {
                 setValue('phone', user.phone);
                 setValue('role', user.role);
                 setValue('clientId', user.clientId);
-                setValue('equity', user.equity);
                 setValue('walletBalance', user.walletBalance);
                 setValue('status', user.status);
 
@@ -130,8 +129,8 @@ const EditUser = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Personal Info */}
-                <Card className="bg-[#050505] border-white/5 space-y-6">
-                    <h3 className="text-lg font-bold text-foreground border-b border-white/5 pb-2">Personal Information</h3>
+                <Card className="space-y-6">
+                    <h3 className="text-lg font-bold text-foreground border-b border-border/70 pb-2">Personal Information</h3>
 
                     <div className="space-y-4">
                         <div className="space-y-2">
@@ -170,7 +169,7 @@ const EditUser = () => {
                                     placeholder={isAdminBeingEdited ? "Enter new secure password" : "Leave blank to keep current"}
                                     className="w-full bg-secondary/30 border border-primary/20 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground pr-10"
                                 />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-muted-foreground hover:text-white">
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                             </div>
@@ -179,8 +178,8 @@ const EditUser = () => {
                 </Card>
 
                 {/* Trading Configuration */}
-                <Card className={`bg-[#050505] border-white/5 space-y-6 ${isAdminBeingEdited ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <h3 className="text-lg font-bold text-foreground border-b border-white/5 pb-2">Trading Configuration</h3>
+                <Card className={`space-y-6 ${isAdminBeingEdited ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <h3 className="text-lg font-bold text-foreground border-b border-border/70 pb-2">Trading Configuration</h3>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -197,14 +196,10 @@ const EditUser = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Wallet Balance</label>
                             <input type="number" {...register('walletBalance')} disabled={isAdminBeingEdited} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Equity</label>
-                            <input type="number" {...register('equity')} disabled={isAdminBeingEdited} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground" />
                         </div>
                     </div>
 
@@ -222,8 +217,8 @@ const EditUser = () => {
 
                 {/* Plan & Sub-Broker */}
                 {!isAdminBeingEdited && (
-                    <Card className="bg-[#050505] border-white/5 space-y-6 lg:col-span-2">
-                        <h3 className="text-lg font-bold text-foreground border-b border-white/5 pb-2">Association</h3>
+                    <Card className="space-y-6 lg:col-span-2">
+                        <h3 className="text-lg font-bold text-foreground border-b border-border/70 pb-2">Association</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign Plan (Update)</label>

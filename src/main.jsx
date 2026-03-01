@@ -7,15 +7,18 @@ import { ThemeProvider } from './components/theme-provider'
 import './styles/globals.css'
 
 import { ToastProvider } from './context/ToastContext'
+import { SoundProvider } from './context/SoundContext'
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>
       <ThemeProvider>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
+        <SoundProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </SoundProvider>
       </ThemeProvider>
     </Provider>
   </React.StrictMode>,

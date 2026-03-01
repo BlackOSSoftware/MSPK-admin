@@ -3,7 +3,7 @@ import TradingLayout from '../../components/trading/TradingLayout';
 
 const MarketData = () => {
     return (
-        <TradingLayout />
+        <TradingLayout hideCharts />
     );
 };
 

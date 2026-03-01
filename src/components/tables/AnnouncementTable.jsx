@@ -1,6 +1,7 @@
 import React from 'react';
-import { MoreVertical, Megaphone, Calendar, Users, Eye, Edit, Trash2 } from 'lucide-react';
+import { MoreVertical, Megaphone, Calendar, Users, Eye, Edit, Trash2, Tag, Activity, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
+import TableHeaderCell from '../ui/TableHeaderCell';
 
 const AnnouncementTable = ({ announcements, onAction, isLoading, highlightTerm }) => {
     const getTypeColor = (type) => {
@@ -52,12 +53,12 @@ const AnnouncementTable = ({ announcements, onAction, isLoading, highlightTerm }
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Title</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Type</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Audience</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Status</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Date</th>
-                            <th className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm">Actions</th>
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Megaphone} label="Title" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Tag} label="Type" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Users} label="Audience" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Activity} label="Status" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Calendar} label="Date" align="center" />
+                            <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={Settings} label="Actions" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">

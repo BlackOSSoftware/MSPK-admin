@@ -68,7 +68,6 @@ import Calendar from '../pages/announcements/Calendar';
 
 import MarketData from '../pages/market/MarketData';
 
-import Reports from '../pages/reports/Reports';
 
 // Broker Management
 import AllBrokers from '../pages/brokers/AllBrokers';
@@ -168,8 +167,6 @@ const AppRouter = () => {
                     <Route path="announcements/edit/:id" element={<CreateAnnouncement />} />
                     <Route path="announcements/calendar" element={<Calendar />} />
 
-                    {/* Reports */}
-                    <Route path="reports/all" element={<Reports />} />
 
                     {/* Sub Brokers */}
                     <Route path="brokers/all" element={<AllBrokers />} />
@@ -186,7 +183,7 @@ const AppRouter = () => {
                     {/* System Monitor */}
                     <Route path="monitor" element={<MonitoringDashboard />} />
 
-                    <Route path="*" element={<div className="text-white p-6">Page Not Found</div>} />
+                    <Route path="*" element={<div className="p-6 text-muted-foreground">Page Not Found</div>} />
                 </Route>
             </Routes>
         </BrowserRouter>

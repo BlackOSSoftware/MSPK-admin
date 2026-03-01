@@ -56,7 +56,7 @@ const SignalsAccess = ({ isEmbedded = false, data = [] }) => {
                 {accessList.map((item, index) => (
                     <Card
                         key={index}
-                        className={`border-white/5 relative overflow-hidden group hover:border-white/10 transition-colors ${item.access ? 'bg-[#050505]' : 'bg-black/40'}`}
+                        className={`border-border/60 relative overflow-hidden group hover:border-border/80 transition-colors ${item.access ? 'bg-card' : 'bg-secondary/30'}`}
                         noPadding
                     >
                         <div className="p-6">
@@ -66,7 +66,7 @@ const SignalsAccess = ({ isEmbedded = false, data = [] }) => {
                                 </div>
                                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${item.access
                                     ? 'border-primary/20 bg-primary/5 text-primary'
-                                    : 'border-white/10 bg-white/5 text-muted-foreground'
+                                    : 'border-border/70 bg-secondary/30 text-muted-foreground'
                                     }`}>
                                     {item.access ? 'Granted' : 'Locked'}
                                 </span>
@@ -79,7 +79,7 @@ const SignalsAccess = ({ isEmbedded = false, data = [] }) => {
                         </div>
 
                         {/* Footer Action */}
-                        <div className="p-3 bg-white/[0.02] border-t border-white/5 flex justify-end">
+                        <div className="p-3 bg-secondary/20 border-t border-border/70 flex justify-end">
                             <button
                                 onClick={() => handleToggleAccess(item)}
                                 disabled={loading}

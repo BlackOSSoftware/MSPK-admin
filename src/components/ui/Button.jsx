@@ -3,10 +3,10 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const Button = ({ children, variant = 'primary', size = 'md', className, ...props }) => {
-    const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed";
+    const baseStyles = "ui-btn soft-shadow-hover inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed";
 
     const variants = {
-        primary: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] border border-transparent font-semibold",
+        primary: "bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 font-semibold",
         secondary: "bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80",
         outline: "bg-transparent text-primary border border-primary/50 hover:border-primary hover:bg-primary/10",
         danger: "bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-destructive/20",
@@ -21,6 +21,7 @@ const Button = ({ children, variant = 'primary', size = 'md', className, ...prop
 
     return (
         <button
+            data-variant={variant}
             className={twMerge(baseStyles, variants[variant], sizes[size], className)}
             {...props}
         >

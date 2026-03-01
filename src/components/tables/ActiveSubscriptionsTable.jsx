@@ -1,5 +1,6 @@
 import React from 'react';
-import { Clock, MoreVertical, CreditCard, AlertCircle } from 'lucide-react';
+import { Activity, Calendar, Clock, CreditCard, Globe, User } from 'lucide-react';
+import TableHeaderCell from '../ui/TableHeaderCell';
 
 const ActiveSubscriptionsTable = ({ subscriptions, highlightTerm, isLoading }) => {
     return (
@@ -11,12 +12,12 @@ const ActiveSubscriptionsTable = ({ subscriptions, highlightTerm, isLoading }) =
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">User Identity</th>
-                            <th className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm">Current Plan</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Start Date</th>
-                            <th className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm">Expiry Date</th>
-                            <th className="px-5 py-3 border-r border-border w-48 bg-muted/90 backdrop-blur-sm">Validity Progress</th>
-                            <th className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm">Last Login IP</th>
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={User} label="User Identity" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={CreditCard} label="Current Plan" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Calendar} label="Start Date" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Clock} label="Expiry Date" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border w-48 bg-muted/90 backdrop-blur-sm" icon={Activity} label="Validity Progress" />
+                            <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={Globe} label="Last Login IP" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">

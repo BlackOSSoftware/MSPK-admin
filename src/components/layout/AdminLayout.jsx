@@ -46,6 +46,19 @@ const AdminLayout = () => {
     }, [dispatch]); // handleLogout is stable mostly, but it depends on dispatch/navigate. 
     // Better to rely on dispatch stability or just omit handleLogout from dep array if infinite loop fears.
 
+    // Prevent background/page scrolling when the mobile sidebar is open.
+    useEffect(() => {
+        if (!isSidebarOpen) return;
+        if (!window.matchMedia('(max-width: 767px)').matches) return; // Tailwind md breakpoint
+
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [isSidebarOpen]);
+
     return (
         <div className={`flex h-screen bg-background overflow-hidden font-sans ${isMarketPage ? 'market-scroll-hidden' : ''}`}>
             <Sidebar
@@ -62,13 +75,6 @@ const AdminLayout = () => {
                 </main>
             </div>
 
-            {/* Mobile Overlay */}
-            {isSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 md:hidden"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
         </div>
     );
 };

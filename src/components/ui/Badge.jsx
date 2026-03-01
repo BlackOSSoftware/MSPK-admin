@@ -8,7 +8,7 @@ const Badge = ({ children, variant = 'default', className }) => {
         warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
         danger: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
         info: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-        neon: "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]"
+        neon: "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.12)]"
     };
 
     return (

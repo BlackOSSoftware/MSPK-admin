@@ -1,108 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Maximize2, MoreHorizontal, Calendar, ArrowUpRight } from 'lucide-react';
-import { useTheme } from '../../components/theme-provider';
+import React, { useMemo, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import Card from '../ui/Card';
+import Badge from '../ui/Badge';
 
 const AdminRevenueGraph = ({ data, totalRevenue, growth }) => {
-    const { theme } = useTheme();
+    const formatPointLabel = (raw, index) => {
+        if (raw === null || raw === undefined || raw === '') return `${index + 1}`;
 
-    // Format Data for Chart if needed (or rely on API keys)
-    // API sends: { date: '2024-12-01', value: 1000 }
-    // Chart expects: time, revenue
+        const date = new Date(raw);
+        if (!Number.isNaN(date.getTime())) {
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        }
 
-    // Data comes pre-formatted from backend or needs simple mapping
-    // Backend sends: [{ date: '2024-12-01', value: 1000 }]
+        return String(raw);
+    };
 
-    const chartData = data ? data.map(d => ({
-        time: new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-        revenue: d.value
-    })) : [];
+    const [range, setRange] = useState('30D');
+
+    const chartData = Array.isArray(data)
+        ? data.map((d, idx) => {
+            const rawLabel = d?.date ?? d?.time ?? d?.label ?? d?.x ?? d?.timestamp ?? d?.ts;
+            const rawValue = d?.value ?? d?.revenue ?? d?.amount ?? d?.y;
+            const parsedDate = rawLabel ? new Date(rawLabel) : null;
+            const pointDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null;
+
+            return {
+                time: formatPointLabel(rawLabel, idx),
+                revenue: Number(rawValue) || 0,
+                pointDate
+            };
+        })
+        : [];
+
+    const filteredData = useMemo(() => {
+        if (!chartData.length) return chartData;
+        if (range === 'Today') {
+            const today = new Date();
+            const todays = chartData.filter((d) => d.pointDate && d.pointDate.toDateString() === today.toDateString());
+            return todays.length ? todays : chartData;
+        }
+        const days = range === '7D' ? 7 : range === '90D' ? 90 : 30;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const sliced = chartData.filter((d) => !d.pointDate || d.pointDate >= cutoff);
+        return sliced.length ? sliced : chartData;
+    }, [chartData, range]);
+
+    const formattedTotal = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    }).format(totalRevenue || 0);
+
+    const numericGrowth = Number(growth) || 0;
+    const isPositive = numericGrowth >= 0;
+
+    const ranges = ['Today', '7D', '30D', '90D'];
 
     return (
-        <div className="h-full flex flex-col bg-card border border-border rounded-xl shadow-xl overflow-hidden relative group hover:border-primary/50 transition-all duration-500">
-            {/* Cyber Grid Background */}
-            <div className="absolute inset-0 bg-cyber-grid opacity-20 pointer-events-none"></div>
+        <Card className="dashboard-surface soft-shadow soft-shadow-hover h-full relative overflow-hidden" noPadding showAccents={false}>
+            <div className="h-full flex flex-col relative">
+                {/* Header */}
+                <div className="relative z-10 px-4 py-3 border-b border-border/70 bg-secondary/40 flex items-start justify-between gap-4 shrink-0">
+                    <div className="min-w-0">
+                        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.22em] uppercase">
+                            Revenue Analytics
+                        </p>
+                        <p className="mt-0.5 text-xl md:text-2xl font-semibold tracking-tight tabular-nums text-foreground truncate">
+                            {formattedTotal}
+                        </p>
+                    </div>
 
-            {/* Top Shine */}
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Badge
+                            variant={isPositive ? 'success' : 'danger'}
+                            className="shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full border border-border/60 bg-card/80"
+                        >
+                            {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                            <span className="ml-1">
+                                {isPositive ? '+' : ''}{numericGrowth}%
+                            </span>
+                        </Badge>
 
-            {/* Header */}
-            <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-accent/5">
-                <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
-                    <div className="flex flex-col">
-                        <span className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
-                            REVENUE GROWTH
-                        </span>
+                        <div className="flex items-center rounded-full bg-background/60 border border-border/60 p-1">
+                            {ranges.map((item) => (
+                                <button
+                                    key={item}
+                                    onClick={() => setRange(item)}
+                                    className={`px-2.5 py-1 text-[10px] font-semibold rounded-full transition ${
+                                        range === item
+                                            ? 'bg-primary/10 text-primary'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><Maximize2 size={14} /></button>
+                {/* Chart */}
+                <div className="relative z-10 flex-1 min-h-0 p-4">
+                    {filteredData.length === 0 ? (
+                        <div className="h-full grid place-items-center text-muted-foreground text-xs font-medium">
+                            No revenue data
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={filteredData} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
+                                <XAxis
+                                    dataKey="time"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontFamily: 'inherit' }}
+                                    dy={8}
+                                    interval="preserveStartEnd"
+                                />
+                                <YAxis
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontFamily: 'inherit' }}
+                                    tickFormatter={(v) => {
+                                        const n = Number(v) || 0;
+                                        if (n >= 10000000) return `${(n / 10000000).toFixed(1)}Cr`;
+                                        if (n >= 100000) return `${(n / 100000).toFixed(1)}L`;
+                                        if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+                                        return `${n}`;
+                                    }}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'hsl(var(--card))',
+                                        borderColor: 'hsl(var(--border))',
+                                        borderRadius: '12px',
+                                        color: 'hsl(var(--foreground))'
+                                    }}
+                                    formatter={(value) => [
+                                        new Intl.NumberFormat('en-IN', {
+                                            style: 'currency',
+                                            currency: 'INR',
+                                            maximumFractionDigits: 0
+                                        }).format(Number(value) || 0),
+                                        'Revenue'
+                                    ]}
+                                    itemStyle={{ fontSize: '11px', fontWeight: 600, color: 'hsl(var(--foreground))' }}
+                                    labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '10px', marginBottom: '4px' }}
+                                />
+                                <Bar
+                                    dataKey="revenue"
+                                    name="Revenue"
+                                    fill="hsl(var(--primary))"
+                                    opacity={0.6}
+                                    radius={[6, 6, 2, 2]}
+                                    maxBarSize={36}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             </div>
-
-            {/* Stats Overlay */}
-            <div className="absolute top-16 left-6 z-10 pointer-events-none">
-                <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">Total Revenue</span>
-                    <span className="text-3xl font-bold text-foreground tracking-tight flex items-end gap-2">
-                        {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(totalRevenue || 0)}
-                        <span className="text-sm font-medium text-emerald-500 mb-1.5 flex items-center gap-0.5">
-                            {growth > 0 ? '+' : ''}{growth}% <ArrowUpRight size={12} />
-                        </span>
-                    </span>
-                </div>
-            </div>
-
-            {/* Chart Area */}
-            <div className="flex-1 w-full min-h-0 pt-10">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
-                        <XAxis
-                            dataKey="time"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontFamily: 'monospace' }}
-                            dy={10}
-                        />
-                        <YAxis
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontFamily: 'monospace' }}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: 'hsl(var(--card))',
-                                borderColor: 'hsl(var(--border))',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                color: 'hsl(var(--foreground))'
-                            }}
-                            itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: 'hsl(var(--foreground))' }}
-                            labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: '10px', marginBottom: '4px' }}
-                        />
-                        <Area
-                            type="monotone"
-                            dataKey="revenue"
-                            stroke="#10b981"
-                            strokeWidth={2}
-                            fillOpacity={1}
-                            fill="url(#colorRevenue)"
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-            {/* Bottom Accent Line */}
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-primary transition-all duration-700 group-hover:w-full"></div>
-        </div>
+        </Card>
     );
 };
 

@@ -102,7 +102,7 @@ const UsersList = () => {
             setPendingAction({ type: 'liquidate', user });
             setDialogConfig({
                 title: 'Liquidate Positions',
-                message: `Are you sure you want to LIQUIDATE all positions for ${user.clientId}? This will reset their Equity and PnL to 0 and mark them as Liquidated.`,
+                message: `Are you sure you want to LIQUIDATE all positions for ${user.clientId}? This will reset their positions and mark them as Liquidated.`,
                 variant: 'danger',
                 confirmText: 'Liquidate'
             });
@@ -131,7 +131,6 @@ const UsersList = () => {
                 setUsers(users.map(u => u.id === user.id ? {
                     ...u,
                     status: 'Liquidated',
-                    equity: 0,
                     marginUsed: 0,
                     pnl: 0
                 } : u));
@@ -328,9 +327,6 @@ const UsersList = () => {
                         </button>
                     </div>
 
-                    <div className="h-4 w-[1px] bg-white/10 mx-2"></div>
-
-                    <span>Active Equity: <span className="text-emerald-500 font-bold">₹ {users.reduce((sum, user) => sum + (user.equity || 0), 0).toLocaleString()}</span></span>
                 </div>
             </div>
 

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Clock, MoreVertical, XCircle, Trash2, Edit, Cpu, Activity, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, AlertTriangle, Clock, MoreVertical, XCircle, Trash2, Edit, Cpu, Activity, Zap, Tag, ArrowUpRight, BarChart2, ShieldAlert, BadgeCheck, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 import { socket } from '../../api/socket';
+import TableHeaderCell from '../ui/TableHeaderCell';
 
 const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }) => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -69,16 +70,16 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-20 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
-                            <th className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm w-44">Symbol / Strategy</th>
-                            <th className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-center w-20">Type</th>
-                            <th className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24">Entry</th>
-                            <th className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24">LTP</th>
-                            <th className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm w-56">Hybrid Metrics</th>
-                            <th className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24">Target</th>
-                            <th className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24">Stoploss</th>
-                            <th className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24">Generated</th>
-                            <th className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24">Status</th>
-                            <th className="px-4 py-3 text-center bg-muted/90 backdrop-blur-sm w-10">Action</th>
+                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm w-44" icon={Activity} label="Symbol / Strategy" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-center w-20" icon={Tag} label="Type" align="center" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24" icon={ArrowUpRight} label="Entry" align="right" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24" icon={TrendingUp} label="LTP" align="right" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm w-56" icon={BarChart2} label="Hybrid Metrics" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={Target} label="Target" align="center" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={ShieldAlert} label="Stoploss" align="center" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={Clock} label="Generated" align="center" />
+                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={BadgeCheck} label="Status" align="center" />
+                            <TableHeaderCell className="px-4 py-3 text-center bg-muted/90 backdrop-blur-sm w-10" icon={Settings} label="Action" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">
