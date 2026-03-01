@@ -3,7 +3,7 @@ import { CheckCircle, AlertCircle, Hash, MessageSquare, User, Activity, Calendar
 import { clsx } from 'clsx';
 import TableHeaderCell from '../ui/TableHeaderCell';
 
-const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
+const TicketTable = ({ tickets, highlightTerm, isLoading, onStatusChange }) => {
     const getStatusColor = (status) => {
         switch (status) {
             case 'Open': return 'text-blue-500';
@@ -115,11 +115,13 @@ const TicketTable = ({ tickets, highlightTerm, isLoading }) => {
                                             <div className="flex items-center justify-center gap-2">
                                                 <button
                                                     type="button"
+                                                    onClick={() => onStatusChange?.(ticket._id, "RESOLVED")}
                                                     className="px-2.5 py-1 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-emerald-500/20 transition-colors">
                                                     Approve
                                                 </button>
                                                 <button
                                                     type="button"
+                                                    onClick={() => onStatusChange?.(ticket._id, "CLOSED")}
                                                     className="px-2.5 py-1 rounded border border-red-500/30 text-red-400 bg-red-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-red-500/20 transition-colors">
                                                     Reject
                                                 </button>
