@@ -1,15 +1,11 @@
 import React from 'react';
 
 const SkeletonCard = () => (
-    <div className="dashboard-surface soft-shadow h-full bg-card/90 border border-border/70 rounded-2xl p-3 sm:p-4 flex flex-col justify-between animate-pulse">
-        <div className="flex justify-between items-start">
-            <div className="w-20 h-3 bg-muted rounded"></div>
-            <div className="w-10 h-3 bg-muted rounded"></div>
-        </div>
-        <div className="mt-4 space-y-2">
-            <div className="w-32 h-8 bg-muted rounded"></div>
-            <div className="w-16 h-3 bg-muted rounded"></div>
-        </div>
+    <div className="metallic-surface soft-shadow h-full min-h-[144px] md:min-h-[164px] border border-border/70 rounded-2xl p-6 md:p-7 flex flex-col items-center justify-center text-center gap-3 animate-pulse">
+        <div className="h-11 w-11 bg-muted/40 rounded-2xl"></div>
+        <div className="w-28 h-3 bg-muted rounded"></div>
+        <div className="w-32 h-10 bg-muted rounded"></div>
+        <div className="w-20 h-4 bg-muted/70 rounded-full"></div>
     </div>
 );
 
