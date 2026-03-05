@@ -40,6 +40,7 @@ const EditUser = () => {
                 setValue('name', user.name);
                 setValue('email', user.email);
                 setValue('phone', user.phone);
+                setValue('tradingViewId', user.tradingViewId || '');
                 setValue('role', user.role);
                 setValue('clientId', user.clientId);
                 setValue('walletBalance', user.walletBalance);
@@ -163,6 +164,17 @@ const EditUser = () => {
                             </div>
                         )}
 
+                        {!isAdminBeingEdited && (
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TradingView ID</label>
+                                <input
+                                    {...register('tradingViewId')}
+                                    placeholder="e.g. trader_123"
+                                    className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                />
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider text-primary">New Password</label>
                             <div className="relative">
@@ -213,7 +225,6 @@ const EditUser = () => {
                             <option value="Inactive">Inactive</option>
                             <option value="Suspended">Suspended</option>
                             <option value="Blocked">Blocked</option>
-                            <option value="Liquidated">Liquidated</option>
                         </select>
                     </div>
                 </Card>

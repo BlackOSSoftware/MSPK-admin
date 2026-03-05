@@ -62,6 +62,8 @@ import NotificationTemplates from '../pages/settings/NotificationTemplates';
 import AllAnnouncements from '../pages/announcements/AllAnnouncements';
 import CreateAnnouncement from '../pages/announcements/CreateAnnouncement';
 import Calendar from '../pages/announcements/Calendar';
+import AllBlogs from '../pages/blogs/AllBlogs';
+import CreateBlog from '../pages/blogs/CreateBlog';
 
 import MarketData from '../pages/market/MarketData';
 
@@ -158,6 +160,11 @@ const AppRouter = () => {
                     <Route path="announcements/create" element={<CreateAnnouncement />} />
                     <Route path="announcements/edit/:id" element={<CreateAnnouncement />} />
                     <Route path="announcements/calendar" element={<Calendar />} />
+
+                    {/* Blogs */}
+                    <Route path="blogs/all" element={<AllBlogs />} />
+                    <Route path="blogs/create" element={<CreateBlog />} />
+                    <Route path="blogs/edit/:id" element={<CreateBlog />} />
 
 
                     {/* Sub Brokers */}

@@ -6,8 +6,7 @@ const ACTION_BUTTONS = [
   { icon: UserPlus, label: "Add User", tone: "blue", path: "/users/create" },
   { icon: CreditCard, label: "New Plan", tone: "amber", path: "/plans/create" },
   { icon: Megaphone, label: "Broadcast", tone: "emerald", path: "/announcements/create" },
-  { icon: PauseCircle, label: "Sys Freeze", tone: "rose", path: "/settings/all" },
-  { icon: Settings2, label: "Config", tone: "slate", path: "/settings/all" },
+ 
 ];
 
 const TONE = {

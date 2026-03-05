@@ -8,6 +8,7 @@ import Input from '../../components/ui/Input';
 import { createUser } from '../../api/users.api';
 import { fetchPlans } from '../../api/plans.api';
 import { fetchSubBrokers } from '../../api/subbrokers.api';
+import { getSegments } from '../../api/market.api';
 
 import useToast from '../../hooks/useToast';
 
@@ -19,15 +20,20 @@ const CreateUser = () => {
 
     const [plans, setPlans] = useState([]);
     const [subBrokers, setSubBrokers] = useState([]);
+    const [segments, setSegments] = useState([]);
+    const [selectedSegments, setSelectedSegments] = useState([]);
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const plansRes = await fetchPlans();
+                const [plansRes, sbRes, segmentsRes] = await Promise.all([
+                    fetchPlans(),
+                    fetchSubBrokers(),
+                    getSegments()
+                ]);
                 setPlans(plansRes.data);
-
-                const sbRes = await fetchSubBrokers();
                 setSubBrokers(sbRes.data);
+                setSegments(Array.isArray(segmentsRes) ? segmentsRes : []);
             } catch (e) {
                 console.error("Failed to load dependency data", e);
                 // toast.error("Failed to load form data");
@@ -44,7 +50,8 @@ const CreateUser = () => {
                 ...data,
                 role: 'user', // Default role
                 planId: data.planId === 'none' ? undefined : data.planId,
-                subBrokerId: data.subBrokerId === 'none' ? undefined : data.subBrokerId
+                subBrokerId: data.subBrokerId === 'none' ? undefined : data.subBrokerId,
+                ...(selectedSegments.length > 0 ? { segments: selectedSegments } : {})
             };
 
             await createUser(payload);
@@ -100,6 +107,11 @@ const CreateUser = () => {
                             {...register("phone")}
                         />
                         <Input
+                            label="TradingView ID (Optional)"
+                            placeholder="e.g. trader_123"
+                            {...register("tradingViewId")}
+                        />
+                        <Input
                             label="Password"
                             type="password"
                             placeholder="Set initial password"
@@ -144,6 +156,35 @@ const CreateUser = () => {
                                     <option key={sb.id || sb._id} value={sb.id || sb._id}>{sb.name}</option>
                                 ))}
                             </select>
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] sm:text-[11px] font-medium text-muted-foreground block">Demo Segments</label>
+                            <div className="flex flex-wrap gap-2">
+                                {segments.map((segment) => {
+                                    const code = segment.segment_code || segment.code;
+                                    if (!code) return null;
+                                    const active = selectedSegments.includes(code);
+                                    return (
+                                        <button
+                                            key={segment._id || code}
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedSegments((prev) =>
+                                                    prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code]
+                                                )
+                                            }
+                                            className={`h-8 rounded-full px-3 text-[10px] sm:text-xs font-semibold transition-all border ${
+                                                active
+                                                    ? "bg-primary text-black border-primary shadow-[0_10px_30px_-18px_rgba(59,130,246,0.7)]"
+                                                    : "bg-white/70 dark:bg-white/5 border-slate-200 dark:border-white/10 text-muted-foreground hover:text-foreground"
+                                            }`}
+                                        >
+                                            {segment.name || code}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                     </div>

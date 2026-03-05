@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Users, CreditCard,
     BarChart2, Settings,
     RefreshCcw, Radio, MessageSquare, Megaphone,
-    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X
+    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X, FileText
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../store/authSlice';
@@ -224,6 +224,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                         { name: 'Economic Calendar', path: '/announcements/calendar', icon: Calendar },
                     ],
                 },
+                {
+                    name: 'Blogs',
+                    icon: FileText,
+                    submenu: [
+                        { name: 'All Blogs', path: '/blogs/all', icon: FileText },
+                        { name: 'Create Blog', path: '/blogs/create', icon: FileText },
+                    ],
+                },
             ],
         },
         {
@@ -250,6 +258,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { label: 'Market', to: '/market/data', icon: Activity, isActive: (p) => p.startsWith('/market') },
         { label: 'Tickets', to: '/tickets/all', icon: MessageSquare, isActive: (p) => p.startsWith('/tickets') },
         { label: 'News', to: '/announcements/all', icon: Megaphone, isActive: (p) => p.startsWith('/announcements') },
+        { label: 'Blogs', to: '/blogs/all', icon: FileText, isActive: (p) => p.startsWith('/blogs') },
     ];
 
     const railContent = (
