@@ -238,9 +238,16 @@ const EditUser = () => {
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign Plan (Update)</label>
                                 <select {...register('planId')} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground [&>option]:bg-background">
                                     <option value="">Keep Current Plan</option>
-                                    {plans.map(plan => (
-                                        <option key={plan._id || plan.id} value={plan._id || plan.id}>{plan.name} - ₹{plan.price}</option>
-                                    ))}
+                                    {plans.map(plan => {
+                                        const isCustom = !plan.isDemo && Number(plan.price) === 0;
+                                        const priceLabel = plan.isDemo ? 'Free' : (isCustom ? `Custom/${plan.durationDays} Days` : `₹${plan.price}`);
+                                        const suffix = priceLabel ? ` - ${priceLabel}` : '';
+                                        return (
+                                            <option key={plan._id || plan.id} value={plan._id || plan.id}>
+                                                {plan.name}{suffix}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                                 <p className="text-[10px] text-muted-foreground">Selecting a new plan will terminate the current subscription and start a new one.</p>
                             </div>

@@ -14,9 +14,17 @@ import SearchableSelect from '../../components/ui/SearchableSelect';
 const schema = yup.object({
     name: yup.string().required('Plan name is required'),
     segment: yup.string().required('Segment is required'),
-    price: yup.number().min(0, 'Price must be non-negative').typeError('Price must be a number').required('Price is required'),
+    planType: yup.string().oneOf(['premium', 'demo', 'custom']).required('Plan type is required'),
+    price: yup
+        .number()
+        .min(0, 'Price must be non-negative')
+        .typeError('Price must be a number')
+        .when('planType', {
+            is: 'premium',
+            then: (rule) => rule.required('Price is required'),
+            otherwise: (rule) => rule.notRequired()
+        }),
     validity_days: yup.number().integer().positive().typeError('Validity must be a number').required('Validity is required'),
-    isDemo: yup.boolean().default(false),
 }).required();
 
 const STANDARD_FEATURES = [
@@ -58,7 +66,7 @@ const EditPlan = () => {
     const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
         defaultValues: {
-            isDemo: false,
+            planType: 'premium',
             price: 0
         }
     });
@@ -76,9 +84,13 @@ const EditPlan = () => {
                 // Populate Form
                 setValue('name', data.name);
                 setValue('segment', data.segment);
+                const resolvedPlanType = data.isDemo
+                    ? 'demo'
+                    : (Number(data.price) === 0 ? 'custom' : 'premium');
+
+                setValue('planType', resolvedPlanType);
                 setValue('price', data.price);
                 setValue('validity_days', data.durationDays);
-                setValue('isDemo', data.isDemo);
 
                 // Populate Features
                 const loadedFeatures = data.features || [];
@@ -121,13 +133,16 @@ const EditPlan = () => {
                 return;
             }
 
+            const isDemo = data.planType === 'demo';
+            const priceValue = data.planType === 'premium' ? Number(data.price) : 0;
+
             const payload = {
                 name: data.name,
                 segment: data.segment,
-                price: Number(data.price),
+                price: priceValue,
                 durationDays: Number(data.validity_days),
                 features: finalFeatures,
-                isDemo: data.isDemo,
+                isDemo,
                 isActive: true // Should we allow toggling active status here? Usually yes, but sticking to create logic for now
             };
 
@@ -143,7 +158,13 @@ const EditPlan = () => {
         }
     };
 
-    const isDemo = watch("isDemo");
+    const planType = watch("planType");
+
+    useEffect(() => {
+        if (planType !== 'premium') {
+            setValue('price', 0, { shouldValidate: true });
+        }
+    }, [planType, setValue]);
 
     if (fetching) {
         return <div className="flex h-full items-center justify-center text-muted-foreground">Loading Plan Details...</div>;
@@ -183,13 +204,14 @@ const EditPlan = () => {
                         <div className="space-y-1.5">
                             <label className="text-xs font-medium text-muted-foreground block">Plan Type</label>
                             <Controller
-                                name="isDemo"
+                                name="planType"
                                 control={control}
                                 render={({ field }) => (
                                     <SearchableSelect
                                         options={[
-                                            { label: 'Premium (Paid)', value: false },
-                                            { label: 'Demo (Trial / Free)', value: true }
+                                            { label: 'Premium (Paid)', value: 'premium' },
+                                            { label: 'Demo (Trial / Free)', value: 'demo' },
+                                            { label: 'Custom (Admin Created)', value: 'custom' }
                                         ]}
                                         value={field.value}
                                         onChange={field.onChange}
@@ -224,7 +246,7 @@ const EditPlan = () => {
                             label="Price (₹)"
                             type="number"
                             placeholder="0"
-                            disabled={isDemo === 'true' || isDemo === true}
+                            disabled={planType !== 'premium'}
                             {...register('price')}
                             error={errors.price?.message}
                         />

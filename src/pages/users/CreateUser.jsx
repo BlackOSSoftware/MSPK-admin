@@ -139,9 +139,16 @@ const CreateUser = () => {
                                 className="w-full h-8 sm:h-10 px-3 rounded-md bg-secondary/50 border border-input text-[10px] sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                             >
                                 <option value="none">No Plan</option>
-                                {plans.map(p => (
-                                    <option key={p.id || p._id} value={p.id || p._id}>{p.name} ({p.durationDays} Days) - â‚¹{p.price}</option>
-                                ))}
+                                {plans.map(p => {
+                                    const isCustom = !p.isDemo && Number(p.price) === 0;
+                                    const priceLabel = p.isDemo ? 'Free' : (isCustom ? `Custom/${p.durationDays} Days` : `₹${p.price}`);
+                                    const suffix = priceLabel ? ` - ${priceLabel}` : '';
+                                    return (
+                                        <option key={p.id || p._id} value={p.id || p._id}>
+                                            {p.name} ({p.durationDays} Days){suffix}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
 
