@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Users, CreditCard,
     BarChart2, Settings,
     RefreshCcw, Radio, MessageSquare, Megaphone,
-    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X, FileText
+    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X, FileText, Mail
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../store/authSlice';
@@ -211,6 +211,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             title: 'Support',
             items: [
                 { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
+                { name: 'Web Enquiries', path: '/enquiries/all', icon: Mail },
             ],
         },
         {
@@ -257,6 +258,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { label: 'Signals', to: '/signals/all', icon: Radio, isActive: (p) => p.startsWith('/signals') },
         { label: 'Market', to: '/market/data', icon: Activity, isActive: (p) => p.startsWith('/market') },
         { label: 'Tickets', to: '/tickets/all', icon: MessageSquare, isActive: (p) => p.startsWith('/tickets') },
+        { label: 'Enquiries', to: '/enquiries/all', icon: Mail, isActive: (p) => p.startsWith('/enquiries') },
         { label: 'News', to: '/announcements/all', icon: Megaphone, isActive: (p) => p.startsWith('/announcements') },
         { label: 'Blogs', to: '/blogs/all', icon: FileText, isActive: (p) => p.startsWith('/blogs') },
     ];

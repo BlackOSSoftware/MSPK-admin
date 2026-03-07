@@ -79,8 +79,9 @@ const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadin
                                 const ticketType = ticket.ticketType || ticket.category || '-';
                                 const contactEmail = ticket.contactEmail || ticket.user?.email || '';
                                 const contactNumber = ticket.contactNumber || ticket.user?.phone || '';
-                                const userName = ticket.user?.name || contactEmail || contactNumber || 'Unknown User';
+                                const userName = ticket.user?.name || ticket.contactName || contactEmail || contactNumber || 'Unknown User';
                                 const userInitials = userName.substring(0, 2).toUpperCase();
+                                const sourceLabel = ticket.source === 'web_enquiry' ? 'Web Enquiry' : 'Support Ticket';
 
                                 // Safe Date Handling
                                 const dateStr = ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : '-';
@@ -90,6 +91,8 @@ const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadin
                                     (subject && subject.toLowerCase().includes(highlightTerm.toLowerCase())) ||
                                     (description && description.toLowerCase().includes(highlightTerm.toLowerCase())) ||
                                     (ticketType && ticketType.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (ticket.contactName && ticket.contactName.toLowerCase().includes(highlightTerm.toLowerCase())) ||
+                                    (sourceLabel && sourceLabel.toLowerCase().includes(highlightTerm.toLowerCase())) ||
                                     (userName && userName.toLowerCase().includes(highlightTerm.toLowerCase())) ||
                                     (contactEmail && contactEmail.toLowerCase().includes(highlightTerm.toLowerCase())) ||
                                     (contactNumber && contactNumber.toLowerCase().includes(highlightTerm.toLowerCase()))
@@ -107,6 +110,9 @@ const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadin
                                                 <span className="text-foreground font-sans font-bold">{subject}</span>
                                                 <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
                                                     <span className="bg-secondary px-1 py-0.5 rounded">{ticketType}</span>
+                                                    <span className="bg-primary/10 text-primary px-1 py-0.5 rounded border border-primary/15">
+                                                        {sourceLabel}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </td>

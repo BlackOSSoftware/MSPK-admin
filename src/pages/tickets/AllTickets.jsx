@@ -75,8 +75,10 @@ const AllTickets = () => {
             (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t.ticketType && t.ticketType.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (t.contactName && t.contactName.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t.contactEmail && t.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t.contactNumber && t.contactNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (t.source && t.source.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t.ticketId && t.ticketId.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t._id && t._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (t.user && t.user.email && t.user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
