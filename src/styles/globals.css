@@ -515,6 +515,13 @@
     height: 0;
   }
 
+  .sidebar-scrollbar {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* CYBER-FINANCIAL UTILITIES */
   .bg-cyber-grid {
     background-size: 20px 20px;

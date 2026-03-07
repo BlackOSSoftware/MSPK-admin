@@ -1,76 +1,163 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, BarChart2, Download, List, Settings, Sparkles, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+    Search,
+    Plus,
+    BarChart2,
+    List,
+    Settings,
+    Sparkles,
+    CheckCircle,
+    KeyRound,
+    RefreshCw,
+    Database,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MarketTable from '../../components/tables/MarketTable';
 import Button from '../../components/ui/Button';
 import DataFeedConfig from './DataFeedConfig';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import { getSymbols, deleteSymbol } from '../../api/market.api';
+import { deleteSymbol, generateSymbolId, getSegments, getSymbols } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 import TablePageFooter from '../../components/ui/TablePageFooter';
+
+const DEFAULT_PAGINATION = {
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 1,
+    hasPrevPage: false,
+    hasNextPage: false,
+};
+
+const DEFAULT_SUMMARY = {
+    total: 0,
+    active: 0,
+    inactive: 0,
+    withSymbolId: 0,
+    withoutSymbolId: 0,
+    matched: 0,
+};
+
+const filterInputClassName = "h-10 rounded-xl border border-border/70 bg-secondary/30 px-3 text-xs font-semibold text-foreground outline-none transition focus:border-primary/50 focus:bg-secondary/50";
 
 const ManageSymbols = () => {
     const navigate = useNavigate();
     const toast = useToast();
-    const [activeTab, setActiveTab] = useState('watchlist');
 
-    // Symbols State
+    const [activeTab, setActiveTab] = useState('scripts');
     const [symbols, setSymbols] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [segments, setSegments] = useState([]);
+    const [summary, setSummary] = useState(DEFAULT_SUMMARY);
+    const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
     const [loadingSymbols, setLoadingSymbols] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
-
-    // Delete Modal State
-    const [deleteModal, setDeleteModal] = useState({ isOpen: false, type: null, data: null });
+    const [segmentFilter, setSegmentFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [idFilter, setIdFilter] = useState('all');
+    const [reloadToken, setReloadToken] = useState(0);
+    const [generatingIdFor, setGeneratingIdFor] = useState('');
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, data: null });
 
     useEffect(() => {
-        loadData();
-    }, []);
+        const timer = window.setTimeout(() => {
+            setCurrentPage(1);
+            setDebouncedSearch(searchTerm.trim());
+        }, 350);
 
-    const loadData = async () => {
-        setLoadingSymbols(true);
-        try {
-            const [symData] = await Promise.all([getSymbols()]);
-            setSymbols(symData);
-        } catch (error) {
-            console.error("Failed to load market data", error);
-            toast.error("Failed to load market data");
-        } finally {
-            setLoadingSymbols(false);
-        }
-    };
+        return () => window.clearTimeout(timer);
+    }, [searchTerm]);
 
+    useEffect(() => {
+        const loadSegments = async () => {
+            try {
+                const data = await getSegments();
+                setSegments(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Failed to load segments', error);
+                toast.error('Failed to load segments');
+            }
+        };
+
+        loadSegments();
+    }, [toast]);
+
+    useEffect(() => {
+        if (activeTab !== 'scripts') return;
+
+        const loadSymbols = async () => {
+            setLoadingSymbols(true);
+            try {
+                const response = await getSymbols({
+                    paginated: 'true',
+                    page: currentPage,
+                    limit: itemsPerPage,
+                    search: debouncedSearch,
+                    segment: segmentFilter,
+                    isActive: statusFilter === 'all' ? undefined : statusFilter,
+                    hasSymbolId: idFilter === 'all' ? undefined : idFilter,
+                });
+
+                setSymbols(Array.isArray(response?.results) ? response.results : []);
+                setPagination(response?.pagination || DEFAULT_PAGINATION);
+                setSummary(response?.summary || DEFAULT_SUMMARY);
+                if (response?.pagination?.page && response.pagination.page !== currentPage) {
+                    setCurrentPage(response.pagination.page);
+                }
+            } catch (error) {
+                console.error('Failed to load market data', error);
+                toast.error('Failed to load symbols');
+            } finally {
+                setLoadingSymbols(false);
+            }
+        };
+
+        loadSymbols();
+    }, [activeTab, currentPage, itemsPerPage, debouncedSearch, segmentFilter, statusFilter, idFilter, reloadToken, toast]);
 
     const handleDeleteClick = (symbol) => {
-        setDeleteModal({ isOpen: true, type: 'symbol', data: symbol });
+        setDeleteModal({ isOpen: true, data: symbol });
     };
 
     const handleConfirmDelete = async () => {
-        if (!deleteModal.data) return;
+        if (!deleteModal.data?._id) return;
 
         try {
-            if (deleteModal.type === 'symbol') {
-                await deleteSymbol(deleteModal.data._id);
-                toast.success(`Deleted ${deleteModal.data.symbol} successfully`);
-                loadData();
+            await deleteSymbol(deleteModal.data._id);
+            toast.success(`Deleted ${deleteModal.data.symbol} successfully`);
+            setDeleteModal({ isOpen: false, data: null });
+
+            if (symbols.length === 1 && currentPage > 1) {
+                setCurrentPage((page) => Math.max(1, page - 1));
+                return;
             }
-            setDeleteModal({ isOpen: false, type: null, data: null });
+
+            setReloadToken((value) => value + 1);
         } catch (error) {
-            console.error("Failed to delete item", error);
-            const msg = error.response?.data?.message || "Failed to delete item";
+            console.error('Failed to delete symbol', error);
+            const msg = error.response?.data?.message || 'Failed to delete symbol';
             toast.error(msg);
         }
     };
 
-    const filteredSymbols = symbols.filter(sym =>
-        sym.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (sym.name && sym.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const handleGenerateSymbolId = async (symbol) => {
+        if (!symbol?._id) return;
 
-    const totalSymbols = symbols.length;
-    const activeSymbols = symbols.filter(s => s.isActive).length;
-    const inactiveSymbols = totalSymbols - activeSymbols;
+        setGeneratingIdFor(symbol._id);
+        try {
+            const updated = await generateSymbolId(symbol._id);
+            toast.success(`${updated.symbol} webhook ID is ready`);
+            setReloadToken((value) => value + 1);
+        } catch (error) {
+            console.error('Failed to generate symbol ID', error);
+            const msg = error.response?.data?.message || 'Failed to generate symbol ID';
+            toast.error(msg);
+        } finally {
+            setGeneratingIdFor('');
+        }
+    };
 
     const toneStyles = {
         emerald: { box: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-500', bar: 'bg-emerald-500/70' },
@@ -80,42 +167,46 @@ const ManageSymbols = () => {
         sky: { box: 'bg-sky-500/10 border-sky-500/20', text: 'text-sky-500', bar: 'bg-sky-500/70' }
     };
 
+    const overviewCards = [
+        { label: 'Total Scripts', value: summary.total, icon: Database, tone: 'primary' },
+        { label: 'Active', value: summary.active, icon: CheckCircle, tone: 'emerald' },
+        { label: 'Missing IDs', value: summary.withoutSymbolId, icon: KeyRound, tone: 'amber' },
+        { label: 'Matched', value: summary.matched, icon: BarChart2, tone: 'sky' },
+    ];
+
     return (
         <div className="h-full flex flex-col gap-4">
-            {/* Delete Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={deleteModal.isOpen}
-                onClose={() => setDeleteModal({ isOpen: false, type: null, data: null })}
+                onClose={() => setDeleteModal({ isOpen: false, data: null })}
                 onConfirm={handleConfirmDelete}
-                title={`Delete ${deleteModal.type === 'symbol' ? 'Symbol' : 'Segment'}?`}
-                message={`Are you sure you want to delete ${deleteModal.type === 'symbol' ? deleteModal.data?.symbol : deleteModal.data?.name}? This action cannot be undone.`}
+                title="Delete Script?"
+                message={`Are you sure you want to delete ${deleteModal.data?.symbol}? This action cannot be undone.`}
                 confirmText="Delete"
                 confirmVariant="danger"
             />
 
-            {/* Header with Tabs */}
             <div className="flex flex-col gap-4 shrink-0">
-                {/* Tab Navigation */}
                 <div className="flex items-center gap-1 border-b border-border overflow-x-auto no-scrollbar">
                     <button
-                        onClick={() => setActiveTab('watchlist')}
-                        className={`px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 transition-all border-b-2 whitespace-nowrap ${activeTab === 'watchlist'
-                            ? "border-primary text-primary bg-primary/5"
-                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
+                        onClick={() => setActiveTab('scripts')}
+                        className={`px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 transition-all border-b-2 whitespace-nowrap ${activeTab === 'scripts'
+                            ? 'border-primary text-primary bg-primary/5'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
                     >
-                        <List size={14} /> Instruments
+                        <List size={14} /> Script Master
                     </button>
                     <button
                         onClick={() => setActiveTab('config')}
                         className={`px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 transition-all border-b-2 whitespace-nowrap ${activeTab === 'config'
-                            ? "border-primary text-primary bg-primary/5"
-                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"}`}
+                            ? 'border-primary text-primary bg-primary/5'
+                            : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
                     >
                         <Settings size={14} /> Data Feed Config
                     </button>
                 </div>
 
-                {activeTab === 'watchlist' && (
+                {activeTab === 'scripts' && (
                     <div className="relative rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card/95 to-primary/5 p-3 sm:p-4">
                         <div className="absolute inset-0 rounded-2xl ring-1 ring-primary/10 pointer-events-none" />
                         <div className="flex items-center justify-between gap-3 mb-3">
@@ -124,38 +215,34 @@ const ManageSymbols = () => {
                                     <Sparkles size={16} className="text-primary" />
                                 </div>
                                 <div className="leading-tight">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Overview</p>
-                                    <h2 className="text-sm sm:text-base font-bold text-foreground">Market Inventory</h2>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Inventory</p>
+                                    <h2 className="text-sm sm:text-base font-bold text-foreground">Script Registry</h2>
                                 </div>
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono hidden sm:block">
-                                Updated: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                Webhook ID format: SEGMENT-SYMBOL-MONGOID
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-                            {[
-                                { label: 'Total Symbols', value: `${totalSymbols}`, icon: BarChart2, tone: 'primary' },
-                                { label: 'Active Feeds', value: `${activeSymbols}`, icon: CheckCircle, tone: 'emerald' },
-                                { label: 'Inactive', value: `${inactiveSymbols}`, icon: XCircle, tone: 'rose' }
-                            ].map((card) => {
+                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
+                            {overviewCards.map((card) => {
                                 const tone = toneStyles[card.tone] || toneStyles.primary;
                                 return (
                                     <div
                                         key={card.label}
-                                        className={`rounded-2xl border border-border/70 bg-card/70 p-2.5 sm:p-3 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ${card.tone === 'primary' ? 'bg-amber-400/90 border-amber-300/60' : ''}`}
+                                        className="rounded-2xl border border-border/70 bg-card/70 p-2.5 sm:p-3 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div>
-                                                <p className={`text-[9px] uppercase tracking-wider font-semibold ${card.tone === 'primary' ? 'text-foreground/70' : 'text-muted-foreground'}`}>{card.label}</p>
-                                                <p className={`text-base sm:text-lg font-bold mt-0.5 ${card.tone === 'primary' ? 'text-foreground' : 'text-foreground'}`}>{card.value}</p>
+                                                <p className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">{card.label}</p>
+                                                <p className="text-base sm:text-lg font-bold mt-0.5 text-foreground">{card.value}</p>
                                             </div>
-                                            <div className={`h-8 w-8 rounded-lg border grid place-items-center ${card.tone === 'primary' ? 'bg-white/60 border-white/60' : tone.box}`}>
-                                                <card.icon size={14} className={card.tone === 'primary' ? 'text-foreground' : tone.text} />
+                                            <div className={`h-8 w-8 rounded-lg border grid place-items-center ${tone.box}`}>
+                                                <card.icon size={14} className={tone.text} />
                                             </div>
                                         </div>
-                                        <div className={`mt-2 h-1.5 rounded-full overflow-hidden ${card.tone === 'primary' ? 'bg-foreground/10' : 'bg-secondary/50'}`}>
-                                            <div className={`h-full ${card.tone === 'primary' ? 'bg-foreground/40' : tone.bar}`} style={{ width: '70%' }} />
+                                        <div className="mt-2 h-1.5 rounded-full overflow-hidden bg-secondary/50">
+                                            <div className={`h-full ${tone.bar}`} style={{ width: '72%' }} />
                                         </div>
                                     </div>
                                 );
@@ -165,96 +252,147 @@ const ManageSymbols = () => {
                 )}
             </div>
 
-            {/* Main Content */}
             <div className="flex-1 min-h-0 relative flex flex-col">
-                {activeTab === 'watchlist' && (
+                {activeTab === 'scripts' && (
                     <div className="flex flex-col h-full gap-2">
-                        {/* Toolbar */}
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shrink-0 bg-card border border-border p-3 rounded-2xl shadow-sm">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
-                                        <TrendingUp size={16} className="text-primary" />
+                        <div className="flex flex-col gap-3 shrink-0 bg-card border border-border p-3 rounded-2xl shadow-sm">
+                            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center">
+                                            <Database size={16} className="text-primary" />
+                                        </div>
+                                        <div className="leading-tight">
+                                            <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Scripts</p>
+                                            <h2 className="text-sm sm:text-base font-bold text-foreground">Search, filter, and manage all symbols</h2>
+                                        </div>
                                     </div>
-                                    <div className="leading-tight">
-                                        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Symbols</p>
-                                        <h2 className="text-sm sm:text-base font-bold text-foreground">Market Watchlist</h2>
+
+                                    <div className="hidden sm:block h-7 w-[1px] bg-border/70" />
+
+                                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                                        <span className="text-muted-foreground font-medium">Results:</span>
+                                        <span className="text-foreground font-bold">{pagination.total}</span>
+                                        <span className="text-muted-foreground/50">|</span>
+                                        <span className="text-muted-foreground font-medium">Ready IDs:</span>
+                                        <span className="text-foreground font-bold">{summary.withSymbolId}</span>
                                     </div>
                                 </div>
 
-                                <div className="hidden sm:block h-7 w-[1px] bg-border/70" />
-
-                                <div className="flex items-center gap-2 text-xs">
-                                    <span className="text-muted-foreground font-medium">Total Symbols:</span>
-                                    <span className="text-foreground font-bold">{symbols.length}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
-                                <div className="relative group w-full sm:w-64">
-                                    <Search className="absolute left-3 top-2 text-muted-foreground" size={12} />
-                                    <input
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        type="text"
-                                        placeholder="SEARCH INSTRUMENT..."
-                                        className="bg-secondary/30 border border-border h-8 pl-9 pr-3 w-full text-[11px] font-mono rounded-lg focus:border-primary/50 focus:bg-secondary/50 focus:outline-none focus:ring-0 transition-all placeholder:text-muted-foreground/50"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <Button variant="outline" size="sm" className="h-8 text-[10px] border-border gap-1.5 rounded-lg hover:border-primary/50 flex-1 sm:flex-none min-w-0 px-3" onClick={loadData}>
-                                    <Download size={12} /> Sync
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full xl:w-auto">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 text-[10px] border-border gap-1.5 rounded-lg hover:border-primary/50"
+                                        onClick={() => setReloadToken((value) => value + 1)}
+                                    >
+                                        <RefreshCw size={12} /> Refresh
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => navigate('/market/add')}
-                                        className="h-8 text-[10px] gap-1.5 rounded-lg font-bold flex-1 sm:flex-none min-w-0 px-3 btn-cancel"
+                                        className="h-9 text-[10px] gap-1.5 rounded-lg font-bold btn-cancel"
                                     >
                                         <Plus size={12} /> Add Symbol
                                     </Button>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-2">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 text-muted-foreground" size={14} />
+                                    <input
+                                        value={searchTerm}
+                                        onChange={(event) => setSearchTerm(event.target.value)}
+                                        type="text"
+                                        placeholder="Search by symbol, name, symbol ID, or Mongo ID"
+                                        className={`${filterInputClassName} w-full pl-10 font-mono placeholder:text-muted-foreground/50`}
+                                    />
+                                </div>
+
+                                <select
+                                    value={segmentFilter}
+                                    onChange={(event) => {
+                                        setSegmentFilter(event.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className={filterInputClassName}
+                                >
+                                    <option value="">All Segments</option>
+                                    {segments.map((segment) => (
+                                        <option key={segment._id || segment.code} value={segment.code}>
+                                            {segment.code}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <select
+                                    value={statusFilter}
+                                    onChange={(event) => {
+                                        setStatusFilter(event.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className={filterInputClassName}
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="true">Active Only</option>
+                                    <option value="false">Inactive Only</option>
+                                </select>
+
+                                <select
+                                    value={idFilter}
+                                    onChange={(event) => {
+                                        setIdFilter(event.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className={filterInputClassName}
+                                >
+                                    <option value="all">All ID Status</option>
+                                    <option value="true">With Symbol ID</option>
+                                    <option value="false">Missing Symbol ID</option>
+                                </select>
+                            </div>
                         </div>
 
-                        {/* Table */}
                         <div className="flex-1 min-h-0 relative flex flex-col">
                             <div className="flex-1 min-h-[620px] relative">
                                 <MarketTable
-                                    symbols={filteredSymbols.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
-                                    onEdit={(sym) => navigate('/market/edit', { state: { symbol: sym } })}
+                                    symbols={symbols}
+                                    onEdit={(symbol) => navigate('/market/edit', { state: { symbol } })}
                                     onDelete={handleDeleteClick}
+                                    onGenerateId={handleGenerateSymbolId}
+                                    generatingIdFor={generatingIdFor}
                                     isLoading={loadingSymbols}
                                 />
 
-                                {!loadingSymbols && filteredSymbols.length === 0 && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-3 opacity-50 bg-card/80 backdrop-blur-sm pointer-events-none">
+                                {!loadingSymbols && symbols.length === 0 && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-3 opacity-60 bg-card/80 backdrop-blur-sm pointer-events-none">
                                         <BarChart2 size={48} strokeWidth={1} />
                                         <div className="text-center">
-                                            <p className="text-sm font-bold uppercase tracking-widest">No Symbols Found</p>
-                                            <p className="text-[10px] font-mono mt-1">Try adjusting search or add a new symbol</p>
+                                            <p className="text-sm font-bold uppercase tracking-widest">No Scripts Found</p>
+                                            <p className="text-[10px] font-mono mt-1">Try another search term or reset filters</p>
                                         </div>
                                     </div>
                                 )}
-
                             </div>
 
                             <div className="shrink-0 mt-2">
                                 <TablePageFooter
-                                    total={filteredSymbols.length}
-                                    page={currentPage}
-                                    totalPages={Math.ceil(filteredSymbols.length / itemsPerPage) || 1}
+                                    total={pagination.total}
+                                    overallTotal={summary.total}
+                                    page={pagination.page}
+                                    totalPages={pagination.totalPages}
                                     perPage={itemsPerPage}
                                     perPageOptions={[20, 50, 100]}
                                     onPerPageChange={(value) => {
                                         setItemsPerPage(value);
                                         setCurrentPage(1);
                                     }}
-                                    onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    onNext={() => setCurrentPage(p => Math.min(Math.ceil(filteredSymbols.length / itemsPerPage), p + 1))}
+                                    onPrev={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                                    onNext={() => setCurrentPage((page) => Math.min(pagination.totalPages || 1, page + 1))}
                                 />
                             </div>
-
                         </div>
                     </div>
                 )}
@@ -265,7 +403,7 @@ const ManageSymbols = () => {
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     );
 };
 

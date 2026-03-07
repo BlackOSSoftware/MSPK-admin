@@ -10,7 +10,12 @@ export const getSymbols = async (params) => {
     if (typeof params === 'string') {
         query = `?segment=${params}`;
     } else if (typeof params === 'object') {
-        const usp = new URLSearchParams(params).toString();
+        const sanitizedParams = Object.entries(params).reduce((acc, [key, value]) => {
+            if (value === undefined || value === null || value === '') return acc;
+            acc[key] = value;
+            return acc;
+        }, {});
+        const usp = new URLSearchParams(sanitizedParams).toString();
         query = `?${usp}`;
     }
     const response = await client.get(`/market/symbols${query}`);
@@ -68,6 +73,11 @@ export const createSymbol = async (data) => {
 
 export const updateSymbol = async (id, data) => {
     const response = await client.patch(`/market/symbols/${id}`, data);
+    return response.data;
+};
+
+export const generateSymbolId = async (id) => {
+    const response = await client.post(`/market/symbols/${id}/generate-id`);
     return response.data;
 };
 

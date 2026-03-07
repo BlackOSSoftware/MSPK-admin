@@ -1,13 +1,77 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Target, AlertTriangle, Clock, MoreVertical, XCircle, Trash2, Edit, Cpu, Activity, Zap, Tag, ArrowUpRight, BarChart2, ShieldAlert, BadgeCheck, Settings } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    AlertTriangle,
+    ArrowUpRight,
+    BadgeCheck,
+    Clock,
+    Edit,
+    MoreVertical,
+    Radio,
+    ShieldAlert,
+    Target,
+    Trash2,
+    TrendingDown,
+    TrendingUp,
+    XCircle,
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { socket } from '../../api/socket';
 import TableHeaderCell from '../ui/TableHeaderCell';
 
+const CLOSED_STATUSES = new Set(['Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit']);
+
+const formatPrice = (value) => {
+    if (value === null || value === undefined || value === '') return '---';
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value);
+    return numeric.toFixed(2);
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '---';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '---';
+    return date.toLocaleString([], {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
+
+const getTimeAgo = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+};
+
+const getStatusClasses = (status) => {
+    switch (status) {
+        case 'Active':
+            return 'border-primary/30 text-primary bg-primary/10';
+        case 'Target Hit':
+            return 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10';
+        case 'Partial Profit Book':
+            return 'border-amber-500/30 text-amber-500 bg-amber-500/10';
+        case 'Stoploss Hit':
+            return 'border-red-500/30 text-red-500 bg-red-500/10';
+        case 'Closed':
+            return 'border-amber-500/30 text-amber-500 bg-amber-500/10';
+        default:
+            return 'border-border/70 text-muted-foreground bg-muted/10';
+    }
+};
+
 const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }) => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
-    const dropdownRef = useRef(null);
     const [ltpData, setLtpData] = useState({});
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -15,203 +79,296 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                 setOpenDropdownId(null);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     useEffect(() => {
-        if (!signals || signals.length === 0) return;
-        const symbols = [...new Set(signals.map(s => s.symbol))];
-        symbols.forEach(sym => socket.emit('subscribe', sym));
+        if (!signals || signals.length === 0) return undefined;
 
-        const onTick = (data) => {
-            if (symbols.includes(data.symbol)) {
-                setLtpData(prev => ({
-                    ...prev,
-                    [data.symbol]: {
-                        price: data.price,
-                        change: data.change || 0,
-                    }
-                }));
-            }
+        const symbols = [...new Set(signals.map((signal) => signal.symbol).filter(Boolean))];
+        symbols.forEach((symbol) => socket.emit('subscribe', symbol));
+
+        const onTick = (tick) => {
+            if (!tick?.symbol || !symbols.includes(tick.symbol)) return;
+
+            setLtpData((prev) => ({
+                ...prev,
+                [tick.symbol]: {
+                    price: tick.price ?? tick.last_price,
+                    change: tick.change ?? 0,
+                },
+            }));
         };
 
         socket.on('tick', onTick);
+
         return () => {
             socket.off('tick', onTick);
-            symbols.forEach(sym => socket.emit('unsubscribe', sym));
+            symbols.forEach((symbol) => socket.emit('unsubscribe', symbol));
         };
     }, [signals]);
 
-    const toggleDropdown = (id, e) => {
-        e.stopPropagation();
-        setOpenDropdownId(openDropdownId === id ? null : id);
-    };
-
-    const formatTime = (date) => {
-        if (!date) return '---';
-        const d = new Date(date);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    };
-
-    const getTimeAgo = (date) => {
-        if (!date) return '';
-        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-        if (seconds < 60) return `${seconds}s ago`;
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        return `${Math.floor(seconds / 3600)}h ago`;
+    const toggleDropdown = (signalId, event) => {
+        event.stopPropagation();
+        setOpenDropdownId((current) => (current === signalId ? null : signalId));
     };
 
     return (
-        <div className="terminal-panel w-full h-full overflow-hidden border border-border bg-card rounded-lg shadow-2xl relative flex flex-col font-sans">
-            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+        <div className="terminal-panel relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
+            <div className="absolute left-0 right-0 top-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
-            <div className="overflow-auto flex-1 custom-scrollbar pb-20">
-                <table className="w-full text-left whitespace-nowrap">
-                    <thead className="bg-muted/50 sticky top-0 z-20 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
+            <div className="custom-scrollbar flex-1 overflow-auto pb-20">
+                <table className="w-full whitespace-nowrap text-left">
+                    <thead className="sticky top-0 z-20 border-b border-border bg-muted/50 text-[9px] font-bold uppercase tracking-widest text-muted-foreground shadow-sm backdrop-blur-md">
                         <tr>
-                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm w-44" icon={Activity} label="Symbol / Strategy" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-center w-20" icon={Tag} label="Type" align="center" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24" icon={ArrowUpRight} label="Entry" align="right" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24" icon={TrendingUp} label="LTP" align="right" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border bg-muted/90 backdrop-blur-sm w-56" icon={BarChart2} label="Hybrid Metrics" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={Target} label="Target" align="center" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={ShieldAlert} label="Stoploss" align="center" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={Clock} label="Generated" align="center" />
-                            <TableHeaderCell className="px-4 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm w-24" icon={BadgeCheck} label="Status" align="center" />
-                            <TableHeaderCell className="px-4 py-3 text-center bg-muted/90 backdrop-blur-sm w-10" icon={Settings} label="Action" align="center" />
+                            <TableHeaderCell className="w-[320px] border-r border-border bg-muted/90 px-4 py-3 backdrop-blur-sm" icon={Radio} label="Signal / Routing" />
+                            <TableHeaderCell className="w-24 border-r border-border bg-muted/90 px-4 py-3 text-center backdrop-blur-sm" icon={TrendingUp} label="Type" align="center" />
+                            <TableHeaderCell className="w-28 border-r border-border bg-muted/90 px-4 py-3 text-right backdrop-blur-sm" icon={ArrowUpRight} label="Entry" align="right" />
+                            <TableHeaderCell className="w-[240px] border-r border-border bg-muted/90 px-4 py-3 backdrop-blur-sm" icon={Target} label="Targets" />
+                            <TableHeaderCell className="w-[220px] border-r border-border bg-muted/90 px-4 py-3 backdrop-blur-sm" icon={ShieldAlert} label="Risk / Outcome" />
+                            <TableHeaderCell className="w-[220px] border-r border-border bg-muted/90 px-4 py-3 backdrop-blur-sm" icon={Clock} label="Timing" />
+                            <TableHeaderCell className="w-32 border-r border-border bg-muted/90 px-4 py-3 text-center backdrop-blur-sm" icon={BadgeCheck} label="Status" align="center" />
+                            <TableHeaderCell className="w-14 bg-muted/90 px-4 py-3 text-center backdrop-blur-sm" icon={MoreVertical} label="Action" align="center" />
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium font-mono">
+                    <tbody className="divide-y divide-border bg-transparent font-mono text-[11px] font-medium">
                         {isLoading ? (
                             [...Array(8)].map((_, index) => (
-                                <tr key={`skeleton-${index}`} className="animate-pulse">
-                                    <td className="px-4 py-3 border-r border-border"><div className="h-4 w-32 bg-muted/50 rounded mb-1"></div><div className="h-3 w-20 bg-muted/50 rounded"></div></td>
-                                    <td className="px-4 py-3 border-r border-border"><div className="h-6 w-16 bg-muted/50 rounded mx-auto"></div></td>
-                                    <td className="px-4 py-3 border-r border-border text-right"><div className="h-4 w-16 bg-muted/50 rounded ml-auto"></div></td>
-                                    <td className="px-4 py-3 border-r border-border text-right"><div className="h-4 w-16 bg-muted/50 rounded ml-auto"></div></td>
-                                    <td className="px-4 py-3 border-r border-border"><div className="h-4 w-44 bg-muted/50 rounded"></div></td>
-                                    <td className="px-4 py-3 border-r border-border text-center"><div className="h-4 w-16 bg-muted/50 rounded mx-auto"></div></td>
-                                    <td className="px-4 py-3 border-r border-border text-center"><div className="h-4 w-16 bg-muted/50 rounded mx-auto"></div></td>
-                                    <td className="px-4 py-3 border-r border-border text-center"><div className="h-4 w-16 bg-muted/50 rounded mx-auto"></div></td>
-                                    <td className="px-4 py-3 border-r border-border text-center"><div className="h-5 w-16 bg-muted/50 rounded mx-auto"></div></td>
-                                    <td className="px-4 py-3 text-center"><div className="h-6 w-6 bg-muted/50 rounded mx-auto"></div></td>
+                                <tr key={`signal-skeleton-${index}`} className="animate-pulse">
+                                    <td className="border-r border-border px-4 py-4">
+                                        <div className="mb-2 h-4 w-36 rounded bg-muted/50" />
+                                        <div className="mb-2 h-3 w-48 rounded bg-muted/50" />
+                                        <div className="h-3 w-56 rounded bg-muted/50" />
+                                    </td>
+                                    <td className="border-r border-border px-4 py-4 text-center"><div className="mx-auto h-6 w-16 rounded bg-muted/50" /></td>
+                                    <td className="border-r border-border px-4 py-4 text-right"><div className="ml-auto h-4 w-16 rounded bg-muted/50" /></td>
+                                    <td className="border-r border-border px-4 py-4"><div className="h-4 w-40 rounded bg-muted/50" /></td>
+                                    <td className="border-r border-border px-4 py-4"><div className="h-4 w-36 rounded bg-muted/50" /></td>
+                                    <td className="border-r border-border px-4 py-4"><div className="h-4 w-40 rounded bg-muted/50" /></td>
+                                    <td className="border-r border-border px-4 py-4 text-center"><div className="mx-auto h-5 w-20 rounded bg-muted/50" /></td>
+                                    <td className="px-4 py-4 text-center"><div className="mx-auto h-6 w-6 rounded bg-muted/50" /></td>
                                 </tr>
                             ))
                         ) : (
                             signals.map((signal, index) => {
+                                const signalId = signal.id || signal._id || `${signal.symbol}-${index}`;
                                 const isBuy = signal.type === 'BUY';
+                                const isClosed = CLOSED_STATUSES.has(signal.status);
                                 const targets = signal.targets || {};
-                                const targetPrice = targets.target1 || signal.target || '---';
-                                const ltp = ltpData[signal.symbol]?.price;
-                                const isHighlighted = highlightTerm && signal.symbol.toLowerCase().includes(highlightTerm.toLowerCase());
-                                const generationTime = signal.createdAt || signal.timestamp;
+                                const livePrice = ltpData[signal.symbol]?.price;
+                                const signalTime = signal.signalTime || signal.createdAt || signal.timestamp;
+                                const highlightMatch =
+                                    highlightTerm &&
+                                    `${signal.symbol} ${signal.uniqueId || ''} ${signal.webhookId || ''}`
+                                        .toLowerCase()
+                                        .includes(highlightTerm.toLowerCase());
 
                                 return (
                                     <tr
-                                        key={signal.id || index}
-                                        onClick={() => onRowClick && onRowClick(signal)}
-                                        className={`transition-all duration-300 group relative cursor-pointer ${isHighlighted ? 'bg-primary/5 shadow-[inset_4px_0_0_0_rgba(59,130,246,0.5)]' : 'hover:bg-primary/[0.02]'}`}
+                                        key={signalId}
+                                        onClick={() => onRowClick?.(signal)}
+                                        className={clsx(
+                                            'group relative cursor-pointer transition-all duration-200 hover:bg-primary/[0.03]',
+                                            highlightMatch && 'bg-primary/5 shadow-[inset_4px_0_0_0_rgba(59,130,246,0.5)]'
+                                        )}
                                     >
-                                        <td className="px-4 py-4 border-r border-border">
-                                            <div className="flex flex-col">
-                                                <span className="text-foreground font-sans font-extrabold text-sm tracking-tight">{signal.symbol}</span>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[10px] text-primary/80 font-bold uppercase tracking-wider">{signal.strategyName || 'MANUAL'}</span>
-                                                    <span className="text-[9px] text-muted-foreground/60">•</span>
-                                                    <span className="text-[9px] text-muted-foreground/60">{signal.timeframe || '---'}</span>
+                                        <td className="border-r border-border px-4 py-4">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-sans text-sm font-extrabold tracking-tight text-foreground">{signal.symbol || '---'}</span>
+                                                            <span className={clsx(
+                                                                'rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.22em]',
+                                                                signal.isFree ? 'border-sky-500/30 bg-sky-500/10 text-sky-400' : 'border-violet-500/30 bg-violet-500/10 text-violet-400'
+                                                            )}>
+                                                                {signal.isFree ? 'Free' : 'Premium'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                            {[signal.segment, signal.category, signal.timeframe].filter(Boolean).map((item) => (
+                                                                <span key={`${signalId}-${item}`} className="rounded-md border border-border/70 bg-muted/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                                                                    {item}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid gap-1 text-[9px] text-muted-foreground">
+                                                    <div className="truncate">
+                                                        <span className="font-semibold text-foreground/80">UID:</span>{' '}
+                                                        <span title={signal.uniqueId || '---'}>{signal.uniqueId || '---'}</span>
+                                                    </div>
+                                                    <div className="truncate">
+                                                        <span className="font-semibold text-foreground/80">Webhook:</span>{' '}
+                                                        <span title={signal.webhookId || '---'}>{signal.webhookId || '---'}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
 
-                                        <td className="px-4 py-3 border-r border-border text-center">
-                                            <div className={`inline-flex items-center gap-1 font-bold px-2 py-1 rounded text-[10px] ${isBuy ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-red-400 bg-red-500/10 border border-red-500/20'}`}>
-                                                {isBuy ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                                                {signal.type}
-                                            </div>
-                                        </td>
-
-                                        <td className="px-4 py-3 border-r border-border text-right text-foreground font-bold font-mono">
-                                            {signal.entry || '---'}
-                                        </td>
-
-                                        <td className="px-4 py-3 border-r border-border text-right">
-                                            {ltp ? (
-                                                <span className="text-foreground font-bold text-xs">{ltp.toFixed(2)}</span>
-                                            ) : (
-                                                <span className="text-muted-foreground opacity-30">---</span>
-                                            )}
-                                        </td>
-
-                                        <td className="px-4 py-3 border-r border-border">
-                                            <div className="flex flex-wrap items-center gap-y-1.5 gap-x-3 text-[9px] uppercase tracking-tighter font-bold">
-                                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-muted/20 border border-border/10">
-                                                    <span className="text-muted-foreground">SMA</span>
-                                                    <span className="text-blue-400">{signal.metrics?.sma ? signal.metrics.sma.toFixed(1) : '---'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-muted/20 border border-border/10">
-                                                    <span className="text-muted-foreground">EMA</span>
-                                                    <span className="text-violet-400">{signal.metrics?.ema ? signal.metrics.ema.toFixed(1) : '---'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-emerald-500/5 border border-emerald-500/10">
-                                                    <span className="text-emerald-500/70">ST</span>
-                                                    <span className="text-emerald-400">{signal.metrics?.supertrend ? signal.metrics.supertrend.toFixed(1) : '---'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-orange-500/5 border border-orange-500/10">
-                                                    <span className="text-orange-500/70">RSI</span>
-                                                    <span className="text-orange-400">{signal.metrics?.rsi ? signal.metrics.rsi.toFixed(0) : '---'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-blue-500/5 border border-blue-500/10">
-                                                    <span className="text-blue-500/70">SAR</span>
-                                                    <span className="text-blue-400">{signal.metrics?.psar ? signal.metrics.psar.toFixed(1) : '---'}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td className="px-4 py-3 text-center border-r border-border text-emerald-500 font-bold bg-emerald-500/[0.03]">
-                                            {targetPrice}
-                                        </td>
-
-                                        <td className="px-4 py-3 text-center border-r border-border text-red-500 font-bold bg-red-500/[0.03]">
-                                            {signal.stoploss || '---'}
-                                        </td>
-
-                                        <td className="px-4 py-3 text-center border-r border-border">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-foreground/80 font-bold text-[10px]">{formatTime(generationTime)}</span>
-                                                <span className="text-muted-foreground/50 text-[8px] uppercase">{getTimeAgo(generationTime)}</span>
-                                            </div>
-                                        </td>
-
-                                        <td className="px-4 py-3 text-center border-r border-border">
-                                            <span className={clsx(
-                                                "px-2 py-0.5 border rounded-full text-[8px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 w-fit mx-auto shadow-sm",
-                                                signal.status === 'Active' ? 'border-primary/30 text-primary bg-primary/10' :
-                                                    signal.status === 'Target Hit' ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10' :
-                                                        signal.status === 'Stoploss Hit' ? 'border-red-500/30 text-red-500 bg-red-500/10' :
-                                                            'border-white/10 text-muted-foreground bg-white/5'
+                                        <td className="border-r border-border px-4 py-4 text-center">
+                                            <div className={clsx(
+                                                'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold',
+                                                isBuy
+                                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                                                    : 'border-red-500/20 bg-red-500/10 text-red-400'
                                             )}>
-                                                {signal.status === 'Active' && <Zap size={8} className="animate-pulse" />}
-                                                {signal.status}
+                                                {isBuy ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                                                {signal.type || '---'}
+                                            </div>
+                                        </td>
+
+                                        <td className="border-r border-border px-4 py-4 text-right text-foreground">
+                                            <div className="text-xs font-extrabold">{formatPrice(signal.entry)}</div>
+                                            <div className="mt-1 text-[9px] text-muted-foreground">
+                                                Live: <span className="font-semibold text-foreground/80">{formatPrice(livePrice)}</span>
+                                            </div>
+                                        </td>
+
+                                        <td className="border-r border-border px-4 py-4">
+                                            <div className="grid gap-1">
+                                                {[
+                                                    ['TP1', targets.target1],
+                                                    ['TP2', targets.target2],
+                                                    ['TP3', targets.target3],
+                                                ].map(([label, value]) => (
+                                                    <div key={`${signalId}-${label}`} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">{label}</span>
+                                                        <span className="text-[10px] font-bold text-emerald-400">{formatPrice(value)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </td>
+
+                                        <td className="border-r border-border px-4 py-4">
+                                            <div className="grid gap-1.5">
+                                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
+                                                    <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">SL</span>
+                                                    <span className="text-[10px] font-bold text-red-400">{formatPrice(signal.stoploss)}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
+                                                    <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">
+                                                        {isClosed ? 'Exit' : 'LTP'}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-foreground">
+                                                        {formatPrice(isClosed ? signal.exitPrice : livePrice)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
+                                                    <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">Points</span>
+                                                    <span className="text-[10px] font-bold text-foreground">{signal.totalPoints ?? '---'}</span>
+                                                </div>
+                                                {signal.exitReason ? (
+                                                    <div className="truncate text-[9px] text-muted-foreground" title={signal.exitReason}>
+                                                        Reason: <span className="font-semibold text-foreground/80">{signal.exitReason}</span>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </td>
+
+                                        <td className="border-r border-border px-4 py-4">
+                                            <div className="grid gap-2">
+                                                <div>
+                                                    <div className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">Signal Time</div>
+                                                    <div className="mt-1 text-[10px] font-semibold text-foreground">{formatDateTime(signalTime)}</div>
+                                                    <div className="text-[9px] text-muted-foreground">{getTimeAgo(signalTime)}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">Exit Time</div>
+                                                    <div className="mt-1 text-[10px] font-semibold text-foreground">{formatDateTime(signal.exitTime)}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="border-r border-border px-4 py-4 text-center">
+                                            <span className={clsx(
+                                                'mx-auto inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.2em]',
+                                                getStatusClasses(signal.status)
+                                            )}>
+                                                {signal.status === 'Active' ? <Radio size={8} className="animate-pulse" /> : <BadgeCheck size={8} />}
+                                                {signal.status || 'Unknown'}
                                             </span>
                                         </td>
 
-                                        <td className="px-4 py-3 text-center relative" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => toggleDropdown(signal.id, e)} className="p-1.5 hover:bg-muted/20 rounded-md text-muted-foreground hover:text-foreground transition-all">
+                                        <td className="relative px-4 py-4 text-center" onClick={(event) => event.stopPropagation()}>
+                                            <button
+                                                type="button"
+                                                onClick={(event) => toggleDropdown(signalId, event)}
+                                                className="rounded-md p-1.5 text-muted-foreground transition-all hover:bg-muted/20 hover:text-foreground"
+                                            >
                                                 <MoreVertical size={14} />
                                             </button>
-                                            {openDropdownId === signal.id && (
-                                                <div ref={dropdownRef} className="absolute right-8 top-0 mt-2 w-44 bg-card border border-border rounded-lg shadow-2xl z-50 flex flex-col py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
-                                                    <button onClick={() => { onAction('updateStatus', signal, 'Target Hit'); setOpenDropdownId(null); }} className="px-3 py-2 text-[10px] hover:bg-emerald-500/10 hover:text-emerald-500 text-left flex items-center gap-2.5 font-bold border-b border-border/10">
-                                                        <Target size={14} /> Target Hit
+
+                                            {openDropdownId === signalId && (
+                                                <div ref={dropdownRef} className="absolute right-8 top-2 z-50 flex w-44 flex-col overflow-hidden rounded-lg border border-border bg-card py-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onAction?.('edit', signal);
+                                                            setOpenDropdownId(null);
+                                                        }}
+                                                        className="flex items-center gap-2.5 px-3 py-2 text-left text-[10px] font-bold hover:bg-muted/20"
+                                                    >
+                                                        <Edit size={14} /> Edit Signal
                                                     </button>
-                                                    <button onClick={() => { onAction('updateStatus', signal, 'Stoploss Hit'); setOpenDropdownId(null); }} className="px-3 py-2 text-[10px] hover:bg-red-500/10 hover:text-red-500 text-left flex items-center gap-2.5 font-bold border-b border-border/10">
-                                                        <AlertTriangle size={14} /> Stoploss Hit
-                                                    </button>
-                                                    <button onClick={() => { onAction('close', signal); setOpenDropdownId(null); }} className="px-3 py-2 text-[10px] hover:bg-muted/20 text-left flex items-center gap-2.5 font-bold border-b border-border/10">
-                                                        <XCircle size={14} /> Force Close
-                                                    </button>
-                                                    <button onClick={() => { onAction('delete', signal); setOpenDropdownId(null); }} className="px-3 py-2 text-[10px] hover:bg-red-500/10 text-red-500 text-left flex items-center gap-2.5 font-black">
+
+                                                    {!isClosed ? (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    onAction?.('updateStatus', signal, 'Target Hit');
+                                                                    setOpenDropdownId(null);
+                                                                }}
+                                                                className="flex items-center gap-2.5 border-t border-border/10 px-3 py-2 text-left text-[10px] font-bold hover:bg-emerald-500/10 hover:text-emerald-500"
+                                                            >
+                                                                <Target size={14} /> Target Hit
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    onAction?.('updateStatus', signal, 'Partial Profit Book');
+                                                                    setOpenDropdownId(null);
+                                                                }}
+                                                                className="flex items-center gap-2.5 border-t border-border/10 px-3 py-2 text-left text-[10px] font-bold hover:bg-amber-500/10 hover:text-amber-500"
+                                                            >
+                                                                <BadgeCheck size={14} /> Partial Profit
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    onAction?.('updateStatus', signal, 'Stoploss Hit');
+                                                                    setOpenDropdownId(null);
+                                                                }}
+                                                                className="flex items-center gap-2.5 border-t border-border/10 px-3 py-2 text-left text-[10px] font-bold hover:bg-red-500/10 hover:text-red-500"
+                                                            >
+                                                                <AlertTriangle size={14} /> Stoploss Hit
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    onAction?.('close', signal);
+                                                                    setOpenDropdownId(null);
+                                                                }}
+                                                                className="flex items-center gap-2.5 border-t border-border/10 px-3 py-2 text-left text-[10px] font-bold hover:bg-muted/20"
+                                                            >
+                                                                <XCircle size={14} /> Force Close
+                                                            </button>
+                                                        </>
+                                                    ) : null}
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onAction?.('delete', signal);
+                                                            setOpenDropdownId(null);
+                                                        }}
+                                                        className="flex items-center gap-2.5 border-t border-border/10 px-3 py-2 text-left text-[10px] font-black text-red-500 hover:bg-red-500/10"
+                                                    >
                                                         <Trash2 size={14} /> Purge Record
                                                     </button>
                                                 </div>

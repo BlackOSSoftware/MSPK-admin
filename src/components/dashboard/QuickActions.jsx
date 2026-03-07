@@ -1,12 +1,12 @@
 import React from "react";
-import { UserPlus, Megaphone, Settings2, PauseCircle, CreditCard } from "lucide-react";
+import { UserPlus, Megaphone, Headphones, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const ACTION_BUTTONS = [
   { icon: UserPlus, label: "Add User", tone: "blue", path: "/users/create" },
   { icon: CreditCard, label: "New Plan", tone: "amber", path: "/plans/create" },
   { icon: Megaphone, label: "Broadcast", tone: "emerald", path: "/announcements/create" },
- 
+  { icon: Headphones, label: "Update Support", tone: "slate", path: "/settings/all" },
 ];
 
 const TONE = {

@@ -12,7 +12,6 @@ import CreateUser from '../pages/users/CreateUser';
 import UserDetails from '../pages/users/UserDetails';
 import EditUser from '../pages/users/EditUser';
 import SubscriptionHistory from '../pages/users/SubscriptionHistory';
-import SignalsAccess from '../pages/users/SignalsAccess';
 
 // Plan Management
 import AllPlans from '../pages/plans/AllPlans';
@@ -107,7 +106,6 @@ const AppRouter = () => {
                     <Route path="users/details" element={<UserDetails />} />
                     <Route path="users/edit" element={<EditUser />} />
                     <Route path="users/history" element={<SubscriptionHistory />} />
-                    <Route path="users/access" element={<SignalsAccess />} />
 
                     {/* Plan Management */}
                     <Route path="plans/all" element={<AllPlans />} />

@@ -38,6 +38,14 @@ const DataFeedConfig = () => {
         data_feed_api_secret: ''
     });
 
+    const getProviderStats = (stats, provider) => {
+        if (provider === 'kite') {
+            return stats.kite || { connected: false, latency: 'Disconnected', tickCount: 0 };
+        }
+
+        return stats.alltick || stats.marketData || stats.mt5 || { connected: false, latency: 'Disconnected', tickCount: 0 };
+    };
+
     useEffect(() => {
         loadSettings();
 
@@ -56,7 +64,7 @@ const DataFeedConfig = () => {
                             mode: stats.mode,
                             uptime: formatUptime(stats.uptime),
                             kite: stats.kite || { connected: false, latency: 'Disconnected', ticks: 0 },
-                            alltick: stats.alltick || { connected: false, latency: 'Disconnected', ticks: 0 }
+                            alltick: getProviderStats(stats, 'alltick')
                         }));
                     }
                 });
@@ -87,7 +95,7 @@ const DataFeedConfig = () => {
                     mode: stats.mode,
                     uptime: formatUptime(stats.uptime),
                     kite: stats.kite || { connected: false, latency: 'Disconnected', ticks: 0 },
-                    alltick: stats.alltick || { connected: false, latency: 'Disconnected', ticks: 0 }
+                    alltick: getProviderStats(stats, 'alltick')
                 }));
             }
         } catch (error) {
@@ -223,7 +231,8 @@ const DataFeedConfig = () => {
             {/* Status Card */}
             {(() => {
                 const currentViewStats = status[config.data_feed_provider] || { connected: false, latency: 'Disconnected', ticks: 0 };
-                const isActiveProvider = status.provider === config.data_feed_provider;
+                const normalizedProvider = status.provider === 'market_data' ? 'alltick' : status.provider;
+                const isActiveProvider = normalizedProvider === config.data_feed_provider;
 
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

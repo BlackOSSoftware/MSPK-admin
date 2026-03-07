@@ -3,13 +3,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Save, X, BarChart2, Settings, Activity } from 'lucide-react';
+import { Save, X, BarChart2, Settings, Activity, KeyRound, RefreshCw } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useToast from '../../hooks/useToast';
-import { updateSymbol, getSegments } from '../../api/market.api';
+import { updateSymbol, getSegments, generateSymbolId } from '../../api/market.api';
 
 const schema = yup.object({
     symbol: yup.string().required('Symbol is required').uppercase(),
@@ -27,9 +27,11 @@ const EditSymbol = () => {
     const toast = useToast();
     const [segments, setSegments] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGeneratingId, setIsGeneratingId] = useState(false);
 
     // Get symbol from state
-    const symbolToEdit = location.state?.symbol;
+    const initialSymbol = location.state?.symbol;
+    const [symbolRecord, setSymbolRecord] = useState(initialSymbol || null);
 
     const { register, handleSubmit, control, formState: { errors }, reset } = useForm({
         resolver: yupResolver(schema),
@@ -45,21 +47,23 @@ const EditSymbol = () => {
     });
 
     useEffect(() => {
-        if (!symbolToEdit) {
+        if (!initialSymbol) {
             toast.error("No symbol selected for editing");
             navigate('/market/symbols');
             return;
         }
 
+        setSymbolRecord(initialSymbol);
+
         // Pre-fill form
         reset({
-            symbol: symbolToEdit.symbol,
-            name: symbolToEdit.name,
-            segment: symbolToEdit.segment,
-            exchange: symbolToEdit.exchange,
-            lotSize: symbolToEdit.lotSize,
-            tickSize: symbolToEdit.tickSize || 0.05,
-            isActive: symbolToEdit.isActive
+            symbol: initialSymbol.symbol,
+            name: initialSymbol.name,
+            segment: initialSymbol.segment,
+            exchange: initialSymbol.exchange,
+            lotSize: initialSymbol.lotSize,
+            tickSize: initialSymbol.tickSize || 0.05,
+            isActive: initialSymbol.isActive
         });
 
         const loadSegments = async () => {
@@ -72,12 +76,13 @@ const EditSymbol = () => {
             }
         };
         loadSegments();
-    }, [symbolToEdit, navigate, reset, toast]);
+    }, [initialSymbol, navigate, reset, toast]);
 
     const onSubmit = async (data) => {
         setIsSubmitting(true);
         try {
-            await updateSymbol(symbolToEdit._id, data);
+            const updated = await updateSymbol(symbolRecord._id, data);
+            setSymbolRecord(updated);
             toast.success("Symbol updated successfully");
             navigate('/market/symbols');
         } catch (error) {
@@ -89,14 +94,31 @@ const EditSymbol = () => {
         }
     };
 
-    if (!symbolToEdit) return null;
+    const handleGenerateId = async () => {
+        if (!symbolRecord?._id) return;
+
+        setIsGeneratingId(true);
+        try {
+            const updated = await generateSymbolId(symbolRecord._id);
+            setSymbolRecord(updated);
+            toast.success("Webhook symbol ID generated");
+        } catch (error) {
+            console.error("Failed to generate symbol ID", error);
+            const msg = error.response?.data?.message || "Failed to generate symbol ID";
+            toast.error(msg);
+        } finally {
+            setIsGeneratingId(false);
+        }
+    };
+
+    if (!symbolRecord) return null;
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Edit Instrument</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Modify details for {symbolToEdit.symbol}</p>
+                    <p className="text-muted-foreground text-sm mt-1">Modify details for {symbolRecord.symbol}</p>
                 </div>
                 <Button variant="outline" onClick={() => navigate('/market/symbols')} className="gap-2 btn-cancel">
                     <X size={16} /> Cancel
@@ -126,6 +148,34 @@ const EditSymbol = () => {
                             {...register('name')}
                             error={errors.name?.message}
                         />
+
+                        <div className="md:col-span-2 space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground block">Webhook Symbol ID</label>
+                            <div className="flex flex-col md:flex-row gap-3">
+                                <div className="relative flex-1">
+                                    <KeyRound size={14} className="absolute left-3 top-3 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={symbolRecord.symbolId || 'Not generated yet'}
+                                        className="ui-input w-full bg-secondary/20 border border-input rounded-lg pl-10 pr-4 py-2.5 text-xs text-foreground font-mono"
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleGenerateId}
+                                    disabled={isGeneratingId}
+                                    className="gap-2 rounded-lg md:min-w-[180px]"
+                                >
+                                    {isGeneratingId ? <RefreshCw size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                                    {symbolRecord.symbolId ? 'Regenerate ID' : 'Generate ID'}
+                                </Button>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                                Isi ID ko webhook payload mein symbol ke roop mein bhejna hai. Save karne par segment/symbol change hoga to ID auto-refresh ho jayegi.
+                            </p>
+                        </div>
                     </div>
                 </Card>
 
