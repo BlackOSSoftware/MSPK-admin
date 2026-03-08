@@ -56,10 +56,10 @@ const PlanCard = ({ plan, isPopular, onEdit, onDelete }) => {
     const shownFeatures = features.slice(0, 6);
     const remaining = features.length - shownFeatures.length;
 
-    const isCustom = !plan?.isDemo && Number(plan?.price) === 0;
+    const isCustom = Boolean(plan?.isCustom) || (!plan?.isDemo && Number(plan?.price) <= 0);
     const planType = plan?.isDemo ? 'Demo' : (isCustom ? 'Custom' : 'Premium');
     const validityLabel = formatValidity(plan?.durationDays);
-    const priceLabel = plan?.isDemo ? 'Free' : (isCustom ? '' : formatINR(plan?.price));
+    const priceLabel = plan?.isDemo ? 'Free' : (isCustom ? 'Custom' : formatINR(plan?.price));
 
     return (
         <div
@@ -199,7 +199,7 @@ const AllPlans = () => {
             try {
                 const { fetchPlans } = await import('../../api/plans.api');
                 const { data } = await fetchPlans();
-                const visiblePlans = (data || []).filter(p => !(!p?.isDemo && Number(p?.price) === 0));
+                const visiblePlans = (data || []).filter(p => !p?.isCustom);
                 setPlans(visiblePlans);
             } catch (e) {
                 console.error("Failed to load plans", e);
@@ -323,9 +323,9 @@ const AllPlans = () => {
                                 {isLoading
                                     ? [...Array(6)].map((_, idx) => <PlanCardSkeleton key={`plan-skel-${idx}`} />)
                                     : plans.map((plan) => {
-                                        const premiumPlans = plans.filter((p) => !p.isDemo && Number(p.price) > 0);
+                                        const premiumPlans = plans.filter((p) => !p.isDemo && !p.isCustom && Number(p.price) > 0);
                                         const maxPrice = premiumPlans.reduce((m, p) => Math.max(m, Number(p.price) || 0), 0);
-                                        const isPopular = !plan.isDemo && Number(plan.price) > 0 && (Number(plan.price) || 0) === maxPrice && premiumPlans.length > 1;
+                                        const isPopular = !plan.isDemo && !plan.isCustom && Number(plan.price) > 0 && (Number(plan.price) || 0) === maxPrice && premiumPlans.length > 1;
 
                                         return (
                                             <PlanCard
