@@ -59,7 +59,7 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                                 </tr>
                             ))
                         ) : (
-                            plans.map((plan) => {
+                            plans.filter(plan => !(!plan?.isDemo && Number(plan?.price) === 0)).map((plan) => {
                                 const isHighlighted = highlightTerm && plan.name.toLowerCase().includes(highlightTerm.toLowerCase());
                                 const isCustom = !plan.isDemo && Number(plan.price) === 0;
                                 const priceLabel = plan.isDemo ? 'Free' : (isCustom ? '' : `₹ ${plan.price}`);

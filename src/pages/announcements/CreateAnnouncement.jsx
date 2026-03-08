@@ -64,7 +64,9 @@ const CreateAnnouncement = () => {
     const loadPlans = async () => {
         try {
             const response = await fetchPlans();
-            setPlans(response.data.results || response.data);
+            const rawPlans = response.data.results || response.data || [];
+            const visiblePlans = rawPlans.filter(p => !(!p?.isDemo && Number(p?.price) === 0));
+            setPlans(visiblePlans);
         } catch (error) {
             console.error(error);
         }

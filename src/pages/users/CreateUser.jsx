@@ -31,7 +31,9 @@ const CreateUser = () => {
                     fetchSubBrokers(),
                     getSegments()
                 ]);
-                setPlans(plansRes.data);
+                const rawPlans = plansRes.data || [];
+                const visiblePlans = rawPlans.filter(p => !(!p?.isDemo && Number(p?.price) === 0));
+                setPlans(visiblePlans);
                 setSubBrokers(sbRes.data);
                 setSegments(Array.isArray(segmentsRes) ? segmentsRes : []);
             } catch (e) {

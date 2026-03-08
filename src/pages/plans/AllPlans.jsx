@@ -199,7 +199,8 @@ const AllPlans = () => {
             try {
                 const { fetchPlans } = await import('../../api/plans.api');
                 const { data } = await fetchPlans();
-                setPlans(data);
+                const visiblePlans = (data || []).filter(p => !(!p?.isDemo && Number(p?.price) === 0));
+                setPlans(visiblePlans);
             } catch (e) {
                 console.error("Failed to load plans", e);
             } finally {
