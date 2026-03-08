@@ -41,7 +41,6 @@ const EditUser = () => {
         defaultValues: {
             customPlanName: 'Custom As User Requirement',
             customPlanDescription: 'Custom access configured by admin',
-            customPlanPrice: 0,
             customPlanDurationDays: 30,
             customPlanIsActive: true,
             customPlanSegments: []
