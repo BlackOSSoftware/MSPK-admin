@@ -12,6 +12,10 @@ export const updateUser = async (id, data) => {
     return client.patch(`/admin/users/${id}`, data);
 };
 
+export const assignCustomPlan = async (id, data) => {
+    return client.post(`/admin/users/${id}/custom-plan`, data);
+};
+
 export const fetchUserSignalDeliveries = async (id, params) => {
     return client.get(`/admin/users/${id}/signal-deliveries`, { params });
 };

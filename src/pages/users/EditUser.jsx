@@ -1,10 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Save, X, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import useToast from '../../hooks/useToast';
+import SearchableSelect from '../../components/ui/SearchableSelect';
+
+const STANDARD_FEATURES = [
+    { id: 'Intraday Equity', label: 'Intraday Equity', category: 'Equity' },
+    { id: 'Delivery / Swing', label: 'Delivery / Swing', category: 'Equity' },
+    { id: 'Nifty Options', label: 'Nifty Options', category: 'FNO' },
+    { id: 'BankNifty Options', label: 'BankNifty Options', category: 'FNO' },
+    { id: 'FinNifty Options', label: 'FinNifty Options', category: 'FNO' },
+    { id: 'Stock Options', label: 'Stock Options', category: 'FNO' },
+    { id: 'MCX Futures', label: 'MCX Futures', category: 'Commodity' },
+    { id: 'Currency', label: 'Currency', category: 'Forex' },
+    { id: 'BTST Calls', label: 'BTST Calls', category: 'Special' },
+    { id: 'Hero Zero Trades', label: 'Hero Zero Trades', category: 'Special' },
+];
+
+const ALLOWED_SEGMENTS = ['EQUITY', 'FNO', 'COMMODITY', 'CURRENCY', 'CRYPTO', 'FOREX', 'OPTIONS'];
 
 const EditUser = () => {
     const navigate = useNavigate();
@@ -16,8 +32,29 @@ const EditUser = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [plans, setPlans] = useState([]);
     const [subBrokers, setSubBrokers] = useState([]);
+    const [marketSegments, setMarketSegments] = useState([]);
+    const [assignMode, setAssignMode] = useState('existing');
+    const [selectedFeatures, setSelectedFeatures] = useState([]);
+    const [customFeatures, setCustomFeatures] = useState('');
 
-    const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm();
+    const { register, handleSubmit, setValue, watch, control, formState: { errors, isSubmitting } } = useForm({
+        defaultValues: {
+            customPlanName: 'Custom As User Requirement',
+            customPlanDescription: 'Custom access configured by admin',
+            customPlanPrice: 0,
+            customPlanDurationDays: 30,
+            customPlanIsActive: true,
+            customPlanSegments: []
+        }
+    });
+
+    const toggleFeature = (id) => {
+        setSelectedFeatures(prev =>
+            prev.includes(id)
+                ? prev.filter(f => f !== id)
+                : [...prev, id]
+        );
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -25,16 +62,19 @@ const EditUser = () => {
                 const { fetchUserById } = await import('../../api/users.api');
                 const { fetchPlans } = await import('../../api/plans.api');
                 const { fetchSubBrokers } = await import('../../api/subbrokers.api');
+                const { getSegments } = await import('../../api/market.api');
 
-                const [userRes, plansRes, sbRes] = await Promise.all([
+                const [userRes, plansRes, sbRes, segmentsRes] = await Promise.all([
                     fetchUserById(userId),
                     fetchPlans(),
-                    fetchSubBrokers()
+                    fetchSubBrokers(),
+                    getSegments()
                 ]);
 
                 const user = userRes.data;
                 setPlans(plansRes.data);
                 setSubBrokers(sbRes.data);
+                setMarketSegments(Array.isArray(segmentsRes) ? segmentsRes : []);
 
                 // Populate Form
                 setValue('name', user.name);
@@ -73,7 +113,8 @@ const EditUser = () => {
 
     const onSubmit = async (data) => {
         try {
-            const { updateUser } = await import('../../api/users.api');
+            const { updateUser, assignCustomPlan } = await import('../../api/users.api');
+            let customPayload = null;
 
             // Filter out empty password if not changing
             const payload = { ...data };
@@ -83,8 +124,60 @@ const EditUser = () => {
             if (payload.planId && !/^[a-fA-F0-9]{24}$/.test(payload.planId)) {
                 delete payload.planId;
             }
+            if (assignMode === 'custom') {
+                delete payload.planId;
+            }
+
+            delete payload.customPlanName;
+            delete payload.customPlanDescription;
+            delete payload.customPlanPrice;
+            delete payload.customPlanDurationDays;
+            delete payload.customPlanIsActive;
+            delete payload.customPlanSegments;
+
+            if (assignMode === 'custom') {
+                const featuresList = Array.from(new Set([
+                    ...selectedFeatures,
+                    ...customFeatures.split(',').map(f => f.trim()).filter(Boolean)
+                ]));
+                const normalizedSegments = (data.customPlanSegments || [])
+                    .map(seg => String(seg).toUpperCase())
+                    .filter(Boolean);
+                const invalidSegments = normalizedSegments.filter(seg => !ALLOWED_SEGMENTS.includes(seg));
+
+                customPayload = {
+                    name: data.customPlanName,
+                    description: data.customPlanDescription,
+                    price: Number(data.customPlanPrice),
+                    durationDays: Number(data.customPlanDurationDays),
+                    isActive: !!data.customPlanIsActive,
+                    isDemo: false
+                };
+
+                if (invalidSegments.length > 0) {
+                    toast.error(`Invalid segments: ${invalidSegments.join(', ')}`);
+                    return;
+                }
+
+                if (normalizedSegments.length > 0) {
+                    customPayload.segments = normalizedSegments;
+                }
+
+                if (featuresList.length > 0) {
+                    customPayload.features = featuresList;
+                }
+
+                if (!customPayload.name || !customPayload.durationDays) {
+                    toast.error("Please fill custom plan name and duration days.");
+                    return;
+                }
+            }
 
             await updateUser(userId, payload);
+
+            if (customPayload) {
+                await assignCustomPlan(userId, customPayload);
+            }
             toast.success("Client details updated successfully");
             navigate('/users/all');
         } catch (error) {
@@ -99,6 +192,10 @@ const EditUser = () => {
 
     const userRole = watch('role');
     const isAdminBeingEdited = userRole === 'admin';
+    const segmentOptions = ALLOWED_SEGMENTS.map((code) => {
+        const match = marketSegments.find(seg => String(seg.code || '').toUpperCase() === code);
+        return { label: match?.name || code, value: code };
+    });
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto space-y-6">
@@ -236,20 +333,148 @@ const EditUser = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign Plan (Update)</label>
-                                <select {...register('planId')} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground [&>option]:bg-background">
-                                    <option value="">Keep Current Plan</option>
-                                    {plans.map(plan => {
-                                        const isCustom = !plan.isDemo && Number(plan.price) === 0;
-                                        const priceLabel = plan.isDemo ? 'Free' : (isCustom ? `Custom/${plan.durationDays} Days` : `₹${plan.price}`);
-                                        const suffix = priceLabel ? ` - ${priceLabel}` : '';
-                                        return (
-                                            <option key={plan._id || plan.id} value={plan._id || plan.id}>
-                                                {plan.name}{suffix}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                                <p className="text-[10px] text-muted-foreground">Selecting a new plan will terminate the current subscription and start a new one.</p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignMode('existing')}
+                                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all ${assignMode === 'existing'
+                                            ? 'border-primary/50 bg-primary/10 text-primary'
+                                            : 'border-white/10 bg-secondary/30 text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        Existing Plan
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignMode('custom')}
+                                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all ${assignMode === 'custom'
+                                            ? 'border-primary/50 bg-primary/10 text-primary'
+                                            : 'border-white/10 bg-secondary/30 text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        Custom Plan
+                                    </button>
+                                </div>
+
+                                {assignMode === 'existing' ? (
+                                    <>
+                                        <select {...register('planId')} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground [&>option]:bg-background">
+                                            <option value="">Keep Current Plan</option>
+                                            {plans.filter(plan => {
+                                                const isCustom = !plan.isDemo && Number(plan.price) === 0;
+                                                return !isCustom;
+                                            }).map(plan => {
+                                                const isCustom = !plan.isDemo && Number(plan.price) === 0;
+                                                const priceLabel = plan.isDemo ? 'Free' : (isCustom ? `Custom/${plan.durationDays} Days` : `INR ${plan.price}`);
+                                                const suffix = priceLabel ? ` - ${priceLabel}` : '';
+                                                return (
+                                                    <option key={plan._id || plan.id} value={plan._id || plan.id}>
+                                                        {plan.name}{suffix}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                        <p className="text-[10px] text-muted-foreground">Selecting a new plan will terminate the current subscription and start a new one.</p>
+                                    </>
+                                ) : (
+                                    <div className="space-y-3 pt-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Plan Name</label>
+                                                <input
+                                                    {...register('customPlanName')}
+                                                    className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Description</label>
+                                                <input
+                                                    {...register('customPlanDescription')}
+                                                    className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Price (INR)</label>
+                                                <input
+                                                    type="number"
+                                                    {...register('customPlanPrice')}
+                                                    className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Duration (Days)</label>
+                                                <input
+                                                    type="number"
+                                                    {...register('customPlanDurationDays')}
+                                                    className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Segments (Optional)</label>
+                                            <Controller
+                                                name="customPlanSegments"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <SearchableSelect
+                                                        options={segmentOptions}
+                                                        value={(field.value || []).filter(v => ALLOWED_SEGMENTS.includes(String(v).toUpperCase()))}
+                                                        onChange={(vals) => {
+                                                            const cleaned = (vals || [])
+                                                                .map(v => String(v).toUpperCase())
+                                                                .filter(v => ALLOWED_SEGMENTS.includes(v));
+                                                            field.onChange(cleaned);
+                                                        }}
+                                                        placeholder="Select segments..."
+                                                        searchable={false}
+                                                        variant="standard"
+                                                        multiple
+                                                    />
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Features (Optional)</label>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {STANDARD_FEATURES.map((feature) => {
+                                                    const isSelected = selectedFeatures.includes(feature.id);
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            key={feature.id}
+                                                            onClick={() => toggleFeature(feature.id)}
+                                                            className={`px-3 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-tight transition-all text-left ${isSelected
+                                                                ? 'border-primary/50 bg-primary/10 text-primary'
+                                                                : 'border-white/10 bg-secondary/30 text-muted-foreground hover:text-foreground'
+                                                                }`}
+                                                        >
+                                                            <span className="block">{feature.label}</span>
+                                                            <span className="block text-[9px] uppercase tracking-wider opacity-70">{feature.category}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            <textarea
+                                                value={customFeatures}
+                                                onChange={(e) => setCustomFeatures(e.target.value)}
+                                                className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-[11px] focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                                rows={3}
+                                                placeholder="Add more features separated by commas"
+                                            />
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                                            <label className="flex items-center gap-2">
+                                                <input type="checkbox" {...register('customPlanIsActive')} className="accent-primary" />
+                                                Active
+                                            </label>
+                                        </div>
+
+                                        <p className="text-[10px] text-muted-foreground">Custom plan assignment will expire the current subscription and create a new one.</p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">
