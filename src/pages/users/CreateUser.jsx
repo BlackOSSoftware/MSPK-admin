@@ -35,7 +35,12 @@ const CreateUser = () => {
                 const visiblePlans = rawPlans.filter(p => !(!p?.isDemo && Number(p?.price) === 0));
                 setPlans(visiblePlans);
                 setSubBrokers(sbRes.data);
-                setSegments(Array.isArray(segmentsRes) ? segmentsRes : []);
+                const list = Array.isArray(segmentsRes) ? segmentsRes : [];
+                const withAll = [
+                    { _id: 'ALL', name: 'All', code: 'ALL', segment_code: 'ALL' },
+                    ...list
+                ];
+                setSegments(withAll);
             } catch (e) {
                 console.error("Failed to load dependency data", e);
                 // toast.error("Failed to load form data");
@@ -168,7 +173,7 @@ const CreateUser = () => {
                         </div>
 
                         <div className="space-y-1 md:col-span-2">
-                            <label className="text-[10px] sm:text-[11px] font-medium text-muted-foreground block">Demo Segments</label>
+                            <label className="text-[10px] sm:text-[11px] font-medium text-muted-foreground block">Only Segment</label>
                             <div className="flex flex-wrap gap-2">
                                 {segments.map((segment) => {
                                     const code = segment.segment_code || segment.code;
@@ -179,9 +184,15 @@ const CreateUser = () => {
                                             key={segment._id || code}
                                             type="button"
                                             onClick={() =>
-                                                setSelectedSegments((prev) =>
-                                                    prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code]
-                                                )
+                                                setSelectedSegments((prev) => {
+                                                    if (code === 'ALL') {
+                                                        return prev.includes('ALL') ? [] : ['ALL'];
+                                                    }
+                                                    const next = prev.includes(code)
+                                                        ? prev.filter((item) => item !== code)
+                                                        : [...prev.filter((item) => item !== 'ALL'), code];
+                                                    return next;
+                                                })
                                             }
                                             className={`h-8 rounded-full px-3 text-[10px] sm:text-xs font-semibold transition-all border ${
                                                 active

@@ -24,7 +24,7 @@ const isLikelyJwt = (token) => token.split('.').length === 3;
 const getSocketUrl = () => {
     const token = normalizeToken(localStorage.getItem('token'));
     if (!token || !isLikelyJwt(token)) return null;
-    return `${baseUrl}/?token=${encodeURIComponent(token)}`;
+    return `${baseUrl}/?token=${encodeURIComponent(token)}&autoSubscribe=false`;
 };
 
 const scheduleReconnect = () => {

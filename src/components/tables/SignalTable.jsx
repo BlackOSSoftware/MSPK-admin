@@ -68,6 +68,50 @@ const getStatusClasses = (status) => {
     }
 };
 
+const toFiniteNumber = (value) => {
+    if (value === null || value === undefined || value === '') return undefined;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+};
+
+const resolveExitPrice = (signal, livePrice) => {
+    const status = String(signal?.status || '').trim().toLowerCase();
+    const exit = toFiniteNumber(signal?.exitPrice);
+    if (typeof exit === 'number') return exit;
+
+    if (status.includes('stop')) {
+        const sl = toFiniteNumber(signal?.stoploss);
+        if (typeof sl === 'number') return sl;
+    }
+
+    if (status.includes('target')) {
+        const t1 = toFiniteNumber(signal?.targets?.target1);
+        if (typeof t1 === 'number') return t1;
+    }
+
+    if (status.includes('partial')) {
+        const t2 = toFiniteNumber(signal?.targets?.target2);
+        const t1 = toFiniteNumber(signal?.targets?.target1);
+        if (typeof t2 === 'number') return t2;
+        if (typeof t1 === 'number') return t1;
+    }
+
+    return typeof livePrice === 'number' ? livePrice : undefined;
+};
+
+const resolvePoints = (signal, livePrice) => {
+    const stored = toFiniteNumber(signal?.totalPoints);
+    if (typeof stored === 'number' && stored !== 0) return stored;
+
+    const entry = toFiniteNumber(signal?.entry);
+    const exit = resolveExitPrice(signal, livePrice);
+    if (typeof entry !== 'number' || typeof exit !== 'number') return undefined;
+
+    const isSell = String(signal?.type || '').toUpperCase() === 'SELL';
+    const points = isSell ? entry - exit : exit - entry;
+    return Math.round(points * 100) / 100;
+};
+
 const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }) => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [ltpData, setLtpData] = useState({});
@@ -158,6 +202,8 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const isClosed = CLOSED_STATUSES.has(signal.status);
                                 const targets = signal.targets || {};
                                 const livePrice = ltpData[signal.symbol]?.price;
+                                const resolvedExit = resolveExitPrice(signal, livePrice);
+                                const resolvedPoints = resolvePoints(signal, livePrice);
                                 const signalTime = signal.signalTime || signal.createdAt || signal.timestamp;
                                 const highlightMatch =
                                     highlightTerm &&
@@ -255,12 +301,14 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                         {isClosed ? 'Exit' : 'LTP'}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-foreground">
-                                                        {formatPrice(isClosed ? signal.exitPrice : livePrice)}
+                                                        {formatPrice(isClosed ? resolvedExit : livePrice)}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
                                                     <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">Points</span>
-                                                    <span className="text-[10px] font-bold text-foreground">{signal.totalPoints ?? '---'}</span>
+                                                    <span className="text-[10px] font-bold text-foreground">
+                                                        {resolvedPoints ?? '---'}
+                                                    </span>
                                                 </div>
                                                 {signal.exitReason ? (
                                                     <div className="truncate text-[9px] text-muted-foreground" title={signal.exitReason}>

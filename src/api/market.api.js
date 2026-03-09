@@ -34,7 +34,7 @@ export const getHistory = async (symbol, resolution, from, to) => {
 
 
 export const getMarketStats = async () => {
-    const response = await client.get('/market/stats');
+    const response = await client.get('/market/stats?includePrices=false');
     return response.data;
 };
 

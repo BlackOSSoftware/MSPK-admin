@@ -16,7 +16,6 @@ const UserTable = ({
         if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
         return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     };
-
     return (
         <div className="dashboard-surface w-full h-full min-h-[600px] border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
             <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/70 bg-secondary/20 flex items-center justify-between">
