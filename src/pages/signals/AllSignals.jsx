@@ -113,11 +113,6 @@ const AllSignals = () => {
     };
 
     const handleAction = async (action, signal, payload) => {
-        if (action === 'edit') {
-            navigate(`/signals/edit?id=${signal.id}`);
-            return;
-        }
-
         if (action === 'delete') {
             setPendingAction({ type: 'delete', signal });
             setDialogConfig({

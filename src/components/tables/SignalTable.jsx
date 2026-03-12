@@ -4,7 +4,6 @@ import {
     ArrowUpRight,
     BadgeCheck,
     Clock,
-    Edit,
     MoreVertical,
     Radio,
     ShieldAlert,
@@ -381,17 +380,6 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
 
                                             {openDropdownId === signalId && (
                                                 <div ref={dropdownRef} className="absolute right-8 top-2 z-50 flex w-44 flex-col overflow-hidden rounded-lg border border-border bg-card py-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            onAction?.('edit', signal);
-                                                            setOpenDropdownId(null);
-                                                        }}
-                                                        className="flex items-center gap-2.5 px-3 py-2 text-left text-[10px] font-bold hover:bg-muted/20"
-                                                    >
-                                                        <Edit size={14} /> Edit Signal
-                                                    </button>
-
                                                     {!isClosed ? (
                                                         <>
                                                             <button

@@ -23,4 +23,3 @@ export const AssignPlan = () => <PageShell title="Assign Plan" description="Manu
 
 export const SignalCategories = () => <PageShell title="Signal Categories" description="Manage trading segments (Nifty, BankNifty, etc.)" />;
 export const SignalHistory = () => <PageShell title="Signal History" description="Archive of past trading calls" />;
-export const EditSignal = () => <PageShell title="Edit Signal" description="Modify an active trading signal" />;

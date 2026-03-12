@@ -35,7 +35,6 @@ import CreateStrategy from '../pages/strategies/CreateStrategy';
 // Signal Management
 import AllSignals from '../pages/signals/AllSignals';
 import CreateSignal from '../pages/signals/CreateSignal';
-import EditSignal from '../pages/signals/EditSignal';
 import SignalCategories from '../pages/signals/SignalCategories';
 import SignalHistory from '../pages/signals/SignalHistory';
 import GlobalAccess from '../pages/signals/GlobalAccess';
@@ -130,7 +129,6 @@ const AppRouter = () => {
                     {/* Signal Management */}
                     <Route path="signals/all" element={<AllSignals />} />
                     <Route path="signals/create" element={<CreateSignal />} />
-                    <Route path="signals/edit" element={<EditSignal />} />
                     <Route path="signals/categories" element={<SignalCategories />} />
                     <Route path="signals/history" element={<SignalHistory />} />
                     <Route path="signals/access" element={<GlobalAccess />} />

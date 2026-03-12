@@ -12,6 +12,7 @@ import IndicatorSettingsModal from './IndicatorSettingsModal';
 import TradingChartSettings from './TradingChartSettings';
 import SnapshotModal from './SnapshotModal';
 import SignalCardsPanel from './SignalCardsPanel';
+import Button from '../ui/Button';
 import { socket } from '../../api/socket';
 import { getSymbols, updateSymbol } from '../../api/market.api';
 import { mapStrategyToIndicators } from '../../utils/strategyMapping';
@@ -817,6 +818,160 @@ const TradingLayout = ({ hideCharts = false }) => {
     if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-background text-foreground font-mono animate-pulse">Initializing Trading Engine...</div>;
 
     const showCharts = !hideCharts;
+    const allSymbols = Object.values(marketData).flat();
+    const liveSymbol = selectedSymbol ? allSymbols.find(s => s.symbol === selectedSymbol.symbol) : null;
+    const mergedSymbol = liveSymbol ? { ...selectedSymbol, ...liveSymbol } : selectedSymbol;
+    const mergedLive = (lastTick?.symbol && mergedSymbol?.symbol && lastTick.symbol === mergedSymbol.symbol)
+        ? { ...mergedSymbol, ...lastTick }
+        : mergedSymbol;
+    const priceValue = typeof mergedLive?.price === 'number' ? mergedLive.price : Number(mergedLive?.lastPrice || 0) || 0;
+    const changeValue = typeof mergedLive?.change === 'number' ? mergedLive.change : Number(mergedLive?.change || 0) || 0;
+    const changePercentValue = typeof mergedLive?.changePercent === 'number' ? mergedLive.changePercent : Number(mergedLive?.changePercent || 0) || 0;
+    const isUp = changeValue >= 0;
+    const formatNumber = (value, digits = 2) => (Number.isFinite(value) ? value.toFixed(digits) : '—');
+    const formatCompact = (value) => (Number.isFinite(value) ? value.toLocaleString() : '—');
+
+    if (!showCharts) {
+        return (
+            <div className="flex h-full flex-col bg-background text-foreground font-sans overflow-hidden">
+                <div className="relative border-b border-border bg-card/60 backdrop-blur-md">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_45%)]" />
+                    <div className="relative mx-auto flex max-w-[1600px] flex-col gap-4 px-6 py-5">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Market Pulse</p>
+                                <h1 className="mt-1 text-2xl font-bold text-foreground">Live Market Dashboard</h1>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Clean, focused view of watchlist movement and live signal snapshots.
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="h-9 px-4 text-[11px] font-bold uppercase tracking-wide btn-cancel"
+                                    onClick={() => setSearchModal({ isOpen: true, mode: 'VIEW' })}
+                                >
+                                    Search Symbols
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    className="h-9 px-4 text-[11px] font-bold uppercase tracking-wide btn-primary-soft"
+                                    onClick={() => setSearchModal({ isOpen: true, mode: 'ADD' })}
+                                >
+                                    Add to Watchlist
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-[1.3fr_1fr]">
+                            <div className="rounded-2xl border border-border bg-muted/10 p-4">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xl font-black tracking-tight text-foreground">
+                                                {mergedLive?.symbol || 'Select a Symbol'}
+                                            </span>
+                                            {mergedLive?.segment && (
+                                                <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary">
+                                                    {mergedLive.segment}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {mergedLive?.description || mergedLive?.name || 'Live market movement & watchlist signals'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-right">
+                                            <div className="text-2xl font-black text-foreground">{formatNumber(priceValue)}</div>
+                                            <div className={`text-xs font-bold ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {isUp ? '+' : ''}{formatNumber(changeValue)} ({isUp ? '+' : ''}{formatNumber(changePercentValue)}%)
+                                            </div>
+                                        </div>
+                                        <span className={`rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-[0.22em] ${isUp ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400' : 'border-red-500/40 bg-red-500/10 text-red-400'}`}>
+                                            {isUp ? 'Bull' : 'Bear'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-2xl border border-border bg-card/60 p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Volume</p>
+                                    <p className="mt-2 text-lg font-bold text-foreground">{formatCompact(Number(mergedLive?.volume || mergedLive?.v || 0))}</p>
+                                    <p className="mt-1 text-[10px] text-muted-foreground">Total traded</p>
+                                </div>
+                                <div className="rounded-2xl border border-border bg-card/60 p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Prev Close</p>
+                                    <p className="mt-2 text-lg font-bold text-foreground">{formatNumber(Number(mergedLive?.prevClose || mergedLive?.ohlc?.close || 0))}</p>
+                                    <p className="mt-1 text-[10px] text-muted-foreground">Reference price</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-hidden">
+                    <div className="mx-auto grid h-full max-w-[1600px] gap-4 p-6 lg:grid-cols-[1.1fr_0.9fr]">
+                        <div className="flex min-h-0 flex-col rounded-2xl border border-border bg-card/50 shadow-sm overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Watchlist</p>
+                                    <p className="text-sm font-semibold text-foreground">Live Movement</p>
+                                </div>
+                                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                                    {symbols.length} Symbols
+                                </div>
+                            </div>
+                            <div className="min-h-0 flex-1">
+                                <TradingWatchlist
+                                    marketData={marketData}
+                                    selectedSymbol={selectedSymbol}
+                                    onSelect={(s) => setSelectedSymbol(s)}
+                                    onAddSymbol={() => setSearchModal({ isOpen: true, mode: 'ADD' })}
+                                    onRemoveSymbol={handleRemoveSymbol}
+                                    onReorder={handleWatchlistReorder}
+                                    categoryOrder={categoryOrder}
+                                    onReorderCategories={handleCategoryReorder}
+                                    onRemoveCategory={handleRemoveCategory}
+                                    settings={watchlistSettings}
+                                    onSettingsChange={setWatchlistSettings}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex min-h-0 flex-col rounded-2xl border border-border bg-card/50 shadow-sm overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Signals</p>
+                                    <p className="text-sm font-semibold text-foreground">Strategy Highlights</p>
+                                </div>
+                                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                                    {mergedLive?.symbol || 'No symbol'}
+                                </div>
+                            </div>
+                            <div className="min-h-0 flex-1 overflow-hidden">
+                                <SignalCardsPanel symbol={selectedSymbol} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <SymbolSearchModal
+                    isOpen={searchModal.isOpen}
+                    onClose={() => setSearchModal({ ...searchModal, isOpen: false })}
+                    mode={searchModal.mode}
+                    onSelect={(sym) => {
+                        if (searchModal.mode === 'VIEW') {
+                            setSelectedSymbol(sym);
+                        } else {
+                            loadWatchlist();
+                        }
+                    }}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background text-muted-foreground overflow-hidden font-sans">
