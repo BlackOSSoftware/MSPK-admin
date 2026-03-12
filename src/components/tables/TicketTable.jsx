@@ -3,7 +3,7 @@ import { CheckCircle, AlertCircle, Hash, MessageSquare, User, Activity, Calendar
 import { clsx } from 'clsx';
 import TableHeaderCell from '../ui/TableHeaderCell';
 
-const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadingId }) => {
+const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadingId, onRowClick }) => {
     const normalizeStatus = (status) => (status || '').toString().trim().toLowerCase();
     const isClosedLike = (status) => ['resolved', 'closed', 'rejected'].includes(normalizeStatus(status));
 
@@ -101,7 +101,11 @@ const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadin
                                 const isProcessing = actionLoadingId === ticket._id;
 
                                 return (
-                                    <tr key={index} className={`transition-all duration-500 group relative ${isHighlighted ? '!bg-yellow-500/20 shadow-[inset_0_0_20px_rgba(234,179,8,0.1)] border-y border-yellow-500/20' : 'hover:bg-primary/[0.02]'}`}>
+                                    <tr
+                                        key={index}
+                                        onClick={() => onRowClick?.(ticket)}
+                                        className={`transition-all duration-500 group relative cursor-pointer ${isHighlighted ? '!bg-yellow-500/20 shadow-[inset_0_0_20px_rgba(234,179,8,0.1)] border-y border-yellow-500/20' : 'hover:bg-primary/[0.02]'}`}
+                                    >
                                         <td className="px-5 py-3 border-r border-border font-bold text-muted-foreground">
                                             {ticket.ticketId || ticket._id?.substring(0, 8)}
                                         </td>
@@ -147,6 +151,8 @@ const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadin
                                                         type="button"
                                                         disabled={isProcessing}
                                                         onClick={() => onAction?.(ticket, 'resolve')}
+                                                        onMouseDown={(event) => event.stopPropagation()}
+                                                        onClickCapture={(event) => event.stopPropagation()}
                                                         className="px-2.5 py-1 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                         {isProcessing ? 'Updating...' : 'Resolve'}
                                                     </button>
@@ -154,6 +160,8 @@ const TicketTable = ({ tickets, highlightTerm, isLoading, onAction, actionLoadin
                                                         type="button"
                                                         disabled={isProcessing}
                                                         onClick={() => onAction?.(ticket, 'reject')}
+                                                        onMouseDown={(event) => event.stopPropagation()}
+                                                        onClickCapture={(event) => event.stopPropagation()}
                                                         className="px-2.5 py-1 rounded border border-red-500/30 text-red-400 bg-red-500/10 text-[10px] uppercase font-bold tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                         Reject
                                                     </button>

@@ -39,3 +39,11 @@ export const exportAnnouncements = async (params) => {
     
     return true;
 };
+
+export const triggerRenewalReminders = async () => {
+    return client.post('/admin/reminders/renewal');
+};
+
+export const triggerDemoReminders = async () => {
+    return client.post('/admin/reminders/demo');
+};

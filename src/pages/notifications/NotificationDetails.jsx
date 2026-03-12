@@ -125,17 +125,28 @@ const NotificationDetails = () => {
                         </p>
                     </div>
 
-                    {notification.link && (
-                        <div className="pt-4 border-t border-border/70">
-                            <Button
-                                variant="primary"
-                                onClick={() => navigate(notification.link)}
-                                className="w-full md:w-auto px-8 gap-2 group shadow-xl shadow-primary/10"
-                            >
-                                <Info size={16} />
-                                View Related Page
-                                <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" />
-                            </Button>
+                    {(notification.link || notification?.data?.whatsappLink) && (
+                        <div className="pt-4 border-t border-border/70 flex flex-wrap gap-3">
+                            {notification.link && (
+                                <Button
+                                    variant="primary"
+                                    onClick={() => navigate(notification.link)}
+                                    className="w-full md:w-auto px-8 gap-2 group shadow-xl shadow-primary/10"
+                                >
+                                    <Info size={16} />
+                                    View Related Page
+                                    <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" />
+                                </Button>
+                            )}
+                            {notification?.data?.whatsappLink && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => window.open(notification.data.whatsappLink, '_blank', 'noopener,noreferrer')}
+                                    className="w-full md:w-auto px-8 gap-2"
+                                >
+                                    Chat on WhatsApp
+                                </Button>
+                            )}
                         </div>
                     )}
                 </div>

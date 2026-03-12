@@ -78,6 +78,7 @@ const Subscriptions = () => {
 
     const transactions = subscriptions.map(sub => ({
         id: sub.transaction_id || sub._id?.substring(0, 8).toUpperCase() || 'N/A',
+        userId: sub.user_id?._id || '',
         user: sub.user_id?.name || 'Unknown User',
         email: sub.user_id?.email || '',
         phone: sub.user_id?.phone || sub.user_id?.mobile || sub.user_id?.phoneNumber || '',
@@ -112,8 +113,26 @@ const Subscriptions = () => {
             };
         });
 
+    const demoOnlyUserIdSet = new Set(
+        Array.from(
+            subscriptions.reduce((acc, sub) => {
+                const userId = sub.user_id?._id;
+                if (!userId) return acc;
+                const planType = String(sub.plan_type || '').toLowerCase();
+                const current = acc.get(userId) || { hasDemo: false, hasNonDemo: false };
+                if (planType === 'demo') current.hasDemo = true;
+                else if (planType) current.hasNonDemo = true;
+                acc.set(userId, current);
+                return acc;
+            }, new Map())
+        )
+            .filter(([_, flags]) => flags.hasDemo && !flags.hasNonDemo)
+            .map(([userId]) => userId)
+    );
+
     const filteredTransactions = transactions.filter(txn =>
-        (filter === 'All' || normalizeStatus(txn.originalStatus) === filter) &&
+        (filter === 'All' || filter === 'Demo Only' || normalizeStatus(txn.originalStatus) === filter) &&
+        (filter !== 'Demo Only' || (txn.userId && demoOnlyUserIdSet.has(txn.userId))) &&
         (
             txn.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
             txn.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -330,7 +349,7 @@ const Subscriptions = () => {
 
                                 <div className="flex items-center gap-2 text-xs overflow-x-auto no-scrollbar">
                                     <span className="text-muted-foreground font-medium">Status:</span>
-                                    {['All', 'Active', 'Pending', 'Cancelled'].map(f => (
+                                    {['All', 'Active', 'Pending', 'Cancelled', 'Demo Only'].map(f => (
                                         <button
                                             key={f}
                                             onClick={() => setFilter(f)}

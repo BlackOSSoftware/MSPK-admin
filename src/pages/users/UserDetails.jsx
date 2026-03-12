@@ -58,15 +58,6 @@ const formatCurrency = (value) => {
     }).format(numeric)}`;
 };
 
-const formatNumber = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return '0';
-    return new Intl.NumberFormat('en-IN', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(numeric);
-};
-
 const formatIp = (value) => {
     if (!value) return 'Not captured';
     if (value === '::1' || value === '127.0.0.1') return 'Localhost';
@@ -360,13 +351,7 @@ const UserDetails = () => {
                             hint={verificationSummary}
                             toneClass="text-amber-500"
                         />
-                        <MetricCard
-                            icon={Wallet}
-                            label="Wallet Balance"
-                            value={formatCurrency(user.walletBalance)}
-                            hint={`Equity ${formatCurrency(user.equity)}`}
-                            toneClass="text-emerald-500"
-                        />
+                        
                         <MetricCard
                             icon={BadgeCheck}
                             label="Subscriptions Logged"
@@ -464,27 +449,6 @@ const UserDetails = () => {
                                 <h2 className="text-lg font-bold text-foreground mt-1">Operational View</h2>
                             </div>
                             <TrendingUp size={18} className="text-primary" />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">Wallet</p>
-                                <p className="mt-2 text-lg font-bold text-foreground">{formatCurrency(user.walletBalance)}</p>
-                            </div>
-                            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">Equity</p>
-                                <p className="mt-2 text-lg font-bold text-foreground">{formatCurrency(user.equity)}</p>
-                            </div>
-                            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">Margin Used</p>
-                                <p className="mt-2 text-lg font-bold text-foreground">{formatCurrency(user.marginUsed)}</p>
-                            </div>
-                            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">PnL</p>
-                                <p className={`mt-2 text-lg font-bold ${Number(user.pnl) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                    {`${Number(user.pnl) >= 0 ? '+' : ''}${formatNumber(user.pnl)}`}
-                                </p>
-                            </div>
                         </div>
 
                         <div className="mt-3 space-y-3">

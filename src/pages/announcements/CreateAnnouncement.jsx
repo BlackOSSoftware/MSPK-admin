@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { ArrowLeft, Send, Radio, Megaphone, Calendar, Save, Calculator, LayoutTemplate, CheckCircle2, X } from 'lucide-react';
+import { ArrowLeft, Send, Radio, Megaphone, Calculator, LayoutTemplate, CheckCircle2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createAnnouncement, updateAnnouncement, fetchAnnouncementById } from '../../api/announcements.api';
+import { createAnnouncement, updateAnnouncement, fetchAnnouncementById, triggerRenewalReminders, triggerDemoReminders } from '../../api/announcements.api';
 import { fetchPlans } from '../../api/plans.api';
 import useToast from '../../hooks/useToast';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const SEGMENT_OPTIONS = [
     { label: 'Equity Intra', value: 'EQUITY_INTRA' },
@@ -36,6 +37,14 @@ const CreateAnnouncement = () => {
     const isEditMode = !!id;
 
     const [loading, setLoading] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmConfig, setConfirmConfig] = useState({
+        type: '',
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        variant: 'primary'
+    });
     const [plans, setPlans] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
@@ -44,15 +53,14 @@ const CreateAnnouncement = () => {
         targetAudience: {
             role: 'all',
             planValues: [],
-            segments: []
+            segments: [],
+            includeCustomPlans: false
         },
         startDate: '',
         endDate: '',
         isActive: true,
         priority: 'NORMAL'
     });
-
-    const [pushNotification, setPushNotification] = useState(true);
 
     useEffect(() => {
         loadPlans();
@@ -65,7 +73,7 @@ const CreateAnnouncement = () => {
         try {
             const response = await fetchPlans();
             const rawPlans = response.data.results || response.data || [];
-            const visiblePlans = rawPlans.filter(p => !(!p?.isDemo && Number(p?.price) === 0));
+            const visiblePlans = rawPlans.filter(p => !p?.isCustom && p?.name !== 'Flexible plan tailored to your trading requirements');
             setPlans(visiblePlans);
         } catch (error) {
             console.error(error);
@@ -83,7 +91,8 @@ const CreateAnnouncement = () => {
                 targetAudience: {
                     role: data.targetAudience?.role || 'all',
                     planValues: data.targetAudience?.planValues || [],
-                    segments: data.targetAudience?.segments || []
+                    segments: data.targetAudience?.segments || [],
+                    includeCustomPlans: Boolean(data.targetAudience?.includeCustomPlans)
                 },
                 startDate: data.startDate ? new Date(data.startDate).toISOString().slice(0, 16) : '',
                 endDate: data.endDate ? new Date(data.endDate).toISOString().slice(0, 16) : '',
@@ -135,6 +144,50 @@ const CreateAnnouncement = () => {
         }
     };
 
+    const openConfirm = (type) => {
+        if (type === 'renewal') {
+            setConfirmConfig({
+                type,
+                title: 'Send Renewal Reminder',
+                message: 'This will notify all users whose plan expires in 3 days. Message will be delivered via WhatsApp, Telegram, Email, Push, and in-app notifications. Continue?',
+                confirmText: 'Send Reminder',
+                variant: 'primary'
+            });
+        }
+        if (type === 'demo') {
+            setConfirmConfig({
+                type,
+                title: 'Send Demo Reminder',
+                message: 'This will notify all demo users who have 1 day remaining. Message will be delivered via WhatsApp, Telegram, Push, and in-app notifications. Continue?',
+                confirmText: 'Send Demo Alert',
+                variant: 'primary'
+            });
+        }
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmSend = async () => {
+        try {
+            if (confirmConfig.type === 'renewal') {
+                await triggerRenewalReminders();
+                toast.success('Renewal reminders triggered');
+            } else if (confirmConfig.type === 'demo') {
+                await triggerDemoReminders();
+                toast.success('Demo reminders triggered');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to trigger reminders');
+        } finally {
+            setConfirmOpen(false);
+        }
+    };
+
+    const handleLoadNormalMessage = () => {
+        setFormData({ ...formData, type: 'NEWS', message: '' });
+        toast.success('Normal message template ready');
+    };
+
     const togglePlan = (planName) => {
         const current = formData.targetAudience.planValues;
         const updated = current.includes(planName)
@@ -153,7 +206,6 @@ const CreateAnnouncement = () => {
 
     const audienceOptions = [
         { label: 'All Users', value: 'all' },
-        { label: 'App Users', value: 'user' },
         { label: 'Sub Brokers', value: 'sub-broker' }
     ];
 
@@ -177,9 +229,21 @@ const CreateAnnouncement = () => {
                         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.2em]">Transmission System V2.4</span>
                     </div>
                 </h1>
-                <Button variant="outline" onClick={() => navigate('/announcements/all')} className="gap-2 h-10 px-4 rounded-xl border-white/5 bg-secondary/20 hover:bg-secondary/40 text-xs shadow-inner btn-cancel">
-                    <ArrowLeft size={16} /> Cancel
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    {!isEditMode && (
+                        <>
+                            <Button variant="outline" onClick={() => openConfirm('renewal')} className="gap-2 h-10 px-4 rounded-xl border-white/5 bg-secondary/20 hover:bg-secondary/40 text-[10px] shadow-inner">
+                                Remind Plan Users
+                            </Button>
+                            <Button variant="outline" onClick={() => openConfirm('demo')} className="gap-2 h-10 px-4 rounded-xl border-white/5 bg-secondary/20 hover:bg-secondary/40 text-[10px] shadow-inner">
+                                Remind Demo Users
+                            </Button>
+                        </>
+                    )}
+                    <Button variant="outline" onClick={() => navigate('/announcements/all')} className="gap-2 h-10 px-4 rounded-xl border-white/5 bg-secondary/20 hover:bg-secondary/40 text-xs shadow-inner btn-cancel">
+                        <ArrowLeft size={16} /> Cancel
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -201,12 +265,20 @@ const CreateAnnouncement = () => {
                                         <Radio size={14} className="text-primary" />
                                         Announcement Type
                                     </label>
-                                    <button
-                                        onClick={handleLoadTemplate}
-                                        className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full transition-all border border-primary/20"
-                                    >
-                                        <LayoutTemplate size={12} /> LOAD TEMPLATE
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleLoadNormalMessage}
+                                            className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-full transition-all border border-emerald-500/20"
+                                        >
+                                            <CheckCircle2 size={12} /> NORMAL MSG
+                                        </button>
+                                        <button
+                                            onClick={handleLoadTemplate}
+                                            className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full transition-all border border-primary/20"
+                                        >
+                                            <LayoutTemplate size={12} /> LOAD TEMPLATE
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                                     {typeOptions.map(t => (
@@ -267,6 +339,43 @@ const CreateAnnouncement = () => {
                             <div className="space-y-3">
                                 <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filter by Plan</label>
                                 <div className="flex flex-wrap gap-2">
+                                    {plans.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                const allNames = plans.map(p => p.name);
+                                                const allSelected = allNames.length > 0 && allNames.every(name => formData.targetAudience.planValues.includes(name)) && formData.targetAudience.includeCustomPlans;
+                                                setFormData({
+                                                    ...formData,
+                                                    targetAudience: {
+                                                        ...formData.targetAudience,
+                                                        planValues: allSelected ? [] : allNames,
+                                                        includeCustomPlans: allSelected ? false : true
+                                                    }
+                                                });
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all ${plans.length > 0 && plans.every(p => formData.targetAudience.planValues.includes(p.name))
+                                                ? 'border-primary/50 bg-primary/20 text-primary'
+                                                : 'border-white/5 bg-secondary/10 text-muted-foreground hover:text-foreground'
+                                                }`}
+                                        >
+                                            All Plans
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setFormData({
+                                            ...formData,
+                                            targetAudience: {
+                                                ...formData.targetAudience,
+                                                includeCustomPlans: !formData.targetAudience.includeCustomPlans
+                                            }
+                                        })}
+                                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all ${formData.targetAudience.includeCustomPlans
+                                            ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400'
+                                            : 'border-white/5 bg-secondary/10 text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        Custom Plan Users
+                                    </button>
                                     {plans.map(p => (
                                         <button
                                             key={p._id}
@@ -304,58 +413,6 @@ const CreateAnnouncement = () => {
 
                             <hr className="border-white/5" />
 
-                            {/* Reach Summary */}
-                            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-3">
-                                <div className="flex items-center gap-2 text-primary">
-                                    <Send size={16} />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Reach Report</span>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-[10px]">
-                                        <span className="text-muted-foreground">Primary:</span>
-                                        <span className="text-foreground font-bold">{formData.targetAudience.role.toUpperCase()}</span>
-                                    </div>
-                                    {formData.targetAudience.planValues.length > 0 && (
-                                        <div className="flex flex-wrap gap-1">
-                                            <span className="text-[10px] text-muted-foreground w-full">Plans:</span>
-                                            {formData.targetAudience.planValues.map(p => <span key={p} className="bg-primary/20 text-primary px-1.5 rounded scale-90">{p}</span>)}
-                                        </div>
-                                    )}
-                                    {formData.targetAudience.segments.length > 0 && (
-                                        <div className="flex flex-wrap gap-1">
-                                            <span className="text-[10px] text-muted-foreground w-full">Segments:</span>
-                                            {formData.targetAudience.segments.map(s => <span key={s} className="bg-amber-500/20 text-amber-500 px-1.5 rounded scale-90">{s}</span>)}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Notification Checkbox */}
-                            <div className="flex items-center gap-3 p-4 bg-secondary/10 rounded-2xl border border-white/5 cursor-pointer hover:bg-secondary/20 transition-all" onClick={() => setPushNotification(!pushNotification)}>
-                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${pushNotification ? 'bg-primary border-primary' : 'border-white/20'}`}>
-                                    {pushNotification && <CheckCircle2 size={14} className="text-white" />}
-                                </div>
-                                <span className="text-xs font-bold text-foreground">PUSH NOTIFICATION</span>
-                            </div>
-
-                            {/* Dates */}
-                            <div className="space-y-4">
-                                <Input
-                                    type="datetime-local"
-                                    label="START TIME"
-                                    value={formData.startDate}
-                                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                                    className="bg-secondary/20 border-white/5"
-                                />
-                                <Input
-                                    type="datetime-local"
-                                    label="EXPIRY TIME"
-                                    value={formData.endDate}
-                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                    className="bg-secondary/20 border-white/5"
-                                />
-                            </div>
-
                             <Button
                                 variant="primary"
                                 className="w-full h-14 rounded-2xl gap-3 shadow-xl shadow-primary/20 text-sm font-bold uppercase tracking-widest group"
@@ -371,6 +428,16 @@ const CreateAnnouncement = () => {
                     </Card>
                 </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirmSend}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                confirmText={confirmConfig.confirmText}
+                confirmVariant={confirmConfig.variant}
+            />
         </div>
     );
 };

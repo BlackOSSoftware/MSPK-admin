@@ -112,6 +112,12 @@ const resolvePoints = (signal, livePrice) => {
     return Math.round(points * 100) / 100;
 };
 
+const isTargetHit = (targetValue, price, isBuy) => {
+    const target = toFiniteNumber(targetValue);
+    if (typeof target !== 'number' || typeof price !== 'number') return false;
+    return isBuy ? price >= target : price <= target;
+};
+
 const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }) => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [ltpData, setLtpData] = useState({});
@@ -204,6 +210,7 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const livePrice = ltpData[signal.symbol]?.price;
                                 const resolvedExit = resolveExitPrice(signal, livePrice);
                                 const resolvedPoints = resolvePoints(signal, livePrice);
+                                const priceForTargets = typeof livePrice === 'number' ? livePrice : resolvedExit;
                                 const signalTime = signal.signalTime || signal.createdAt || signal.timestamp;
                                 const highlightMatch =
                                     highlightTerm &&
@@ -281,12 +288,33 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                     ['TP1', targets.target1],
                                                     ['TP2', targets.target2],
                                                     ['TP3', targets.target3],
-                                                ].map(([label, value]) => (
-                                                    <div key={`${signalId}-${label}`} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
-                                                        <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">{label}</span>
-                                                        <span className="text-[10px] font-bold text-emerald-400">{formatPrice(value)}</span>
-                                                    </div>
-                                                ))}
+                                                ].map(([label, value]) => {
+                                                    const hit = isTargetHit(value, priceForTargets, isBuy);
+                                                    return (
+                                                        <div
+                                                            key={`${signalId}-${label}`}
+                                                            className={clsx(
+                                                                "flex items-center justify-between gap-3 rounded-lg border px-2.5 py-1.5",
+                                                                hit
+                                                                    ? "border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_12px_rgba(16,185,129,0.18)]"
+                                                                    : "border-border/60 bg-muted/[0.06]"
+                                                            )}
+                                                        >
+                                                            <span className={clsx(
+                                                                "text-[9px] font-black uppercase tracking-wide",
+                                                                hit ? "text-emerald-400" : "text-muted-foreground"
+                                                            )}>
+                                                                {label}
+                                                            </span>
+                                                            <span className={clsx(
+                                                                "text-[10px] font-bold",
+                                                                hit ? "text-emerald-300" : "text-emerald-400"
+                                                            )}>
+                                                                {formatPrice(value)}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </td>
 

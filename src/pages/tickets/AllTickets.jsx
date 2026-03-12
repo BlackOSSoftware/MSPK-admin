@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import toast from 'react-hot-toast';
 import { fetchTickets, updateTicketStatus } from '../../api/tickets.api';
 import TablePageFooter from '../../components/ui/TablePageFooter';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 // Removed useSelector and role checks as per request - pure Admin View
 
 const AllTickets = () => {
@@ -15,6 +16,8 @@ const AllTickets = () => {
     const [tickets, setTickets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [actionLoadingId, setActionLoadingId] = useState('');
+    const [isExporting, setIsExporting] = useState(false);
+    const [viewTicket, setViewTicket] = useState(null);
 
     // Pagination State (Standardized)
     const [currentPage, setCurrentPage] = useState(1);
@@ -63,6 +66,17 @@ const AllTickets = () => {
         }
     };
 
+    const resolveTicketTitle = (ticket) => ticket?.subject || ticket?.ticketType || ticket?.category || 'Ticket';
+    const resolveTicketMessage = (ticket) => ticket?.description || ticket?.message || ticket?.content || '-';
+    const resolveTicketType = (ticket) => ticket?.ticketType || ticket?.category || '-';
+    const resolveTicketEmail = (ticket) => ticket?.contactEmail || ticket?.user?.email || '-';
+    const resolveTicketPhone = (ticket) => ticket?.contactNumber || ticket?.user?.phone || '-';
+    const resolveTicketName = (ticket) => ticket?.contactName || ticket?.user?.name || '-';
+    const resolveTicketSource = (ticket) => ticket?.source || '-';
+    const resolveTicketStatus = (ticket) => ticket?.status || '-';
+    const resolveTicketId = (ticket) => ticket?.ticketId || ticket?._id || '-';
+    const resolveTicketDate = (ticket) => ticket?.createdAt ? new Date(ticket.createdAt).toLocaleString() : '-';
+
     const getFilteredTickets = () => {
         let data = tickets;
         if (activeTab === 'open') data = data.filter(t => normalizeStatus(t.status) === 'open');
@@ -99,6 +113,44 @@ const AllTickets = () => {
     useEffect(() => {
         setCurrentPage(1);
     }, [activeTab, searchTerm, itemsPerPage]);
+
+    const handleExport = () => {
+        if (!filteredTickets.length) {
+            toast.error('No data to export');
+            return;
+        }
+        setIsExporting(true);
+        try {
+            const exportData = filteredTickets.map((ticket) => ({
+                id: ticket.ticketId || ticket._id || '',
+                subject: ticket.subject || '',
+                description: ticket.description || '',
+                type: ticket.ticketType || ticket.category || '',
+                status: ticket.status || '',
+                source: ticket.source || '',
+                name: ticket.contactName || ticket.user?.name || '',
+                email: ticket.contactEmail || ticket.user?.email || '',
+                phone: ticket.contactNumber || ticket.user?.phone || '',
+                date: ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : '',
+            }));
+
+            const headers = Object.keys(exportData[0]);
+            const csvContent = [
+                headers.join(','),
+                ...exportData.map((row) => headers.map((h) => JSON.stringify(row[h] || '')).join(',')),
+            ].join('\n');
+
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', `tickets_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="h-full flex flex-col gap-4">
@@ -242,6 +294,14 @@ const AllTickets = () => {
                                 </button>
                             )}
                         </div>
+                        <button
+                            type="button"
+                            onClick={handleExport}
+                            disabled={isExporting}
+                            className="h-8 px-3 rounded-lg border border-border/70 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-muted/20 transition-all disabled:opacity-50"
+                        >
+                            {isExporting ? 'Exporting...' : 'Export CSV'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -255,6 +315,7 @@ const AllTickets = () => {
                         highlightTerm={searchTerm}
                         onAction={handleTicketAction}
                         actionLoadingId={actionLoadingId}
+                        onRowClick={setViewTicket}
                     />
                 </div>
 
@@ -281,6 +342,29 @@ const AllTickets = () => {
                     onNext={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 />
             </div>
+
+            <ConfirmDialog
+                isOpen={!!viewTicket}
+                onClose={() => setViewTicket(null)}
+                onConfirm={() => setViewTicket(null)}
+                title={resolveTicketTitle(viewTicket)}
+                message={[
+                    `ID: ${resolveTicketId(viewTicket)}`,
+                    `Name: ${resolveTicketName(viewTicket)}`,
+                    `Email: ${resolveTicketEmail(viewTicket)}`,
+                    `Phone: ${resolveTicketPhone(viewTicket)}`,
+                    `Type: ${resolveTicketType(viewTicket)}`,
+                    `Status: ${resolveTicketStatus(viewTicket)}`,
+                    `Source: ${resolveTicketSource(viewTicket)}`,
+                    `Date: ${resolveTicketDate(viewTicket)}`,
+                    '',
+                    'Description:',
+                    resolveTicketMessage(viewTicket)
+                ].join('\n')}
+                confirmText="Close"
+                confirmVariant="primary"
+                hideCancel
+            />
         </div>
     );
 };
