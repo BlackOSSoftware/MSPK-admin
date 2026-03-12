@@ -80,6 +80,7 @@ const Subscriptions = () => {
         id: sub.transaction_id || sub._id?.substring(0, 8).toUpperCase() || 'N/A',
         user: sub.user_id?.name || 'Unknown User',
         email: sub.user_id?.email || '',
+        phone: sub.user_id?.phone || sub.user_id?.mobile || sub.user_id?.phoneNumber || '',
         plan: normalizePlanType(sub.plan_type),
         amount: Number(sub.total_amount) || 0,
         amountDisplay: Number(sub.total_amount) ? formatINR(sub.total_amount) : '-',
@@ -100,6 +101,8 @@ const Subscriptions = () => {
             return {
                 userId: sub.user_id?._id?.substring(0, 6).toUpperCase() || 'N/A',
                 user: sub.user_id?.name || 'Unknown',
+                email: sub.user_id?.email || '',
+                phone: sub.user_id?.phone || sub.user_id?.mobile || sub.user_id?.phoneNumber || '',
                 plan: normalizePlanType(sub.plan_type),
                 startDate: formatDate(sub.start_date),
                 expiryDate: formatDate(sub.end_date),
@@ -177,22 +180,35 @@ const Subscriptions = () => {
         amount: item.amountDisplay || item.amount // Fallback
     }));
 
+    const normalizeExportRow = (item) => {
+        const fullName = item.fullName || item.user || item.name || '';
+        const phoneNumber = item.phoneNumber || item.phone || item.mobile || '';
+        const email = item.email || '';
+
+        const row = {
+            ...item,
+            fullName,
+            phoneNumber,
+            email,
+            amount: item.amountDisplay || item.amount
+        };
+
+        delete row.user;
+        delete row.phone;
+        delete row.mobile;
+        delete row.amountDisplay;
+        delete row.originalStatus;
+        return row;
+    };
+
     const handleExport = (data, filename) => {
         if (!data || data.length === 0) {
             toast.error("No data to export");
             return;
         }
 
-        // For export, we might want the cleaning of data (e.g. number amount vs string)
-        // Using the raw data (with amount as number) might be better, or strict display. 
-        // Let's use the display version for consistency with view.
-        const exportData = data.map(item => ({
-            ...item,
-            amount: item.amountDisplay || item.amount
-        }));
-
-        const headers = Object.keys(exportData[0]).filter(k => k !== 'originalStatus' && k !== 'amountDisplay');
-        // Filter out internal fields
+        const exportData = data.map(normalizeExportRow);
+        const headers = Object.keys(exportData[0]);
 
         const csvContent = [
             headers.join(','),
