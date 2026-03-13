@@ -20,6 +20,34 @@ const DATE_FILTERS = [
     { value: 'month', label: 'Monthly' },
 ];
 const normalizeTab = (tab) => (tab === 'live' ? 'feed' : tab);
+const EMPTY_REPORT_SUMMARY = {
+    totalSignals: 0,
+    closedSignals: 0,
+    activeSignals: 0,
+    positiveSignals: 0,
+    negativeSignals: 0,
+    neutralSignals: 0,
+    grossProfitPoints: 0,
+    grossLossPoints: 0,
+    netPoints: 0,
+    averagePoints: 0,
+    grossProfitInr: 0,
+    grossLossInr: 0,
+    netInr: 0,
+    averageInr: 0,
+    winRate: 0,
+    closedWithoutPoints: 0,
+    targetHit: 0,
+    partialProfit: 0,
+    stoplossHit: 0,
+    lotSizeMissing: 0,
+};
+
+const formatInr = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '--';
+    return numeric.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+};
 
 const AllSignals = () => {
     const [searchParams] = useSearchParams();
@@ -50,28 +78,8 @@ const AllSignals = () => {
         weeklySignals: 0,
         monthlySignals: 0,
     });
-    const [reportSummary, setReportSummary] = useState({
-        totalSignals: 0,
-        closedSignals: 0,
-        activeSignals: 0,
-        positiveSignals: 0,
-        negativeSignals: 0,
-        neutralSignals: 0,
-        grossProfitPoints: 0,
-        grossLossPoints: 0,
-        netPoints: 0,
-        averagePoints: 0,
-        grossProfitInr: 0,
-        grossLossInr: 0,
-        netInr: 0,
-        averageInr: 0,
-        winRate: 0,
-        closedWithoutPoints: 0,
-        targetHit: 0,
-        partialProfit: 0,
-        stoplossHit: 0,
-        lotSizeMissing: 0,
-    });
+    const [reportSummary, setReportSummary] = useState(EMPTY_REPORT_SUMMARY);
+    const [hasReportSummary, setHasReportSummary] = useState(false);
     const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalResults: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
@@ -143,6 +151,10 @@ const AllSignals = () => {
 
             if (data?.report?.summary) {
                 setReportSummary((prev) => ({ ...prev, ...data.report.summary }));
+                setHasReportSummary(true);
+            } else {
+                setReportSummary(EMPTY_REPORT_SUMMARY);
+                setHasReportSummary(false);
             }
 
             if (data?.pagination) {
@@ -279,6 +291,9 @@ const AllSignals = () => {
     const emptyStateBody = activeTab === 'history'
         ? 'Try a different status, segment, or search term.'
         : 'Webhook and manual signals will appear here automatically.';
+    const accuracyPercent = hasReportSummary && reportSummary.closedSignals > 0
+        ? Math.max(0, Math.round(((reportSummary.closedSignals - reportSummary.lotSizeMissing) / reportSummary.closedSignals) * 100))
+        : null;
 
     return (
         <div className="flex h-full flex-col gap-4">
@@ -537,10 +552,10 @@ const AllSignals = () => {
                                         Net Earnings
                                     </div>
                                     <div className={`mt-2 text-lg font-black ${reportSummary.netInr >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        Rs {reportSummary.netInr}
+                                        {hasReportSummary ? `Rs ${formatInr(reportSummary.netInr)}` : '--'}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        Avg Rs {reportSummary.averageInr} per closed signal
+                                        {hasReportSummary ? `Avg Rs ${formatInr(reportSummary.averageInr)} per settled signal` : 'Backend report not available on this environment'}
                                     </div>
                                 </div>
 
@@ -550,14 +565,14 @@ const AllSignals = () => {
                                     </div>
                                     <div className="mt-2 flex items-center gap-2 text-[11px]">
                                         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-bold text-emerald-400">
-                                            +Rs {reportSummary.grossProfitInr}
+                                            {hasReportSummary ? `+Rs ${formatInr(reportSummary.grossProfitInr)}` : '--'}
                                         </span>
                                         <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 font-bold text-red-400">
-                                            Rs {reportSummary.grossLossInr}
+                                            {hasReportSummary ? `Rs ${formatInr(reportSummary.grossLossInr)}` : '--'}
                                         </span>
                                     </div>
                                     <div className="mt-2 text-[11px] text-muted-foreground">
-                                        Win rate {reportSummary.winRate}% from settled outcomes
+                                        {hasReportSummary ? `Win rate ${reportSummary.winRate}% from settled outcomes` : 'Waiting for backend report summary'}
                                     </div>
                                 </div>
 
@@ -566,10 +581,10 @@ const AllSignals = () => {
                                         Current Range
                                     </div>
                                     <div className={`mt-2 text-lg font-black ${reportSummary.netInr >= 0 ? 'text-sky-400' : 'text-red-400'}`}>
-                                        Rs {reportSummary.netInr}
+                                        {hasReportSummary ? `Rs ${formatInr(reportSummary.netInr)}` : '--'}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        Earnings for selected date filter
+                                        {hasReportSummary ? 'Estimated earnings for selected date filter' : 'Deploy backend update to get range earnings'}
                                     </div>
                                 </div>
 
@@ -578,10 +593,12 @@ const AllSignals = () => {
                                         Report Quality
                                     </div>
                                     <div className="mt-2 text-lg font-black text-foreground">
-                                        {reportSummary.closedSignals}
+                                        {hasReportSummary ? reportSummary.closedSignals : '--'}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        Closed signals, {reportSummary.lotSizeMissing} lot-size fallback
+                                        {hasReportSummary
+                                            ? `Closed signals, ${reportSummary.lotSizeMissing} lot-size fallback${accuracyPercent !== null ? `, est. ${accuracyPercent}% confidence` : ''}`
+                                            : 'No backend report summary received'}
                                     </div>
                                 </div>
                             </div>
