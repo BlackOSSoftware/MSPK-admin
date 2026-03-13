@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { History, List, Plus, Search, Settings, XCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Download, History, List, Plus, Search, Settings, TrendingUp, XCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { clsx } from 'clsx';
 import SignalTable from '../../components/tables/SignalTable';
@@ -12,6 +12,12 @@ import SignalConfiguration from './SignalConfiguration';
 const FEED_FILTERS = ['All', 'Active', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit', 'Closed'];
 const HISTORY_FILTERS = ['All', 'Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit'];
 const SEGMENT_FILTERS = ['All', 'NSE', 'NFO', 'MCX', 'CURRENCY', 'CRYPTO'];
+const DATE_FILTERS = [
+    { value: 'all', label: 'All' },
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'Weekly' },
+    { value: 'month', label: 'Monthly' },
+];
 const normalizeTab = (tab) => (tab === 'live' ? 'feed' : tab);
 
 const AllSignals = () => {
@@ -21,8 +27,12 @@ const AllSignals = () => {
 
     const [activeTab, setActiveTab] = useState(normalizeTab(searchParams.get('tab') || 'feed'));
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+    const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
     const [statusFilter, setStatusFilter] = useState('All');
     const [segmentFilter, setSegmentFilter] = useState('All');
+    const [datePreset, setDatePreset] = useState('all');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [rows, setRows] = useState([]);
     const [stats, setStats] = useState({
         totalSignals: 0,
@@ -33,8 +43,31 @@ const AllSignals = () => {
         successRate: 0,
         partialProfit: 0,
     });
+    const [periodStats, setPeriodStats] = useState({
+        todaySignals: 0,
+        weeklySignals: 0,
+        monthlySignals: 0,
+    });
+    const [reportSummary, setReportSummary] = useState({
+        totalSignals: 0,
+        closedSignals: 0,
+        activeSignals: 0,
+        positiveSignals: 0,
+        negativeSignals: 0,
+        neutralSignals: 0,
+        grossProfitPoints: 0,
+        grossLossPoints: 0,
+        netPoints: 0,
+        averagePoints: 0,
+        winRate: 0,
+        closedWithoutPoints: 0,
+        targetHit: 0,
+        partialProfit: 0,
+        stoplossHit: 0,
+    });
     const [pagination, setPagination] = useState({ page: 1, limit: 10, totalPages: 1, totalResults: 0 });
     const [isLoading, setIsLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState(null);
     const [dialogConfig, setDialogConfig] = useState({ title: '', message: '', variant: 'primary', confirmText: 'Confirm' });
@@ -48,6 +81,7 @@ const AllSignals = () => {
         }
         if (typeof search === 'string') {
             setSearchTerm(search);
+            setSearchInput(search);
         }
     }, [searchParams]);
 
@@ -55,7 +89,15 @@ const AllSignals = () => {
         setStatusFilter('All');
     }, [activeTab]);
 
-    const loadSignals = async (page = 1) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(searchInput.trim());
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    const loadSignals = useCallback(async (page = 1) => {
         if (activeTab === 'config') {
             setIsLoading(false);
             return;
@@ -67,8 +109,12 @@ const AllSignals = () => {
             const params = {
                 page,
                 limit: pagination.limit,
+                includeReport: 1,
                 search: searchTerm || undefined,
                 segment: segmentFilter !== 'All' ? segmentFilter : undefined,
+                datePreset: datePreset !== 'all' ? datePreset : undefined,
+                fromDate: datePreset === 'custom' ? (fromDate || undefined) : undefined,
+                toDate: datePreset === 'custom' ? (toDate || undefined) : undefined,
             };
 
             if (activeTab === 'history') {
@@ -84,6 +130,14 @@ const AllSignals = () => {
                 setStats((prev) => ({ ...prev, ...data.stats }));
             }
 
+            if (data?.periodStats) {
+                setPeriodStats((prev) => ({ ...prev, ...data.periodStats }));
+            }
+
+            if (data?.report?.summary) {
+                setReportSummary((prev) => ({ ...prev, ...data.report.summary }));
+            }
+
             if (data?.pagination) {
                 setPagination((prev) => ({ ...prev, ...data.pagination }));
             } else {
@@ -95,6 +149,38 @@ const AllSignals = () => {
         } finally {
             setIsLoading(false);
         }
+    }, [activeTab, pagination.limit, searchTerm, segmentFilter, datePreset, fromDate, toDate, statusFilter, toast]);
+
+    const exportParams = useMemo(() => {
+        const params = {
+            search: searchTerm || undefined,
+            segment: segmentFilter !== 'All' ? segmentFilter : undefined,
+            datePreset: datePreset !== 'all' ? datePreset : undefined,
+            fromDate: datePreset === 'custom' ? (fromDate || undefined) : undefined,
+            toDate: datePreset === 'custom' ? (toDate || undefined) : undefined,
+        };
+
+        if (activeTab === 'history') {
+            params.status = statusFilter === 'All' ? 'History' : statusFilter;
+        } else if (statusFilter !== 'All') {
+            params.status = statusFilter;
+        }
+
+        return params;
+    }, [activeTab, datePreset, fromDate, searchTerm, segmentFilter, statusFilter, toDate]);
+
+    const handleExportReport = async () => {
+        try {
+            setIsExporting(true);
+            const { exportSignalReport } = await import('../../api/signals.api');
+            await exportSignalReport(exportParams);
+            toast.success('Signal report export started');
+        } catch (error) {
+            console.error('Failed to export signal report', error);
+            toast.error('Failed to export signal report');
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     useEffect(() => {
@@ -105,7 +191,7 @@ const AllSignals = () => {
         }, 350);
 
         return () => clearTimeout(timer);
-    }, [activeTab, searchTerm, statusFilter, segmentFilter, pagination.limit]);
+    }, [activeTab, loadSignals]);
 
     const handlePageChange = (nextPage) => {
         if (nextPage < 1 || nextPage > pagination.totalPages) return;
@@ -266,6 +352,15 @@ const AllSignals = () => {
                                         <span className="rounded-full border border-border/70 bg-muted/10 px-2.5 py-1">
                                             Success: <span className="text-emerald-400">{stats.successRate}%</span>
                                         </span>
+                                        <span className="rounded-full border border-border/70 bg-muted/10 px-2.5 py-1">
+                                            Today: <span className="text-sky-400">{periodStats.todaySignals}</span>
+                                        </span>
+                                        <span className="rounded-full border border-border/70 bg-muted/10 px-2.5 py-1">
+                                            Weekly: <span className="text-cyan-400">{periodStats.weeklySignals}</span>
+                                        </span>
+                                        <span className="rounded-full border border-border/70 bg-muted/10 px-2.5 py-1">
+                                            Monthly: <span className="text-violet-400">{periodStats.monthlySignals}</span>
+                                        </span>
                                     </div>
                                 </div>
 
@@ -273,22 +368,32 @@ const AllSignals = () => {
                                     <div className="relative group">
                                         <Search className="absolute left-3 top-2 text-muted-foreground" size={12} />
                                         <input
-                                            value={searchTerm}
-                                            onChange={(event) => setSearchTerm(event.target.value)}
+                                            value={searchInput}
+                                            onChange={(event) => setSearchInput(event.target.value)}
                                             type="text"
                                             placeholder="Search symbol, uid, webhook..."
                                             className="h-8 w-64 rounded-lg border border-border bg-secondary/30 pl-9 pr-7 text-[11px] font-mono placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-secondary/50 focus:outline-none"
                                         />
-                                        {searchTerm ? (
+                                        {searchInput ? (
                                             <button
                                                 type="button"
-                                                onClick={() => setSearchTerm('')}
+                                                onClick={() => setSearchInput('')}
                                                 className="absolute right-2 top-2 text-muted-foreground transition-all hover:text-foreground"
                                             >
                                                 <XCircle size={12} className="opacity-50 hover:opacity-100" />
                                             </button>
                                         ) : null}
                                     </div>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleExportReport}
+                                        disabled={isExporting}
+                                        className="btn-cancel h-8 gap-1.5 rounded-lg text-[11px] font-bold"
+                                    >
+                                        <Download size={12} /> {isExporting ? 'Exporting...' : 'Export CSV'}
+                                    </Button>
 
                                     <Button
                                         variant="outline"
@@ -338,6 +443,137 @@ const AllSignals = () => {
                                             {value}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Date</span>
+                                    {DATE_FILTERS.map((item) => {
+                                        const count = item.value === 'today'
+                                            ? periodStats.todaySignals
+                                            : item.value === 'week'
+                                                ? periodStats.weeklySignals
+                                                : item.value === 'month'
+                                                    ? periodStats.monthlySignals
+                                                    : stats.totalSignals;
+
+                                        return (
+                                            <button
+                                                key={item.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFromDate('');
+                                                    setToDate('');
+                                                    setPagination((prev) => ({ ...prev, page: 1 }));
+                                                    setDatePreset(item.value);
+                                                }}
+                                                className={clsx(
+                                                    'rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all',
+                                                    datePreset === item.value
+                                                        ? 'border-primary bg-primary/10 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.14)]'
+                                                        : 'border-transparent text-muted-foreground hover:bg-muted/20 hover:text-foreground'
+                                                )}
+                                            >
+                                                {item.label} ({count})
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Custom Range</span>
+                                    <input
+                                        type="date"
+                                        value={fromDate}
+                                        onChange={(event) => {
+                                            setDatePreset('custom');
+                                            setPagination((prev) => ({ ...prev, page: 1 }));
+                                            setFromDate(event.target.value);
+                                        }}
+                                        className="h-8 rounded-lg border border-border bg-secondary/30 px-2 text-[11px] font-mono text-foreground focus:border-primary/50 focus:bg-secondary/50 focus:outline-none"
+                                    />
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">To</span>
+                                    <input
+                                        type="date"
+                                        value={toDate}
+                                        onChange={(event) => {
+                                            setDatePreset('custom');
+                                            setPagination((prev) => ({ ...prev, page: 1 }));
+                                            setToDate(event.target.value);
+                                        }}
+                                        className="h-8 rounded-lg border border-border bg-secondary/30 px-2 text-[11px] font-mono text-foreground focus:border-primary/50 focus:bg-secondary/50 focus:outline-none"
+                                    />
+                                    {(fromDate || toDate) ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDatePreset('all');
+                                                setFromDate('');
+                                                setToDate('');
+                                                setPagination((prev) => ({ ...prev, page: 1 }));
+                                            }}
+                                            className="rounded-md border border-transparent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground transition-all hover:bg-muted/20 hover:text-foreground"
+                                        >
+                                            Clear
+                                        </button>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-xl border border-border bg-secondary/20 p-3">
+                                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                        <TrendingUp size={12} />
+                                        Net Earnings
+                                    </div>
+                                    <div className={`mt-2 text-lg font-black ${reportSummary.netPoints >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {reportSummary.netPoints} pts
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-muted-foreground">
+                                        Avg {reportSummary.averagePoints} pts per closed signal
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-secondary/20 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                        Gross Breakdown
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2 text-[11px]">
+                                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-bold text-emerald-400">
+                                            +{reportSummary.grossProfitPoints} pts
+                                        </span>
+                                        <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 font-bold text-red-400">
+                                            {reportSummary.grossLossPoints} pts
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 text-[11px] text-muted-foreground">
+                                        Win rate {reportSummary.winRate}% from settled outcomes
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-secondary/20 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                        Today Report
+                                    </div>
+                                    <div className="mt-2 text-lg font-black text-sky-400">
+                                        {periodStats.todaySignals}
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-muted-foreground">
+                                        Signals in today filter window
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-secondary/20 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                        Report Quality
+                                    </div>
+                                    <div className="mt-2 text-lg font-black text-foreground">
+                                        {reportSummary.closedSignals}
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-muted-foreground">
+                                        Closed signals, {reportSummary.closedWithoutPoints} missing points
+                                    </div>
                                 </div>
                             </div>
                         </div>

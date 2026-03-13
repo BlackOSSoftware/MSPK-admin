@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Search,
   MessageSquare,
@@ -17,69 +17,58 @@ import { fetchTickets, updateTicketStatus } from "../../api/tickets.api";
 import TablePageFooter from "../../components/ui/TablePageFooter";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 
-// Removed useSelector and role checks as per request - pure Admin View
+const normalizeStatus = (status) => {
+  const value = (status || "").toString().trim().toLowerCase();
+  return value === "open" ? "pending" : value;
+};
 
 const AllTickets = () => {
   const [searchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(
-    searchParams.get("search") || ""
-  );
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [activeTab, setActiveTab] = useState("all");
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [viewTicket, setViewTicket] = useState(null);
-
-  // Pagination State (Standardized)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
 
-  const normalizeStatus = (status) =>
-    (status || "").toString().trim().toLowerCase();
-
-  // Sync Search with URL
   useEffect(() => {
-    const sTerm = searchParams.get("search");
-    if (sTerm) setSearchTerm(sTerm);
+    const nextSearch = searchParams.get("search") || "";
+    setSearchTerm(nextSearch);
   }, [searchParams]);
 
-  useEffect(() => {
-    const loadTickets = async () => {
-      setIsLoading(true);
-      try {
-        const { data } = await fetchTickets();
-        setTickets(data);
-      } catch (e) {
-        console.error("Failed to load tickets", e);
-        toast.error("Failed to load tickets");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadTickets();
+  const loadTickets = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data } = await fetchTickets();
+      setTickets(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to load tickets", error);
+      toast.error("Failed to load tickets");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
 
   const handleTicketAction = async (ticket, action) => {
     const ticketId = ticket?._id;
     if (!ticketId) return;
 
-    const nextStatus =
-      action === "reject"
-        ? "rejected"
-        : action === "pending"
-        ? "pending"
-        : "resolved";
+    const nextStatus = action === "reject" ? "rejected" : "resolved";
     setActionLoadingId(ticketId);
     try {
       await updateTicketStatus(ticketId, nextStatus);
-      setTickets((prev) =>
-        prev.map((t) => (t._id === ticketId ? { ...t, status: nextStatus } : t))
-      );
+      await loadTickets();
       toast.success(`Ticket ${nextStatus}`);
     } catch (error) {
       console.error(`Failed to ${nextStatus} ticket`, error);
-      toast.error(`Failed to ${nextStatus} ticket`);
+      toast.error(error?.response?.data?.message || `Failed to ${nextStatus} ticket`);
     } finally {
       setActionLoadingId("");
     }
@@ -89,79 +78,60 @@ const AllTickets = () => {
     ticket?.subject || ticket?.ticketType || ticket?.category || "Ticket";
   const resolveTicketMessage = (ticket) =>
     ticket?.description || ticket?.message || ticket?.content || "-";
-  const resolveTicketType = (ticket) =>
-    ticket?.ticketType || ticket?.category || "-";
-  const resolveTicketEmail = (ticket) =>
-    ticket?.contactEmail || ticket?.user?.email || "-";
-  const resolveTicketPhone = (ticket) =>
-    ticket?.contactNumber || ticket?.user?.phone || "-";
-  const resolveTicketName = (ticket) =>
-    ticket?.contactName || ticket?.user?.name || "-";
+  const resolveTicketType = (ticket) => ticket?.ticketType || ticket?.category || "-";
+  const resolveTicketEmail = (ticket) => ticket?.contactEmail || ticket?.user?.email || "-";
+  const resolveTicketPhone = (ticket) => ticket?.contactNumber || ticket?.user?.phone || "-";
+  const resolveTicketName = (ticket) => ticket?.contactName || ticket?.user?.name || "-";
   const resolveTicketSource = (ticket) => ticket?.source || "-";
   const resolveTicketStatus = (ticket) => ticket?.status || "-";
-  const resolveTicketId = (ticket) =>
-    ticket?.ticketId || ticket?._id || "-";
+  const resolveTicketId = (ticket) => ticket?.ticketId || ticket?._id || "-";
   const resolveTicketDate = (ticket) =>
     ticket?.createdAt ? new Date(ticket.createdAt).toLocaleString() : "-";
 
   const getFilteredTickets = () => {
     let data = tickets;
-    if (activeTab === "open")
-      data = data.filter((t) => normalizeStatus(t.status) === "open");
-    if (activeTab === "pending")
-      data = data.filter((t) => normalizeStatus(t.status) === "pending");
-    if (activeTab === "resolved")
-      data = data.filter((t) =>
-        ["resolved", "closed"].includes(normalizeStatus(t.status))
+    if (activeTab === "open" || activeTab === "pending") {
+      data = data.filter((ticket) => normalizeStatus(ticket.status) === "pending");
+    }
+    if (activeTab === "resolved") {
+      data = data.filter((ticket) =>
+        ["resolved", "closed"].includes(normalizeStatus(ticket.status)),
       );
-    if (activeTab === "rejected")
-      data = data.filter((t) => normalizeStatus(t.status) === "rejected");
+    }
+    if (activeTab === "rejected") {
+      data = data.filter((ticket) => normalizeStatus(ticket.status) === "rejected");
+    }
 
-    return data.filter(
-      (t) =>
-        (t.subject &&
-          t.subject.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.description &&
-          t.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.ticketType &&
-          t.ticketType.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.category &&
-          t.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.contactName &&
-          t.contactName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.contactEmail &&
-          t.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.contactNumber &&
-          t.contactNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.source &&
-          t.source.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.ticketId &&
-          t.ticketId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t._id && t._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.user &&
-          t.user.email &&
-          t.user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.user &&
-          t.user.phone &&
-          t.user.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.user &&
-          t.user.name &&
-          t.user.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return data;
+
+    return data.filter((ticket) =>
+      [
+        ticket.subject,
+        ticket.description,
+        ticket.ticketType,
+        ticket.category,
+        ticket.contactName,
+        ticket.contactEmail,
+        ticket.contactNumber,
+        ticket.source,
+        ticket.ticketId,
+        ticket._id,
+        ticket.user?.email,
+        ticket.user?.phone,
+        ticket.user?.name,
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query)),
     );
   };
 
   const filteredTickets = getFilteredTickets();
-
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / itemsPerPage));
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentTickets = filteredTickets.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  const currentTickets = filteredTickets.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchTerm, itemsPerPage]);
@@ -171,6 +141,7 @@ const AllTickets = () => {
       toast.error("No data to export");
       return;
     }
+
     setIsExporting(true);
     try {
       const exportData = filteredTickets.map((ticket) => ({
@@ -183,16 +154,14 @@ const AllTickets = () => {
         name: ticket.contactName || ticket.user?.name || "",
         email: ticket.contactEmail || ticket.user?.email || "",
         phone: ticket.contactNumber || ticket.user?.phone || "",
-        date: ticket.createdAt
-          ? new Date(ticket.createdAt).toLocaleString()
-          : "",
+        date: ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : "",
       }));
 
       const headers = Object.keys(exportData[0]);
       const csvContent = [
         headers.join(","),
         ...exportData.map((row) =>
-          headers.map((h) => JSON.stringify(row[h] || "")).join(",")
+          headers.map((header) => JSON.stringify(row[header] || "")).join(","),
         ),
       ].join("\n");
 
@@ -203,7 +172,7 @@ const AllTickets = () => {
       link.href = URL.createObjectURL(blob);
       link.setAttribute(
         "download",
-        `tickets_export_${new Date().toISOString().split("T")[0]}.csv`
+        `tickets_export_${new Date().toISOString().split("T")[0]}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -213,10 +182,15 @@ const AllTickets = () => {
     }
   };
 
+  const pendingCount = tickets.filter((ticket) => normalizeStatus(ticket.status) === "pending").length;
+  const resolvedCount = tickets.filter((ticket) =>
+    ["resolved", "closed"].includes(normalizeStatus(ticket.status)),
+  ).length;
+  const rejectedCount = tickets.filter((ticket) => normalizeStatus(ticket.status) === "rejected").length;
+
   return (
     <div className="h-full flex flex-col gap-4">
       <div className="flex flex-col gap-4 shrink-0">
-        {/* Stats Header */}
         <div className="relative rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card/95 to-primary/5 p-3 sm:p-4">
           <div className="absolute inset-0 rounded-2xl ring-1 ring-primary/10 pointer-events-none" />
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -245,41 +219,10 @@ const AllTickets = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
             {[
-              {
-                label: "Total",
-                value: `${tickets.length}`,
-                icon: MessageSquare,
-                tone: "primary",
-              },
-              {
-                label: "Open",
-                value: `${
-                  tickets.filter((t) => normalizeStatus(t.status) === "open")
-                    .length
-                }`,
-                icon: AlertTriangle,
-                tone: "rose",
-              },
-              {
-                label: "Pending",
-                value: `${
-                  tickets.filter(
-                    (t) => normalizeStatus(t.status) === "pending"
-                  ).length
-                }`,
-                icon: TrendingUp,
-                tone: "amber",
-              },
-              {
-                label: "Resolved",
-                value: `${
-                  tickets.filter((t) =>
-                    ["resolved", "closed"].includes(normalizeStatus(t.status))
-                  ).length
-                }`,
-                icon: CheckCircle,
-                tone: "emerald",
-              },
+              { label: "Total", value: `${tickets.length}`, icon: MessageSquare },
+              { label: "Open", value: `${pendingCount}`, icon: AlertTriangle },
+              { label: "Pending", value: `${pendingCount}`, icon: TrendingUp },
+              { label: "Resolved", value: `${resolvedCount}`, icon: CheckCircle },
             ].map((card) => (
               <div
                 key={card.label}
@@ -306,7 +249,6 @@ const AllTickets = () => {
           </div>
         </div>
 
-        {/* Toolbar */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shrink-0 bg-card border border-border p-3 rounded-2xl shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
@@ -326,83 +268,26 @@ const AllTickets = () => {
             <div className="hidden sm:block h-7 w-[1px] bg-border/70" />
 
             <div className="flex items-center gap-1 flex-wrap">
-              <button
-                onClick={() => setActiveTab("all")}
-                className={clsx(
-                  "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all",
-                  activeTab === "all"
-                    ? "bg-primary/20 text-primary border border-primary/20"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                )}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setActiveTab("open")}
-                className={clsx(
-                  "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all",
-                  activeTab === "open"
-                    ? "bg-red-500/20 text-red-500 border border-red-500/20"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                )}
-              >
-                Open (
-                {
-                  tickets.filter((t) => normalizeStatus(t.status) === "open")
-                    .length
-                }
-                )
-              </button>
-              <button
-                onClick={() => setActiveTab("pending")}
-                className={clsx(
-                  "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all",
-                  activeTab === "pending"
-                    ? "bg-amber-500/20 text-amber-500 border border-amber-500/20"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                )}
-              >
-                Pending (
-                {
-                  tickets.filter(
-                    (t) => normalizeStatus(t.status) === "pending"
-                  ).length
-                }
-                )
-              </button>
-              <button
-                onClick={() => setActiveTab("resolved")}
-                className={clsx(
-                  "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all",
-                  activeTab === "resolved"
-                    ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/20"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                )}
-              >
-                Resolved (
-                {
-                  tickets.filter((t) =>
-                    ["resolved", "closed"].includes(normalizeStatus(t.status))
-                  ).length
-                }
-                )
-              </button>
-              <button
-                onClick={() => setActiveTab("rejected")}
-                className={clsx(
-                  "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all",
-                  activeTab === "rejected"
-                    ? "bg-red-500/20 text-red-500 border border-red-500/20"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                )}
-              >
-                Rejected (
-                {
-                  tickets.filter((t) => normalizeStatus(t.status) === "rejected")
-                    .length
-                }
-                )
-              </button>
+              {[
+                { id: "all", label: "All" },
+                { id: "open", label: `Open (${pendingCount})` },
+                { id: "pending", label: `Pending (${pendingCount})` },
+                { id: "resolved", label: `Resolved (${resolvedCount})` },
+                { id: "rejected", label: `Rejected (${rejectedCount})` },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={clsx(
+                    "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all",
+                    activeTab === tab.id
+                      ? "bg-primary/20 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -411,19 +296,19 @@ const AllTickets = () => {
               <Search className="absolute left-3 top-2 text-muted-foreground" size={12} />
               <input
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 type="text"
                 placeholder="SEARCH TICKET..."
                 className="bg-secondary/30 border border-white/5 h-8 pl-9 pr-7 w-full text-[11px] font-mono rounded-lg focus:border-primary/50 focus:bg-secondary/50 focus:outline-none focus:ring-0 transition-all placeholder:text-muted-foreground/50"
               />
-              {searchTerm && (
+              {searchTerm ? (
                 <button
                   onClick={() => setSearchTerm("")}
                   className="absolute right-2 top-2 text-muted-foreground hover:text-foreground transition-all"
                 >
                   <XCircle size={12} className="opacity-50 hover:opacity-100" />
                 </button>
-              )}
+              ) : null}
             </div>
             <button
               type="button"
@@ -437,7 +322,6 @@ const AllTickets = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 min-h-0 relative flex flex-col z-0">
         <div className="h-[720px] md:h-[800px] overflow-hidden">
           <TicketTable
@@ -450,19 +334,15 @@ const AllTickets = () => {
           />
         </div>
 
-        {!isLoading && filteredTickets.length === 0 && (
+        {!isLoading && filteredTickets.length === 0 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-3 opacity-50 bg-card/80 backdrop-blur-sm pointer-events-none">
             <Inbox size={48} strokeWidth={1} />
             <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-widest">
-                No Tickets Found
-              </p>
-              <p className="text-[10px] font-mono mt-1">
-                Try adjusting filters
-              </p>
+              <p className="text-sm font-bold uppercase tracking-widest">No Tickets Found</p>
+              <p className="text-[10px] font-mono mt-1">Try adjusting filters</p>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="mt-2">

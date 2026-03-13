@@ -2,6 +2,16 @@ import React from 'react';
 import { Edit, Trash2, CheckCircle, XCircle, CreditCard, Clock, Hash, Radio, DollarSign, Tag, List, Settings } from 'lucide-react';
 import TableHeaderCell from '../ui/TableHeaderCell';
 
+const formatPlanSegments = (plan) => {
+    const segments = Array.isArray(plan?.segments) && plan.segments.length > 0
+        ? plan.segments
+        : [plan?.segment].filter(Boolean);
+
+    if (segments.length === 0) return '—';
+    if (segments.includes('ALL')) return 'All Segments';
+    return segments.join(', ');
+};
+
 const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
     return (
         <div className="terminal-panel w-full h-full overflow-hidden border border-border bg-card rounded-lg shadow-2xl relative flex flex-col">
@@ -82,7 +92,7 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                                         </td>
                                         <td className="px-5 py-3 border-r border-border">
                                             <span className="px-2 py-0.5 rounded-[4px] bg-secondary/50 border border-white/5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                                {plan.segment}
+                                                {formatPlanSegments(plan)}
                                             </span>
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border font-bold text-foreground">
