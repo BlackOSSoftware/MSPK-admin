@@ -139,7 +139,13 @@ export const useChartRealtime = ({
             // 1. Initialize RAW
             // Open = Previous Raw Close (if available) else Current Price
             const rawOpen = currentRaw ? currentRaw.close : price;
-            const newRaw = { time: time, open: rawOpen, high: price, low: price, close: price };
+            const newRaw = {
+                time: time,
+                open: rawOpen,
+                high: Math.max(rawOpen, price),
+                low: Math.min(rawOpen, price),
+                close: price
+            };
             if (currentRawCandleRef) currentRawCandleRef.current = newRaw;
 
             // 2. Initialize Display
