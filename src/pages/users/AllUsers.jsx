@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Plus, Users, Activity, XCircle, Sparkles, TrendingUp, CheckCircle, UserCheck } from 'lucide-react';
+import { Search, Plus, Users, Activity, XCircle, Sparkles, TrendingUp, CheckCircle, UserCheck, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import UserTable from '../../components/tables/UserTable';
 import Button from '../../components/ui/Button';
@@ -13,6 +13,7 @@ const UsersList = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [users, setUsers] = useState([]);
     const [subBrokers, setSubBrokers] = useState([{ value: 'All', label: 'All Brokers' }, { value: 'DIRECT', label: 'Direct Clients' }]);
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
@@ -37,37 +38,43 @@ const UsersList = () => {
     const [pendingAction, setPendingAction] = useState(null);
     const [dialogConfig, setDialogConfig] = useState({ title: '', message: '', variant: 'primary', confirmText: 'Confirm' });
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { fetchUsers } = await import('../../api/users.api');
-                const { fetchSubBrokers } = await import('../../api/subbrokers.api');
+    const loadData = async (mode = 'initial') => {
+        try {
+            if (mode === 'initial') setIsLoading(true);
+            else setIsRefreshing(true);
+            const { fetchUsers } = await import('../../api/users.api');
+            const { fetchSubBrokers } = await import('../../api/subbrokers.api');
 
-                const [usersRes, sbRes] = await Promise.all([
-                    fetchUsers(),
-                    fetchSubBrokers()
-                ]);
+            const [usersRes, sbRes] = await Promise.all([
+                fetchUsers(),
+                fetchSubBrokers()
+            ]);
 
-                setUsers(usersRes.data);
+            setUsers(usersRes.data);
 
-                // Format SubBrokers for SearchableSelect
-                const sbOptions = sbRes.data.map(sb => ({
-                    value: sb.id,
-                    label: `${sb.name} (${sb.clientId})`
-                }));
-                setSubBrokers([
-                    { value: 'All', label: 'All Brokers' },
-                    { value: 'DIRECT', label: 'Direct Clients' },
-                    ...sbOptions
-                ]);
-
-            } catch (e) {
-                console.error("Failed to load users data", e);
-            } finally {
-                setIsLoading(false);
+            // Format SubBrokers for SearchableSelect
+            const sbOptions = sbRes.data.map(sb => ({
+                value: sb.id,
+                label: `${sb.name} (${sb.clientId})`
+            }));
+            setSubBrokers([
+                { value: 'All', label: 'All Brokers' },
+                { value: 'DIRECT', label: 'Direct Clients' },
+                ...sbOptions
+            ]);
+        } catch (e) {
+            console.error("Failed to load users data", e);
+            if (mode !== 'initial') {
+                toast.error('Failed to refresh users.');
             }
-        };
-        loadData();
+        } finally {
+            if (mode === 'initial') setIsLoading(false);
+            else setIsRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData('initial');
     }, []);
 
     const handleAction = async (action, user) => {
@@ -308,6 +315,15 @@ const UsersList = () => {
                             className="h-8 w-full sm:w-auto text-[11px] gap-1.5 rounded-lg font-bold justify-center btn-cancel"
                         >
                             <Plus size={12} /> New Client
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => loadData('refresh')}
+                            disabled={isRefreshing}
+                            className="h-8 w-full sm:w-auto text-[11px] gap-1.5 rounded-lg font-bold justify-center btn-cancel"
+                        >
+                            <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} /> Refresh
                         </Button>
                     </div>
                 </div>

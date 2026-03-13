@@ -78,8 +78,10 @@ const Subscriptions = () => {
 
     const transactions = subscriptions.map(sub => ({
         id: sub.transaction_id || sub._id?.substring(0, 8).toUpperCase() || 'N/A',
+        userId: sub.user_id?._id || '',
         user: sub.user_id?.name || 'Unknown User',
         email: sub.user_id?.email || '',
+        phone: sub.user_id?.phone || sub.user_id?.mobile || sub.user_id?.phoneNumber || '',
         plan: normalizePlanType(sub.plan_type),
         amount: Number(sub.total_amount) || 0,
         amountDisplay: Number(sub.total_amount) ? formatINR(sub.total_amount) : '-',
@@ -100,6 +102,8 @@ const Subscriptions = () => {
             return {
                 userId: sub.user_id?._id?.substring(0, 6).toUpperCase() || 'N/A',
                 user: sub.user_id?.name || 'Unknown',
+                email: sub.user_id?.email || '',
+                phone: sub.user_id?.phone || sub.user_id?.mobile || sub.user_id?.phoneNumber || '',
                 plan: normalizePlanType(sub.plan_type),
                 startDate: formatDate(sub.start_date),
                 expiryDate: formatDate(sub.end_date),
@@ -109,8 +113,26 @@ const Subscriptions = () => {
             };
         });
 
+    const demoOnlyUserIdSet = new Set(
+        Array.from(
+            subscriptions.reduce((acc, sub) => {
+                const userId = sub.user_id?._id;
+                if (!userId) return acc;
+                const planType = String(sub.plan_type || '').toLowerCase();
+                const current = acc.get(userId) || { hasDemo: false, hasNonDemo: false };
+                if (planType === 'demo') current.hasDemo = true;
+                else if (planType) current.hasNonDemo = true;
+                acc.set(userId, current);
+                return acc;
+            }, new Map())
+        )
+            .filter(([_, flags]) => flags.hasDemo && !flags.hasNonDemo)
+            .map(([userId]) => userId)
+    );
+
     const filteredTransactions = transactions.filter(txn =>
-        (filter === 'All' || normalizeStatus(txn.originalStatus) === filter) &&
+        (filter === 'All' || filter === 'Demo Only' || normalizeStatus(txn.originalStatus) === filter) &&
+        (filter !== 'Demo Only' || (txn.userId && demoOnlyUserIdSet.has(txn.userId))) &&
         (
             txn.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
             txn.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -177,22 +199,35 @@ const Subscriptions = () => {
         amount: item.amountDisplay || item.amount // Fallback
     }));
 
+    const normalizeExportRow = (item) => {
+        const fullName = item.fullName || item.user || item.name || '';
+        const phoneNumber = item.phoneNumber || item.phone || item.mobile || '';
+        const email = item.email || '';
+
+        const row = {
+            ...item,
+            fullName,
+            phoneNumber,
+            email,
+            amount: item.amountDisplay || item.amount
+        };
+
+        delete row.user;
+        delete row.phone;
+        delete row.mobile;
+        delete row.amountDisplay;
+        delete row.originalStatus;
+        return row;
+    };
+
     const handleExport = (data, filename) => {
         if (!data || data.length === 0) {
             toast.error("No data to export");
             return;
         }
 
-        // For export, we might want the cleaning of data (e.g. number amount vs string)
-        // Using the raw data (with amount as number) might be better, or strict display. 
-        // Let's use the display version for consistency with view.
-        const exportData = data.map(item => ({
-            ...item,
-            amount: item.amountDisplay || item.amount
-        }));
-
-        const headers = Object.keys(exportData[0]).filter(k => k !== 'originalStatus' && k !== 'amountDisplay');
-        // Filter out internal fields
+        const exportData = data.map(normalizeExportRow);
+        const headers = Object.keys(exportData[0]);
 
         const csvContent = [
             headers.join(','),
@@ -314,7 +349,7 @@ const Subscriptions = () => {
 
                                 <div className="flex items-center gap-2 text-xs overflow-x-auto no-scrollbar">
                                     <span className="text-muted-foreground font-medium">Status:</span>
-                                    {['All', 'Active', 'Pending', 'Cancelled'].map(f => (
+                                    {['All', 'Active', 'Pending', 'Cancelled', 'Demo Only'].map(f => (
                                         <button
                                             key={f}
                                             onClick={() => setFilter(f)}

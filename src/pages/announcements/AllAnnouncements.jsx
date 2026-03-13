@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Megaphone, Download, Radio, Calendar, History, Trash2, Edit, Activity, XCircle } from 'lucide-react';
+import { Search, Plus, Megaphone, Download, Radio, Trash2, Edit, Activity, XCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AnnouncementTable from '../../components/tables/AnnouncementTable';
 import Button from '../../components/ui/Button';
-import { clsx } from 'clsx';
 import { fetchAnnouncements, deleteAnnouncement, exportAnnouncements } from '../../api/announcements.api';
 import useToast from '../../hooks/useToast';
 import SearchableSelect from '../../components/ui/SearchableSelect';
@@ -18,7 +17,7 @@ const AllAnnouncements = () => {
 
     // State
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-    const [activeTab, setActiveTab] = useState('active'); // active, scheduled, history
+    const activeTab = 'active';
     const [selectedType, setSelectedType] = useState('All'); // New Filter
     const [announcements, setAnnouncements] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -152,48 +151,13 @@ const AllAnnouncements = () => {
     // Reset page when tab/type changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeTab, selectedType]);
+    }, [selectedType]);
 
     return (
         <div className="h-full flex flex-col gap-2">
-            {/* Header with Tabs */}
-            <div className="flex flex-col gap-2 shrink-0">
-                {/* Tab Navigation */}
-                <div className="flex items-center gap-1 border-b border-border mb-2">
-                    <button
-                        onClick={() => setActiveTab('active')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2",
-                            activeTab === 'active'
-                                ? "border-primary text-primary bg-primary/5"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <Radio size={14} /> Active
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('scheduled')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2",
-                            activeTab === 'scheduled'
-                                ? "border-primary text-primary bg-primary/5"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <Calendar size={14} /> Scheduled
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2",
-                            activeTab === 'history'
-                                ? "border-primary text-primary bg-primary/5"
-                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <History size={14} /> History
-                    </button>
-                </div>
+            {/* Header */}
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                <Radio size={14} /> Active
             </div>
 
             {/* Toolbar - Standardized Design */}

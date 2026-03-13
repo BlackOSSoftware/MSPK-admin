@@ -1,53 +1,128 @@
-import React from 'react';
-
-const SignalCard = ({ timeframe, signal }) => {
-    // Styling based on Signal Type
-    const isBuy = signal.type === 'BUY';
-    const isSell = signal.type === 'SELL';
-
-    let bgColor = 'bg-muted/20';
-    let borderColor = 'border-border';
-
-    if (isBuy) {
-        bgColor = 'bg-[#10b981]';
-        borderColor = 'border-[#059669]';
-    } else if (isSell) {
-        bgColor = 'bg-[#ef4444]';
-        borderColor = 'border-[#dc2626]';
-    }
-
-    // Format Time Info
-    const timeAgo = signal.timeAgo || '---';
-
-    return (
-        <div className={`flex flex-col p-2 rounded-md ${bgColor} text-white border ${borderColor} shadow-sm min-w-[180px] flex-1`}>
-            {/* Header */}
-            <div className="text-xs font-bold mb-1 opacity-90 border-b border-white/20 pb-1">
-                Pro Signals - {timeframe}
-            </div>
-
-            {/* Main Signal Status */}
-            <div className="text-[11px] font-medium leading-tight mb-2">
-                {signal.type} came {timeAgo}
-            </div>
-
-            {/* Price Details */}
-            <div className="flex flex-col gap-0.5 text-[10px] font-mono leading-tight opacity-95">
-                <div className="font-bold">{signal.type} @ : {signal.entry}</div>
-                <div>Target:1 : {signal.t1}</div>
-                <div>Target:2 : {signal.t2}</div>
-                <div>Target:3 : {signal.t3}</div>
-                <div className="mt-1 font-bold">Trailing SL : {signal.sl}</div>
-                <div className="font-bold">Current P/L : {signal.pnl}</div>
-            </div>
-        </div>
-    );
-};
-
 import { getHistory } from '../../api/market.api';
 import { fetchSignals as fetchBackendSignals } from '../../api/signals.api';
 import { formatPrice } from '../../utils/chartUtils';
 import { useState, useEffect } from 'react';
+
+const TIMEFRAMES = [
+    { key: '5m', label: '5 Min' },
+    { key: '15m', label: '15 Min' },
+    { key: '1h', label: '1 Hour' },
+];
+
+const normalizeTimeframe = (value) => {
+    if (!value) return null;
+    const tf = String(value).trim().toLowerCase();
+    if (tf === '5' || tf === '5m' || tf === '05' || tf === '05m') return '5m';
+    if (tf === '15' || tf === '15m') return '15m';
+    if (tf === '60' || tf === '60m' || tf === '1h' || tf === '1hr' || tf === '1hour') return '1h';
+    if (tf.includes('5') && tf.includes('m')) return '5m';
+    if (tf.includes('15') && tf.includes('m')) return '15m';
+    if (tf.includes('1h') || tf.includes('60')) return '1h';
+    return tf;
+};
+
+const formatTimeAgo = (value) => {
+    if (!value) return '—';
+    const ts = new Date(value).getTime();
+    if (Number.isNaN(ts)) return '—';
+    const diffMs = Date.now() - ts;
+    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    return `${diffDays}d ago`;
+};
+
+const getSignalTone = (type) => {
+    if (type === 'BUY') {
+        return {
+            pill: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+            glow: 'from-emerald-500/15 via-emerald-500/5 to-transparent',
+            accent: 'text-emerald-400',
+            border: 'border-emerald-500/30',
+        };
+    }
+    if (type === 'SELL') {
+        return {
+            pill: 'border-red-500/50 bg-red-500/10 text-red-400',
+            glow: 'from-red-500/15 via-red-500/5 to-transparent',
+            accent: 'text-red-400',
+            border: 'border-red-500/30',
+        };
+    }
+    return {
+        pill: 'border-border/60 bg-muted/10 text-muted-foreground',
+        glow: 'from-primary/10 via-primary/5 to-transparent',
+        accent: 'text-muted-foreground',
+        border: 'border-border/60',
+    };
+};
+
+const SignalCard = ({ timeframe, signal }) => {
+    const tone = getSignalTone(signal.type);
+    const isNeutral = signal.type === 'NEUTRAL';
+
+    return (
+        <div className={`group relative overflow-hidden rounded-2xl border ${tone.border} bg-card/70 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg`}>
+            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${tone.glow} opacity-60`} />
+            <div className="pointer-events-none absolute -right-6 -top-10 h-24 w-24 rounded-full bg-white/10 blur-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Pro Signal</div>
+                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] ${tone.pill}`}>
+                    {timeframe}
+                </span>
+            </div>
+
+            <div className="relative mt-3 flex items-center justify-between">
+                <div>
+                    <div className="text-lg font-black text-foreground">{signal.symbol || '—'}</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{signal.statusLabel}</div>
+                </div>
+                <div className={`text-sm font-bold ${tone.accent}`}>{signal.type}</div>
+            </div>
+
+            <div className="relative mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Entry</div>
+                    <div className="mt-1 font-bold text-foreground">{signal.entry || '—'}</div>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">SL</div>
+                    <div className="mt-1 font-bold text-foreground">{signal.sl || '—'}</div>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">TP1</div>
+                    <div className="mt-1 font-bold text-foreground">{signal.t1 || '—'}</div>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">TP2</div>
+                    <div className="mt-1 font-bold text-foreground">{signal.t2 || '—'}</div>
+                </div>
+            </div>
+
+            <div className="relative mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">TP3</div>
+                    <div className="mt-1 font-bold text-foreground">{signal.t3 || '—'}</div>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">P/L</div>
+                    <div className={`mt-1 font-bold ${signal.pnlTone}`}>{signal.pnl || '—'}</div>
+                </div>
+            </div>
+
+            <div className="relative mt-3 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>{isNeutral ? 'Standby mode' : signal.timeAgo}</span>
+                <span className="rounded-full border border-border/60 bg-muted/10 px-2 py-0.5 uppercase tracking-[0.2em]">
+                    {signal.sourceLabel}
+                </span>
+            </div>
+        </div>
+    );
+};
 
 const SignalCardsPanel = ({ symbol }) => {
     const [signals, setSignals] = useState({});
@@ -58,59 +133,80 @@ const SignalCardsPanel = ({ symbol }) => {
 
         const fetchSignals = async () => {
             setLoading(true);
-            const timeframes = ['5', '15', '60'];
             const newSignals = {};
 
             try {
-                // Fetch signals from backend for all TFs in parallel
-                await Promise.all(timeframes.map(async (tf) => {
-                    const ResolutionMap = { '5': '5m', '15': '15m', '60': '1h' };
-                    const backendTF = ResolutionMap[tf];
+                const response = await fetchBackendSignals({
+                    symbol: symbol.symbol,
+                    limit: 40,
+                });
 
-                    const response = await fetchBackendSignals({
-                        symbol: symbol.symbol,
-                        timeframe: backendTF,
-                        limit: 1, // Only need the latest one for each TF
-                    });
+                const signalsData = response.data?.results || response.results || [];
+                const statusWeight = (status) => {
+                    const normalized = String(status || '').toUpperCase();
+                    if (normalized === 'ACTIVE' || normalized === 'ENTRY_PENDING') return 2;
+                    return 1;
+                };
 
-                    const signalsData = response.data?.results || response.results || [];
+                const sorted = [...signalsData].sort((a, b) => {
+                    const w = statusWeight(b.status) - statusWeight(a.status);
+                    if (w !== 0) return w;
+                    const tA = new Date(a.signalTime || a.createdAt || a.timestamp || 0).getTime();
+                    const tB = new Date(b.signalTime || b.createdAt || b.timestamp || 0).getTime();
+                    return tB - tA;
+                });
 
-                    if (signalsData.length > 0) {
-                        const lastSignal = signalsData[0];
-                        const entry = lastSignal.entry || lastSignal.entryPrice;
-                        const isBuy = lastSignal.type === 'BUY';
+                const latestByTf = {};
+                TIMEFRAMES.forEach(tf => { latestByTf[tf.key] = null; });
 
-                        // Calculate Time Ago
-                        const signalTime = new Date(lastSignal.createdAt).getTime();
-                        const diffMs = Date.now() - signalTime;
-                        const diffMins = Math.floor(diffMs / 60000);
-                        const timeAgoStr = diffMins < 60 ? `${diffMins} mins ago` : `${Math.floor(diffMins / 60)}h ago`;
-
-                        // Targets and SL from backend
-                        const t1 = lastSignal.targets?.target1 || 0;
-                        const t2 = lastSignal.targets?.target2 || 0;
-                        const t3 = lastSignal.targets?.target3 || 0;
-                        const sl = lastSignal.stoploss || lastSignal.stopLoss || 0;
-
-                        // P/L Calculation (approximate using current symbol price)
-                        const currentPrice = symbol.price || entry; // fallback to entry if price missing
-                        const pnl = isBuy ? (currentPrice - entry) : (entry - currentPrice);
-
-                        newSignals[tf === '60' ? 'Hourly' : `${tf}min`] = {
-                            type: lastSignal.type,
-                            timeAgo: timeAgoStr,
-                            entry: formatPrice(entry, symbol.symbol),
-                            t1: formatPrice(t1, symbol.symbol),
-                            t2: formatPrice(t2, symbol.symbol),
-                            t3: formatPrice(t3, symbol.symbol),
-                            sl: formatPrice(sl, symbol.symbol),
-                            pnl: formatPrice(pnl, symbol.symbol)
-                        };
-                    } else {
-                        // No Signal Found
-                        newSignals[tf === '60' ? 'Hourly' : `${tf}min`] = { type: 'NEUTRAL', timeAgo: '---' };
+                sorted.forEach((s) => {
+                    const key = normalizeTimeframe(s.timeframe);
+                    if (key && latestByTf[key]) return;
+                    if (key && latestByTf[key] === null) {
+                        latestByTf[key] = s;
                     }
-                }));
+                });
+
+                TIMEFRAMES.forEach((tf) => {
+                    const lastSignal = latestByTf[tf.key];
+                    if (!lastSignal) {
+                        newSignals[tf.key] = {
+                            symbol: symbol.symbol,
+                            type: 'NEUTRAL',
+                            statusLabel: 'No active signal',
+                            timeAgo: '—',
+                            sourceLabel: tf.label,
+                        };
+                        return;
+                    }
+
+                    const entry = lastSignal.entry || lastSignal.entryPrice;
+                    const isBuy = lastSignal.type === 'BUY';
+                    const sl = lastSignal.stoploss || lastSignal.stopLoss;
+                    const t1 = lastSignal.targets?.target1;
+                    const t2 = lastSignal.targets?.target2;
+                    const t3 = lastSignal.targets?.target3;
+                    const currentPrice = symbol.price || entry;
+                    const pnl = typeof entry === 'number' && typeof currentPrice === 'number'
+                        ? (isBuy ? (currentPrice - entry) : (entry - currentPrice))
+                        : null;
+
+                    newSignals[tf.key] = {
+                        symbol: lastSignal.symbol || symbol.symbol,
+                        type: lastSignal.type || 'NEUTRAL',
+                        statusLabel: lastSignal.status || 'Active',
+                        timeAgo: formatTimeAgo(lastSignal.signalTime || lastSignal.createdAt || lastSignal.timestamp),
+                        sourceLabel: tf.label,
+                        entry: entry ? formatPrice(entry, symbol.symbol) : '—',
+                        t1: t1 ? formatPrice(t1, symbol.symbol) : '—',
+                        t2: t2 ? formatPrice(t2, symbol.symbol) : '—',
+                        t3: t3 ? formatPrice(t3, symbol.symbol) : '—',
+                        sl: sl ? formatPrice(sl, symbol.symbol) : '—',
+                        pnl: pnl !== null ? formatPrice(pnl, symbol.symbol) : '—',
+                        pnlTone: pnl === null ? 'text-muted-foreground' : pnl >= 0 ? 'text-emerald-400' : 'text-red-400',
+                    };
+                });
+
                 setSignals(newSignals);
             } catch (err) {
                 console.error("Failed to fetch backend signals", err);
@@ -127,23 +223,42 @@ const SignalCardsPanel = ({ symbol }) => {
     }, [symbol?.symbol]);
 
     return (
-        <div className="flex flex-col h-full bg-background border-t border-border overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-card/50">
-                <span className="text-xs font-bold text-foreground">Active Signals</span>
-                <span className="text-[10px] text-muted-foreground">{symbol?.symbol || '---'}</span>
+        <div className="flex h-full flex-col overflow-hidden bg-background">
+            <div className="relative border-b border-border bg-card/60 px-4 py-3">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_45%)]" />
+                <div className="relative flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Signals</p>
+                        <p className="text-sm font-semibold text-foreground">Strategy Highlights</p>
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+                        {symbol?.symbol || '—'}
+                    </div>
+                </div>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-4">
                 {loading ? (
-                    <div className="text-xs text-center p-4">Calculating...</div>
+                    <div className="grid gap-3">
+                        {[...Array(3)].map((_, idx) => (
+                            <div key={`signal-skeleton-${idx}`} className="h-44 rounded-2xl border border-border/60 bg-muted/10 animate-pulse" />
+                        ))}
+                    </div>
                 ) : (
-                    <div className="flex flex-col gap-2">
-                        {/* Only render if we have data, else render placeholders or empty */}
-                        <SignalCard timeframe="5min" signal={signals['5min'] || { type: 'WAITING' }} />
-                        <SignalCard timeframe="15min" signal={signals['15min'] || { type: 'WAITING' }} />
-                        <SignalCard timeframe="Hourly" signal={signals['Hourly'] || { type: 'WAITING' }} />
+                    <div className="grid gap-3">
+                        {TIMEFRAMES.map((tf) => (
+                            <SignalCard
+                                key={tf.key}
+                                timeframe={tf.label}
+                                signal={signals[tf.key] || {
+                                    symbol: symbol?.symbol,
+                                    type: 'NEUTRAL',
+                                    statusLabel: 'No active signal',
+                                    timeAgo: '—',
+                                    sourceLabel: tf.label,
+                                }}
+                            />
+                        ))}
                     </div>
                 )}
             </div>

@@ -191,9 +191,6 @@ const BrokerDetails = () => {
                     </div>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" className="gap-2 text-xs">
-                        <Mail size={14} /> Send Email
-                    </Button>
                     <Button
                         variant="primary"
                         className="gap-2 text-xs font-bold shadow-lg shadow-primary/20"

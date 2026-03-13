@@ -56,9 +56,10 @@ const PlanCard = ({ plan, isPopular, onEdit, onDelete }) => {
     const shownFeatures = features.slice(0, 6);
     const remaining = features.length - shownFeatures.length;
 
-    const planType = plan?.isDemo ? 'Demo' : 'Premium';
+    const isCustom = Boolean(plan?.isCustom) || (!plan?.isDemo && Number(plan?.price) <= 0);
+    const planType = plan?.isDemo ? 'Demo' : (isCustom ? 'Custom' : 'Premium');
     const validityLabel = formatValidity(plan?.durationDays);
-    const priceLabel = plan?.isDemo ? 'Free' : formatINR(plan?.price);
+    const priceLabel = plan?.isDemo ? 'Free' : (isCustom ? 'Custom' : formatINR(plan?.price));
 
     return (
         <div
@@ -105,7 +106,7 @@ const PlanCard = ({ plan, isPopular, onEdit, onDelete }) => {
                                 "text-[10px] font-bold uppercase tracking-widest rounded-full border px-2 py-1",
                                 plan?.isDemo
                                     ? "border-blue-500/20 text-blue-500 bg-blue-500/10"
-                                    : "border-emerald-500/20 text-emerald-500 bg-emerald-500/10"
+                                    : (isCustom ? "border-purple-500/20 text-purple-500 bg-purple-500/10" : "border-emerald-500/20 text-emerald-500 bg-emerald-500/10")
                             )}
                         >
                             {planType}
@@ -115,12 +116,16 @@ const PlanCard = ({ plan, isPopular, onEdit, onDelete }) => {
 
                 <div className="mt-3 sm:mt-4 flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="text-2xl sm:text-3xl font-mono font-bold tracking-tighter tabular-nums text-foreground">
-                            {priceLabel}
-                        </p>
+                        {priceLabel && (
+                            <p className="text-2xl sm:text-3xl font-mono font-bold tracking-tighter tabular-nums text-foreground">
+                                {priceLabel}
+                            </p>
+                        )}
                         <p className="text-[9px] sm:text-[10px] text-muted-foreground font-mono uppercase tracking-wider opacity-80 flex items-center gap-1.5">
                             <CreditCard size={12} className="text-primary/70" />
-                            {plan?.isDemo ? 'Trial access' : `Billed for ${formatValidity(plan?.durationDays) || 'period'}`}
+                            {plan?.isDemo
+                                ? 'Trial access'
+                                : (isCustom ? 'Custom access configured by admin' : `Billed for ${formatValidity(plan?.durationDays) || 'period'}`)}
                         </p>
                     </div>
                 </div>
@@ -194,7 +199,8 @@ const AllPlans = () => {
             try {
                 const { fetchPlans } = await import('../../api/plans.api');
                 const { data } = await fetchPlans();
-                setPlans(data);
+                const visiblePlans = (data || []).filter(p => !p?.isCustom);
+                setPlans(visiblePlans);
             } catch (e) {
                 console.error("Failed to load plans", e);
             } finally {
@@ -317,9 +323,9 @@ const AllPlans = () => {
                                 {isLoading
                                     ? [...Array(6)].map((_, idx) => <PlanCardSkeleton key={`plan-skel-${idx}`} />)
                                     : plans.map((plan) => {
-                                        const premiumPlans = plans.filter((p) => !p.isDemo);
+                                        const premiumPlans = plans.filter((p) => !p.isDemo && !p.isCustom && Number(p.price) > 0);
                                         const maxPrice = premiumPlans.reduce((m, p) => Math.max(m, Number(p.price) || 0), 0);
-                                        const isPopular = !plan.isDemo && (Number(plan.price) || 0) === maxPrice && premiumPlans.length > 1;
+                                        const isPopular = !plan.isDemo && !plan.isCustom && Number(plan.price) > 0 && (Number(plan.price) || 0) === maxPrice && premiumPlans.length > 1;
 
                                         return (
                                             <PlanCard

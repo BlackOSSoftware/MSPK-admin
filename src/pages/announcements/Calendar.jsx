@@ -392,12 +392,28 @@ const CalendarPage = () => {
             const fromStr = from.toISOString().split('T')[0];
             const toStr = to.toISOString().split('T')[0];
 
-            const response = await fetchCalendarEvents({ from: fromStr, to: toStr });
+            const first = await fetchCalendarEvents({ from: fromStr, to: toStr, page: 1, limit: 20 });
+            const firstResults = first.data?.results || [];
+            const totalPages = first.data?.pagination?.totalPages || 1;
+
+            let allResults = [...firstResults];
+
+            if (totalPages > 1) {
+                const pageCalls = [];
+                for (let p = 2; p <= totalPages; p += 1) {
+                    pageCalls.push(fetchCalendarEvents({ from: fromStr, to: toStr, page: p, limit: 20 }));
+                }
+                const pages = await Promise.all(pageCalls);
+                pages.forEach((res) => {
+                    const pageResults = res.data?.results || [];
+                    allResults = allResults.concat(pageResults);
+                });
+            }
 
             // Augment data with UI-specific fields
-            const augmentedData = response.data.map(evt => ({
+            const augmentedData = allResults.map(evt => ({
                 ...evt,
-                id: evt._id, // Ensure ID is present for key
+                id: evt._id || `${evt.date}-${evt.currency}-${evt.event}`,
                 dateIso: evt.date
             }));
 
@@ -431,9 +447,12 @@ const CalendarPage = () => {
             const currency = e.currency || e.country || 'USD'; // Fallback
             const matchesCurrency = selectedCurrencies.includes(currency);
 
-            return matchesSearch && matchesImpact && matchesCurrency;
+            const eventType = e.category || e.eventType || e.type || '';
+            const matchesType = eventType ? selectedEventTypes.includes(eventType) : true;
+
+            return matchesSearch && matchesImpact && matchesCurrency && matchesType;
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [searchTerm, selectedImpacts, selectedCurrencies, events]);
+    }, [searchTerm, selectedImpacts, selectedCurrencies, selectedEventTypes, events]);
 
     // Grouping by Date for headers
     const groupedEvents = useMemo(() => {

@@ -12,7 +12,6 @@ import CreateUser from '../pages/users/CreateUser';
 import UserDetails from '../pages/users/UserDetails';
 import EditUser from '../pages/users/EditUser';
 import SubscriptionHistory from '../pages/users/SubscriptionHistory';
-import SignalsAccess from '../pages/users/SignalsAccess';
 
 // Plan Management
 import AllPlans from '../pages/plans/AllPlans';
@@ -36,7 +35,6 @@ import CreateStrategy from '../pages/strategies/CreateStrategy';
 // Signal Management
 import AllSignals from '../pages/signals/AllSignals';
 import CreateSignal from '../pages/signals/CreateSignal';
-import EditSignal from '../pages/signals/EditSignal';
 import SignalCategories from '../pages/signals/SignalCategories';
 import SignalHistory from '../pages/signals/SignalHistory';
 import GlobalAccess from '../pages/signals/GlobalAccess';
@@ -48,6 +46,7 @@ import EditSymbol from '../pages/market/EditSymbol';
 
 // Support
 import AllTickets from '../pages/tickets/AllTickets';
+import AllEnquiries from '../pages/enquiries/AllEnquiries';
 import CreateTicket from '../pages/tickets/CreateTicket';
 import TicketDetails from '../pages/tickets/TicketDetails';
 import { ReplyTicket } from '../pages/tickets/TicketPages'; // Keep others if needed
@@ -107,7 +106,6 @@ const AppRouter = () => {
                     <Route path="users/details" element={<UserDetails />} />
                     <Route path="users/edit" element={<EditUser />} />
                     <Route path="users/history" element={<SubscriptionHistory />} />
-                    <Route path="users/access" element={<SignalsAccess />} />
 
                     {/* Plan Management */}
                     <Route path="plans/all" element={<AllPlans />} />
@@ -131,7 +129,6 @@ const AppRouter = () => {
                     {/* Signal Management */}
                     <Route path="signals/all" element={<AllSignals />} />
                     <Route path="signals/create" element={<CreateSignal />} />
-                    <Route path="signals/edit" element={<EditSignal />} />
                     <Route path="signals/categories" element={<SignalCategories />} />
                     <Route path="signals/history" element={<SignalHistory />} />
                     <Route path="signals/access" element={<GlobalAccess />} />
@@ -147,6 +144,7 @@ const AppRouter = () => {
 
                     {/* Support / Tickets */}
                     <Route path="tickets/all" element={<AllTickets />} />
+                    <Route path="enquiries/all" element={<AllEnquiries />} />
                     {/* <Route path="tickets/create" element={<CreateTicket />} /> */}
                     <Route path="tickets/details" element={<TicketDetails />} />
                     <Route path="tickets/reply" element={<ReplyTicket />} />

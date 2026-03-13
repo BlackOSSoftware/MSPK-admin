@@ -184,7 +184,7 @@ const CreateSignal = () => {
                         />
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground block">Signal Access</label>
+                            <label className="text-xs font-medium text-muted-foreground block">Visibility</label>
                             <select
                                 {...register('isFree')}
                                 className="w-full h-10 px-3 rounded-md bg-secondary/50 border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"

@@ -4,6 +4,18 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import TableHeaderCell from '../ui/TableHeaderCell';
 
+const formatINR = (value) => {
+    if (value === undefined || value === null || value === '') return '-';
+    if (typeof value === 'string' && /[a-zA-Z₹]/.test(value)) return value;
+    const num = Number(value);
+    if (!Number.isFinite(num)) return String(value);
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    }).format(num);
+};
+
 const StatusBadge = ({ status }) => {
     const styles = {
         Success: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
@@ -43,10 +55,15 @@ const RecentOrdersTable = ({ orders = [] }) => {
                     <tbody className="divide-y divide-border">
                         {orders.length > 0 ? orders.map((order) => (
                             <tr key={order.id} className="hover:bg-primary/5 transition-colors group">
+                                {/*
+                                  Amount fallbacks: amount, total_amount, planPrice, price, plan.price
+                                */}
                                 <td className="px-4 py-2.5 text-[11px] font-mono text-muted-foreground group-hover:text-primary transition-colors">{order.id}</td>
                                 <td className="px-4 py-2.5 text-xs font-medium text-foreground">{order.user}</td>
                                 <td className="px-4 py-2.5 text-[11px] text-muted-foreground">{order.plan}</td>
-                                <td className="px-4 py-2.5 text-[11px] font-mono font-medium text-foreground">{order.amount}</td>
+                                <td className="px-4 py-2.5 text-[11px] font-mono font-medium text-foreground">
+                                    {formatINR(order.amount ?? order.total_amount ?? order.planPrice ?? order.price ?? order.plan?.price)}
+                                </td>
                                 <td className="px-4 py-2.5"><StatusBadge status={order.status} /></td>
                                 <td className="px-4 py-2.5 text-[10px] text-muted-foreground text-right">
                                     {order.date ? format(new Date(order.date), 'MMM dd, hh:mm a') : 'N/A'}

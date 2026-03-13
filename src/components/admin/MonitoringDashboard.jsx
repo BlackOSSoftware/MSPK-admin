@@ -72,9 +72,37 @@ const MonitoringDashboard = () => {
     };
 
     useEffect(() => {
-        fetchMetrics();
-        const interval = setInterval(fetchMetrics, 2000);
-        return () => clearInterval(interval);
+        let interval = null;
+        const start = () => {
+            if (interval) return;
+            fetchMetrics();
+            interval = setInterval(() => {
+                if (!document.hidden) {
+                    fetchMetrics();
+                }
+            }, 10000);
+        };
+        const stop = () => {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        };
+
+        const handleVisibility = () => {
+            if (document.hidden) {
+                stop();
+            } else {
+                start();
+            }
+        };
+
+        start();
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            stop();
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
     }, []);
 
     if (!data) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading System Metrics...</div>;

@@ -1,379 +1,601 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Save, MessageSquare, RefreshCw, Smartphone, Send, MessageCircle, Bell } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Bell,
+  Bot,
+  KeyRound,
+  Mail,
+  MessageCircle,
+  RefreshCw,
+  Save,
+  Send,
+  Smartphone,
+} from 'lucide-react';
+import { clsx } from 'clsx';
 import Button from '../../components/ui/Button';
 import useToast from '../../hooks/useToast';
-import { getAllSettings, updateSetting } from '../../api/settings.api';
-import { clsx } from 'clsx';
+import { getAllSettings, updateBulkSettings, updateSetting } from '../../api/settings.api';
 
-// Default templates matching backend config
+const DEFAULT_CHANNEL_CONFIGS = {
+  email_config: { enabled: true },
+  push_config: { enabled: false, fcmServerKey: '' },
+  whatsapp_config: { enabled: false, apiKey: '', phoneNumberId: '' },
+  telegram_config: { enabled: false, botToken: '', channelId: '' },
+};
+
 const DEFAULT_TEMPLATES = {
-    SIGNAL_NEW: {
-        title: "🚀 New Signal: {{symbol}}",
-        body: "Action: {{type}}\nEntry: {{entryPrice}}\nSL: {{stopLoss}}\nTP1: {{target1}}\nTP2: {{target2}}\nTP3: {{target3}}\n\nNotes: {{notes}}"
-    },
-    SIGNAL_UPDATE: {
-        title: "⚠️ Signal Update: {{symbol}}",
-        body: "Update for {{symbol}}: {{updateMessage}}\nCurrent Price: {{currentPrice}}"
-    },
-    SIGNAL_TARGET: {
-        title: "🎯 Target Hit: {{symbol}}",
-        body: "Target {{targetLevel}} Hit for {{symbol}}!\nProfit Booked. 💰"
-    },
-    SIGNAL_STOPLOSS: {
-        title: "🛑 Stop Loss Hit: {{symbol}}",
-        body: "SL Hit for {{symbol}}. Exit Position."
-    },
-    ANNOUNCEMENT: {
-        title: "{{title}}",
-        body: "{{message}}"
-    },
-    ECONOMIC_ALERT: {
-        title: "🌍 High Impact: {{event}}",
-        body: "Event: {{event}} ({{country}})\nForecast: {{forecast}}\nPrevious: {{previous}}"
-    },
-    PLAN_EXPIRY_REMINDER: {
-        title: "⏳ Plan Expiry Reminder",
-        body: "Your subscription for {{planName}} is expiring in {{daysLeft}} days. Renew now to continue services."
-    }
+  SIGNAL_NEW: {
+    title: 'New Signal: {{symbol}}',
+    body: 'Action: {{type}}\nEntry: {{entryPrice}}\nSL: {{stopLoss}}\nTP1: {{target1}}\nTP2: {{target2}}\nTP3: {{target3}}',
+  },
+  SIGNAL_UPDATE: {
+    title: 'Signal Update: {{symbol}}',
+    body: 'Update for {{symbol}}: {{updateMessage}}\nCurrent Price: {{currentPrice}}',
+  },
+  SIGNAL_TARGET: {
+    title: 'Target Hit: {{symbol}}',
+    body: '{{symbol}} reached {{targetLevel}}.\nExit: {{exitPrice}}\nPoints: {{pointsLabel}}',
+  },
+  SIGNAL_PARTIAL_PROFIT: {
+    title: 'Partial Profit Booked: {{symbol}}',
+    body: 'Partial profit booked in {{symbol}}.\nExit: {{exitPrice}}\nPoints: {{pointsLabel}}',
+  },
+  SIGNAL_STOPLOSS: {
+    title: 'Stop Loss Hit: {{symbol}}',
+    body: 'Stop loss hit for {{symbol}}.\nExit: {{exitPrice}}\nPoints: {{pointsLabel}}',
+  },
+  ANNOUNCEMENT: {
+    title: '{{title}}',
+    body: '{{message}}',
+  },
+  ECONOMIC_ALERT: {
+    title: 'Economic Alert: {{event}}',
+    body: 'Country: {{country}}\nForecast: {{forecast}}\nPrevious: {{previous}}',
+  },
+  PLAN_EXPIRY_REMINDER: {
+    title: 'Plan Expiry Reminder',
+    body: 'Your {{planName}} expires in {{daysLeft}} day(s). Renew to continue access.',
+  },
+  TICKET_REPLY: {
+    title: 'New Ticket Reply: {{ticketId}}',
+    body: 'Admin reply: {{message}}',
+  },
 };
 
 const VARIABLES_HELP = {
-    SIGNAL_NEW: ['{{symbol}}', '{{type}}', '{{entryPrice}}', '{{stopLoss}}', '{{target1}}', '{{target2}}', '{{target3}}', '{{notes}}'],
-    SIGNAL_UPDATE: ['{{symbol}}', '{{updateMessage}}', '{{currentPrice}}'],
-    SIGNAL_TARGET: ['{{symbol}}', '{{targetLevel}}'],
-    SIGNAL_STOPLOSS: ['{{symbol}}'],
-    ANNOUNCEMENT: ['{{title}}', '{{message}}'],
-    ECONOMIC_ALERT: ['{{event}}', '{{country}}', '{{forecast}}', '{{previous}}'],
-    PLAN_EXPIRY_REMINDER: ['{{planName}}', '{{daysLeft}}']
+  SIGNAL_NEW: ['{{symbol}}', '{{type}}', '{{entryPrice}}', '{{stopLoss}}', '{{target1}}', '{{target2}}', '{{target3}}'],
+  SIGNAL_UPDATE: ['{{symbol}}', '{{updateMessage}}', '{{currentPrice}}'],
+  SIGNAL_TARGET: ['{{symbol}}', '{{targetLevel}}', '{{exitPrice}}', '{{pointsLabel}}'],
+  SIGNAL_PARTIAL_PROFIT: ['{{symbol}}', '{{exitPrice}}', '{{pointsLabel}}'],
+  SIGNAL_STOPLOSS: ['{{symbol}}', '{{exitPrice}}', '{{pointsLabel}}'],
+  ANNOUNCEMENT: ['{{title}}', '{{message}}'],
+  ECONOMIC_ALERT: ['{{event}}', '{{country}}', '{{forecast}}', '{{previous}}'],
+  PLAN_EXPIRY_REMINDER: ['{{planName}}', '{{daysLeft}}'],
+  TICKET_REPLY: ['{{ticketId}}', '{{message}}'],
 };
 
 const MOCK_DATA = {
-    '{{symbol}}': 'XAUUSD',
-    '{{type}}': 'BUY',
-    '{{entryPrice}}': '2045.50',
-    '{{stopLoss}}': '2035.00',
-    '{{target1}}': '2055.00',
-    '{{target2}}': '2065.00',
-    '{{target3}}': '2075.00',
-    '{{notes}}': 'Risk Management is key! 🛡️',
-    '{{updateMessage}}': 'Move SL to Entry',
-    '{{currentPrice}}': '2050.00',
-    '{{targetLevel}}': 'TP1',
-    '{{title}}': 'Market Holiday Notice',
-    '{{message}}': 'Market will remain closed on Monday due to public holiday.',
-    '{{event}}': 'Core CPI (MoM)',
-    '{{country}}': 'USD',
-    '{{forecast}}': '0.3%',
-    '{{previous}}': '0.3%',
-    '{{planName}}': 'Pro Trader Plan',
-    '{{daysLeft}}': '3'
+  '{{symbol}}': 'BTCUSD',
+  '{{type}}': 'BUY',
+  '{{entryPrice}}': '68427.00',
+  '{{stopLoss}}': '68405.34',
+  '{{target1}}': '68565.46',
+  '{{target2}}': '68703.92',
+  '{{target3}}': '68842.38',
+  '{{updateMessage}}': 'Move stop loss to entry.',
+  '{{currentPrice}}': '68512.55',
+  '{{targetLevel}}': 'TP1',
+  '{{exitPrice}}': '68110.25',
+  '{{totalPoints}}': '88.75',
+  '{{pointsLabel}}': '+88.75',
+  '{{title}}': 'Weekend Maintenance',
+  '{{message}}': 'Services will be read-only on Sunday from 02:00 to 03:30 IST.',
+  '{{event}}': 'US Core CPI',
+  '{{country}}': 'USD',
+  '{{forecast}}': '0.3%',
+  '{{previous}}': '0.4%',
+  '{{planName}}': 'Pro Signals',
+  '{{daysLeft}}': '2',
+  '{{ticketId}}': 'TKT-2041',
+};
+
+const CHANNEL_META = {
+  email_config: {
+    label: 'Email',
+    title: 'Email Delivery',
+    description: 'Signal and reminder alerts sent through SMTP or MSG91 email.',
+    icon: Mail,
+    fields: [],
+  },
+  push_config: {
+    label: 'Push',
+    title: 'App Push Notifications',
+    description: 'FCM based alerts for browser and mobile users.',
+    icon: Smartphone,
+    fields: [
+      { key: 'fcmServerKey', label: 'FCM server key', placeholder: 'Paste the current FCM server key', type: 'password' },
+    ],
+  },
+  whatsapp_config: {
+    label: 'WhatsApp',
+    title: 'WhatsApp Delivery',
+    description: 'Signal alerts sent through the WhatsApp Business API.',
+    icon: MessageCircle,
+    fields: [
+      { key: 'apiKey', label: 'Access token', placeholder: 'Paste the WhatsApp access token', type: 'password' },
+      { key: 'phoneNumberId', label: 'Phone number ID', placeholder: 'Meta phone number ID', type: 'text' },
+    ],
+  },
+  telegram_config: {
+    label: 'Telegram',
+    title: 'Telegram Broadcast',
+    description: 'Broadcast messages to the configured Telegram channel.',
+    icon: Send,
+    fields: [
+      { key: 'botToken', label: 'Bot token', placeholder: 'Telegram bot token', type: 'password' },
+      { key: 'channelId', label: 'Channel ID', placeholder: '@channel or numeric channel id', type: 'text' },
+    ],
+  },
+};
+
+const replaceTemplateVariables = (value) => {
+  let output = value || '';
+  Object.entries(MOCK_DATA).forEach(([key, replacement]) => {
+    output = output.split(key).join(replacement);
+  });
+  return output;
 };
 
 const NotificationTemplates = () => {
-    const toast = useToast();
-    const [templates, setTemplates] = useState(DEFAULT_TEMPLATES);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [selectedType, setSelectedType] = useState('SIGNAL_NEW');
-    const [previewMode, setPreviewMode] = useState('push'); // push, whatsapp, telegram
-    const textareaRef = useRef(null);
+  const toast = useToast();
+  const textareaRef = useRef(null);
 
-    useEffect(() => {
-        loadSettings();
-    }, []);
+  const [channelConfigs, setChannelConfigs] = useState(DEFAULT_CHANNEL_CONFIGS);
+  const [templates, setTemplates] = useState(DEFAULT_TEMPLATES);
+  const [selectedType, setSelectedType] = useState('SIGNAL_NEW');
+  const [previewMode, setPreviewMode] = useState('push');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSavingChannels, setIsSavingChannels] = useState(false);
+  const [isSavingTemplates, setIsSavingTemplates] = useState(false);
 
+  useEffect(() => {
     const loadSettings = async () => {
-        setIsLoading(true);
-        try {
-            const settings = await getAllSettings();
-            // Backend returns object { key: value }, so access directly
-            const savedTemplates = settings['notification_templates'];
+      setIsLoading(true);
+      try {
+        const settings = await getAllSettings();
+        const savedTemplates = settings?.notification_templates || {};
 
-            if (savedTemplates) {
-                setTemplates(prev => ({ ...prev, ...savedTemplates }));
-            }
-        } catch (error) {
-            console.error('Failed to load settings:', error);
-            toast.error('Failed to load notification templates');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            await updateSetting('notification_templates', templates);
-            toast.success('Notification templates updated successfully');
-        } catch (error) {
-            console.error('Failed to save templates:', error);
-            toast.error('Failed to save changes');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleChange = (field, value) => {
-        setTemplates(prev => ({
-            ...prev,
-            [selectedType]: {
-                ...prev[selectedType],
-                [field]: value
-            }
-        }));
-    };
-
-    const insertVariable = (variable) => {
-        const textarea = textareaRef.current;
-        if (textarea) {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = templates[selectedType].body;
-            const newText = text.substring(0, start) + variable + text.substring(end);
-            handleChange('body', newText);
-
-            // Restore focus (timeout needed for React render cycle)
-            setTimeout(() => {
-                textarea.focus();
-                textarea.setSelectionRange(start + variable.length, start + variable.length);
-            }, 0);
-        }
-    };
-
-    const getPreviewContent = () => {
-        const template = templates[selectedType];
-        let title = template.title;
-        let body = template.body;
-
-        Object.keys(MOCK_DATA).forEach(key => {
-            const regex = new RegExp(`\\${key.substring(0, key.length - 1)}\\}`, 'g'); // Simple regex for {{key}} escaping issues? 
-            // Better: use split/join or literal replace loop
-            title = title.split(key).join(MOCK_DATA[key]);
-            body = body.split(key).join(MOCK_DATA[key]);
+        setTemplates((prev) => ({ ...prev, ...savedTemplates }));
+        setChannelConfigs({
+          email_config: { ...DEFAULT_CHANNEL_CONFIGS.email_config, ...(settings?.email_config || {}) },
+          push_config: { ...DEFAULT_CHANNEL_CONFIGS.push_config, ...(settings?.push_config || {}) },
+          whatsapp_config: { ...DEFAULT_CHANNEL_CONFIGS.whatsapp_config, ...(settings?.whatsapp_config || {}) },
+          telegram_config: { ...DEFAULT_CHANNEL_CONFIGS.telegram_config, ...(settings?.telegram_config || {}) },
         });
-
-        return { title, body };
+      } catch (error) {
+        console.error('Failed to load notification settings', error);
+        toast.error('Failed to load notification settings');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    const { title: pTitle, body: pBody } = getPreviewContent();
+    loadSettings();
+  }, [toast]);
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-        );
+  const handleChannelChange = (channel, field, value) => {
+    setChannelConfigs((prev) => ({
+      ...prev,
+      [channel]: {
+        ...prev[channel],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleTemplateChange = (field, value) => {
+    setTemplates((prev) => ({
+      ...prev,
+      [selectedType]: {
+        ...prev[selectedType],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleInsertVariable = (variable) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      handleTemplateChange('body', `${templates[selectedType].body}${variable}`);
+      return;
     }
 
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentBody = templates[selectedType].body || '';
+    const nextBody = `${currentBody.slice(0, start)}${variable}${currentBody.slice(end)}`;
+
+    handleTemplateChange('body', nextBody);
+
+    setTimeout(() => {
+      textarea.focus();
+      const nextPosition = start + variable.length;
+      textarea.setSelectionRange(nextPosition, nextPosition);
+    }, 0);
+  };
+
+  const handleSaveChannels = async () => {
+    setIsSavingChannels(true);
+    try {
+      await updateBulkSettings(channelConfigs);
+      toast.success('Notification channels updated');
+    } catch (error) {
+      console.error('Failed to save channel configs', error);
+      toast.error('Failed to save channel settings');
+    } finally {
+      setIsSavingChannels(false);
+    }
+  };
+
+  const handleSaveTemplates = async () => {
+    setIsSavingTemplates(true);
+    try {
+      await updateSetting('notification_templates', templates);
+      toast.success('Notification templates updated');
+    } catch (error) {
+      console.error('Failed to save templates', error);
+      toast.error('Failed to save templates');
+    } finally {
+      setIsSavingTemplates(false);
+    }
+  };
+
+  const previewTitle = replaceTemplateVariables(templates[selectedType]?.title || '');
+  const previewBody = replaceTemplateVariables(templates[selectedType]?.body || '');
+
+  if (isLoading) {
     return (
-        <div className="h-full flex flex-col gap-4 overflow-hidden max-w-7xl mx-auto w-full">
-            {/* Header */}
-            <div className="shrink-0 flex items-center justify-between p-4 bg-card border border-white/5 rounded-lg shadow-sm">
-                <div>
-                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                        <MessageSquare className="text-primary" size={20} />
-                        Notification Studio
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Design detailed notifications for every channel.
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <Button variant="ghost" className="text-xs" onClick={() => {
-                        setTemplates(prev => ({ ...prev, [selectedType]: DEFAULT_TEMPLATES[selectedType] }));
-                        toast.success('Reset current template');
-                    }}>
-                        <RefreshCw size={14} className="mr-2" /> Reset
-                    </Button>
-                    <Button
-                        variant="primary"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="gap-2 shadow-lg shadow-primary/20"
-                    >
-                        {isSaving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-                        Save Changes
-                    </Button>
-                </div>
-            </div>
-
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 overflow-y-auto lg:overflow-visible pb-10 lg:pb-0">
-                {/* LEFT COLUMN: Editor */}
-                <div className="lg:col-span-7 flex flex-col gap-4 overflow-y-visible lg:overflow-y-auto custom-scrollbar pr-0 lg:pr-2 order-2 lg:order-1">
-                    {/* Type Selector */}
-                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
-                        {Object.keys(DEFAULT_TEMPLATES).map(key => (
-                            <button
-                                key={key}
-                                onClick={() => setSelectedType(key)}
-                                className={clsx(
-                                    "px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all border break-words",
-                                    selectedType === key
-                                        ? "bg-primary/10 border-primary text-primary shadow-[0_0_10px_hsl(var(--primary)/0.14)]"
-                                        : "bg-secondary/30 border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                                )}
-                            >
-                                {key.replace(/_/g, ' ')}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="bg-card border border-border/70 rounded-xl p-4 sm:p-6 shadow-sm space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <h3 className="text-sm font-bold text-foreground">Message Content</h3>
-                            <div className="flex flex-wrap gap-1.5 bg-secondary/20 p-2 rounded-lg">
-                                <span className="text-[10px] text-muted-foreground w-full sm:w-auto font-medium">Variables:</span>
-                                {(VARIABLES_HELP[selectedType] || []).map(variable => (
-                                    <button
-                                        key={variable}
-                                        onTouchStart={(e) => { e.preventDefault(); insertVariable(variable); }}
-                                        onClick={() => insertVariable(variable)}
-                                        className="px-2 py-1 rounded bg-secondary/50 border border-border/70 text-[10px] text-primary font-mono hover:bg-primary/20 hover:border-primary/30 active:scale-95 transition-all"
-                                        title="Click to insert"
-                                    >
-                                        {variable}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest pl-1">Title</label>
-                                <input
-                                    type="text"
-                                    value={templates[selectedType].title}
-                                    onChange={(e) => handleChange('title', e.target.value)}
-                                    className="w-full bg-secondary/30 border border-border/70 rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium"
-                                    placeholder="Enter notification title..."
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest pl-1">Body</label>
-                                <textarea
-                                    ref={textareaRef}
-                                    value={templates[selectedType].body}
-                                    onChange={(e) => handleChange('body', e.target.value)}
-                                    rows={6}
-                                    className="w-full bg-secondary/30 border border-border/70 rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all resize-none leading-relaxed"
-                                    placeholder="Enter message body..."
-                                />
-                                <p className="text-[10px] text-muted-foreground pl-1">
-                                    Supports: *Bold* (WhatsApp), **Bold** (Telegram). Emojis allowed 🚀
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* RIGHT COLUMN: Device Preview */}
-                <div className="lg:col-span-5 flex flex-col bg-black/40 rounded-xl border border-white/5 overflow-hidden order-1 lg:order-2 lg:h-[calc(100vh-140px)] lg:sticky lg:top-4">
-                    <div className="p-3 bg-black/20 border-b border-white/5 flex justify-center gap-4">
-                        <button
-                            onClick={() => setPreviewMode('push')}
-                            className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all", previewMode === 'push' ? "bg-white text-black" : "text-muted-foreground hover:text-white")}
-                        >
-                            <Smartphone size={14} /> Lock Screen
-                        </button>
-                        <button
-                            onClick={() => setPreviewMode('telegram')}
-                            className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all", previewMode === 'telegram' ? "bg-[#229ED9] text-white" : "text-muted-foreground hover:text-white")}
-                        >
-                            <Send size={14} /> Telegram
-                        </button>
-                        <button
-                            onClick={() => setPreviewMode('whatsapp')}
-                            className={clsx("flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all", previewMode === 'whatsapp' ? "bg-[#25D366] text-white" : "text-muted-foreground hover:text-white")}
-                        >
-                            <MessageCircle size={14} /> WhatsApp
-                        </button>
-                    </div>
-
-                    <div className="flex-1 flex items-center justify-center p-8 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center">
-
-                        {/* MOCKUP: Lock Screen */}
-                        {previewMode === 'push' && (
-                            <div className="w-[300px] bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-4 shadow-2xl text-white animate-in zoom-in-95 duration-300">
-                                <div className="flex justify-between items-center mb-6 opacity-80">
-                                    <span className="text-xs font-medium">9:41</span>
-                                    <div className="flex gap-1">
-                                        <div className="w-4 h-2.5 bg-white rounded-[2px]" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {/* Notification Card */}
-                                    <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-white/10">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-1.5">
-                                                <div className="w-5 h-5 bg-black rounded-md flex items-center justify-center">
-                                                    <div className="w-3 h-3 bg-gradient-to-br from-primary to-emerald-600 rounded-sm" />
-                                                </div>
-                                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">MSPK TRADE SOLUTIONS</span>
-                                            </div>
-                                            <span className="text-[10px] opacity-60">now</span>
-                                        </div>
-                                        <h4 className="text-sm font-bold mb-1">{pTitle}</h4>
-                                        <p className="text-xs leading-relaxed opacity-90">{pBody}</p>
-                                    </div>
-
-                                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-white/5 opacity-50 scale-95 origin-top">
-                                        <div className="h-3 w-1/2 bg-white/20 rounded mb-2"></div>
-                                        <div className="h-2 w-3/4 bg-white/20 rounded"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* MOCKUP: Telegram */}
-                        {previewMode === 'telegram' && (
-                            <div className="w-[300px] bg-[#17212b] rounded-3xl border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col h-[500px]">
-                                <div className="bg-[#232e3c] p-3 flex items-center gap-3 border-b border-black/20">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white">MS</div>
-                                    <div>
-                                        <div className="text-sm font-bold text-white">MSPK TRADE SOLUTIONS Official</div>
-                                        <div className="text-[10px] text-blue-400">subscribers</div>
-                                    </div>
-                                </div>
-                                <div className="flex-1 bg-[#0e1621] p-3 overflow-hidden relative">
-                                    {/* Background Pattern Mock */}
-                                    <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
-
-                                    <div className="bg-[#182533] rounded-tl-xl rounded-tr-xl rounded-br-xl rounded-bl-none p-3 max-w-[90%] mb-4 border border-black/10 shadow-sm ml-0">
-                                        <p className="text-sm text-white whitespace-pre-wrap">{pBody.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}</p> {/* Simple mock render */}
-                                        <div className="text-[10px] text-white/40 text-right mt-1">10:42 PM</div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* MOCKUP: WhatsApp */}
-                        {previewMode === 'whatsapp' && (
-                            <div className="w-[300px] bg-[#0b141a] rounded-3xl border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col h-[500px]">
-                                <div className="bg-[#202c33] p-3 flex items-center gap-3 border-b border-white/5">
-                                    <div className="w-8 h-8 rounded-full bg-gray-600 overflow-hidden">
-                                        <img src="https://ui-avatars.com/api/?name=Admin&background=random" alt="Admin" />
-                                    </div>
-                                    <div className="text-white text-sm font-medium">MSPK TRADE SOLUTIONS Group</div>
-                                </div>
-                                <div className="flex-1 bg-[url('https://i.pinimg.com/originals/8c/98/99/8c98994518b575bfd8c948e91d20548b.png')] bg-cover p-4">
-                                    <div className="bg-[#202c33] rounded-lg rounded-tl-none p-2 max-w-[90%] shadow-sm text-sm text-[#e9edef] relative border border-white/5">
-                                        <div className="whitespace-pre-wrap">{pBody}</div>
-                                        <div className="text-[9px] text-white/50 text-right mt-1 ml-auto">12:00 PM</div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-                    <div className="p-3 bg-black/40 text-center">
-                        <p className="text-[10px] text-muted-foreground">Preview generated using mock data. Actual rendering may vary by device.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="flex h-full items-center justify-center text-muted-foreground">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
     );
+  }
+
+  return (
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-4 overflow-hidden">
+      <div className="shrink-0 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              <Bell size={12} />
+              Notification Center
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Live channel controls and template studio</h1>
+            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              This page matches the current backend delivery stack: Email, Push, WhatsApp, Telegram, and in-app
+              notification templates.
+            </p>
+          </div>
+
+          <div className="grid min-w-[280px] grid-cols-3 gap-3">
+            {Object.entries(CHANNEL_META).map(([key, meta]) => {
+              const enabled = channelConfigs[key]?.enabled;
+              const Icon = meta.icon;
+
+              return (
+                <div key={key} className="rounded-2xl border border-border/70 bg-muted/[0.06] p-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={clsx(
+                        'grid h-9 w-9 place-items-center rounded-xl border',
+                        enabled
+                          ? 'border-primary/30 bg-primary/10 text-primary'
+                          : 'border-border/70 bg-card text-muted-foreground'
+                      )}
+                    >
+                      <Icon size={16} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold uppercase tracking-wide text-foreground">{meta.label}</div>
+                      <div
+                        className={clsx(
+                          'text-[10px] font-semibold uppercase tracking-[0.18em]',
+                          enabled ? 'text-emerald-400' : 'text-muted-foreground'
+                        )}
+                      >
+                        {enabled ? 'Enabled' : 'Disabled'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="custom-scrollbar order-2 min-h-0 overflow-y-auto xl:order-1 xl:col-span-5">
+          <div className="space-y-4 pr-0 xl:pr-2">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-4">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground">Delivery Channels</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">Configure only the channels that are actually used by the backend.</p>
+                </div>
+
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveChannels}
+                  disabled={isSavingChannels}
+                  className="gap-2"
+                >
+                  {isSavingChannels ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                  Save Channels
+                </Button>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                {Object.entries(CHANNEL_META).map(([key, meta]) => {
+                  const Icon = meta.icon;
+                  const config = channelConfigs[key] || {};
+
+                  return (
+                    <div key={key} className="rounded-2xl border border-border/70 bg-muted/[0.04] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={clsx(
+                              'grid h-10 w-10 place-items-center rounded-xl border',
+                              config.enabled
+                                ? 'border-primary/30 bg-primary/10 text-primary'
+                                : 'border-border/70 bg-card text-muted-foreground'
+                            )}
+                          >
+                            <Icon size={18} />
+                          </span>
+
+                          <div>
+                            <h3 className="text-sm font-bold text-foreground">{meta.title}</h3>
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">{meta.description}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleChannelChange(key, 'enabled', !config.enabled)}
+                          className={clsx(
+                            'relative h-6 w-11 rounded-full border transition-colors',
+                            config.enabled
+                              ? 'border-primary/40 bg-primary/20'
+                              : 'border-border bg-secondary'
+                          )}
+                        >
+                          <span
+                            className={clsx(
+                              'absolute top-0.5 h-4 w-4 rounded-full transition-all',
+                              config.enabled
+                                ? 'right-0.5 bg-primary'
+                                : 'left-0.5 bg-muted-foreground'
+                            )}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 gap-3">
+                        {meta.fields.map((field) => (
+                          <label key={`${key}-${field.key}`} className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{field.label}</span>
+                            <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3">
+                              {field.key.toLowerCase().includes('token') || field.key.toLowerCase().includes('key') ? (
+                                <KeyRound size={14} className="text-muted-foreground" />
+                              ) : (
+                                <Bot size={14} className="text-muted-foreground" />
+                              )}
+                              <input
+                                type={field.type}
+                                value={config[field.key] || ''}
+                                onChange={(event) => handleChannelChange(key, field.key, event.target.value)}
+                                placeholder={field.placeholder}
+                                className="h-11 w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                              />
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="custom-scrollbar order-1 min-h-0 overflow-y-auto xl:order-2 xl:col-span-7">
+          <div className="space-y-4 pr-0 xl:pr-2">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex flex-col gap-4 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground">Template Studio</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">Edit the exact templates used by signal, announcement, reminder, and support notifications.</p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTemplates((prev) => ({
+                      ...prev,
+                      [selectedType]: DEFAULT_TEMPLATES[selectedType],
+                    }))}
+                    className="gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Reset
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveTemplates}
+                    disabled={isSavingTemplates}
+                    className="gap-2"
+                  >
+                    {isSavingTemplates ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save Templates
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
+                <div className="space-y-2">
+                  {Object.keys(DEFAULT_TEMPLATES).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedType(key)}
+                      className={clsx(
+                        'w-full rounded-xl border px-3 py-3 text-left transition-all',
+                        selectedType === key
+                          ? 'border-primary bg-primary/10 text-primary shadow-[0_0_18px_hsl(var(--primary)/0.16)]'
+                          : 'border-border/70 bg-muted/[0.04] text-muted-foreground hover:bg-muted/[0.08] hover:text-foreground'
+                      )}
+                    >
+                      <div className="text-xs font-bold uppercase tracking-[0.18em]">{key.replace(/_/g, ' ')}</div>
+                      <div className="mt-1 text-[11px] leading-5">{DEFAULT_TEMPLATES[key].title}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid gap-4">
+                    <label className="space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Title</span>
+                      <input
+                        type="text"
+                        value={templates[selectedType]?.title || ''}
+                        onChange={(event) => handleTemplateChange('title', event.target.value)}
+                        className="h-11 w-full rounded-xl border border-border bg-muted/[0.04] px-4 text-sm text-foreground focus:border-primary/50 focus:outline-none"
+                        placeholder="Notification title"
+                      />
+                    </label>
+
+                    <label className="space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Body</span>
+                      <textarea
+                        ref={textareaRef}
+                        value={templates[selectedType]?.body || ''}
+                        onChange={(event) => handleTemplateChange('body', event.target.value)}
+                        rows={8}
+                        className="w-full rounded-xl border border-border bg-muted/[0.04] px-4 py-3 text-sm leading-6 text-foreground focus:border-primary/50 focus:outline-none"
+                        placeholder="Notification body"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="rounded-2xl border border-border/70 bg-muted/[0.04] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Variables</h3>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Click a variable to insert it into the body.</p>
+                      </div>
+                      <div className="hidden items-center gap-2 text-[10px] text-muted-foreground sm:flex">
+                        Current template: <span className="font-bold text-foreground">{selectedType.replace(/_/g, ' ')}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(VARIABLES_HELP[selectedType] || []).map((variable) => (
+                        <button
+                          key={variable}
+                          type="button"
+                          onClick={() => handleInsertVariable(variable)}
+                          className="rounded-full border border-border bg-card px-3 py-1 text-[10px] font-mono font-bold text-primary transition-all hover:border-primary/30 hover:bg-primary/10"
+                        >
+                          {variable}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-border/70 bg-muted/[0.04] p-4">
+                    <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Preview</h3>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Rendered with sample values from the current signal flow.</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { key: 'push', label: 'Push', icon: Smartphone },
+                          { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+                          { key: 'telegram', label: 'Telegram', icon: Send },
+                        ].map((mode) => {
+                          const Icon = mode.icon;
+                          return (
+                            <button
+                              key={mode.key}
+                              type="button"
+                              onClick={() => setPreviewMode(mode.key)}
+                              className={clsx(
+                                'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] transition-all',
+                                previewMode === mode.key
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                              )}
+                            >
+                              <Icon size={12} />
+                              {mode.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                      <div
+                        className={clsx(
+                          'rounded-3xl border p-4 shadow-sm',
+                          previewMode === 'push' && 'border-primary/20 bg-slate-950 text-slate-50',
+                          previewMode === 'whatsapp' && 'border-emerald-500/20 bg-[#0f1f17] text-slate-50',
+                          previewMode === 'telegram' && 'border-sky-500/20 bg-[#12202b] text-slate-50'
+                        )}
+                      >
+                        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-white/70">
+                          <span className="inline-flex items-center gap-2">
+                            {previewMode === 'push' ? <Bell size={12} /> : null}
+                            {previewMode === 'whatsapp' ? <MessageCircle size={12} /> : null}
+                            {previewMode === 'telegram' ? <Send size={12} /> : null}
+                            MSPK Trade Solutions
+                          </span>
+                          <span>Now</span>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <h4 className="text-sm font-bold">{previewTitle}</h4>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/85">{previewBody}</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-border bg-card p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Delivery Notes</div>
+                        <ul className="mt-3 space-y-3 text-[11px] leading-5 text-muted-foreground">
+                          <li>Email signal alerts reuse the same rendered title and body with an HTML wrapper.</li>
+                          <li>Push and WhatsApp use the same saved templates from this editor.</li>
+                          <li>Telegram broadcast also uses these template strings after variable replacement.</li>
+                          <li>In-app notifications use title, message, type, link, and data from the backend notification model.</li>
+                          <li>Keep templates concise so they remain readable on phones and notification trays.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default NotificationTemplates;

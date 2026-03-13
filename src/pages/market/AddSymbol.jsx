@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, BarChart2, Settings, Activity } from 'lucide-react';
+import { Save, X, BarChart2, Settings, KeyRound } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -123,8 +123,8 @@ const AddSymbol = () => {
     const onSubmit = async (data) => {
         setIsSubmitting(true);
         try {
-            await createSymbol({ ...data, isActive: true });
-            toast.success("Symbol added successfully");
+            const created = await createSymbol({ ...data, isActive: true });
+            toast.success(created?.symbolId ? "Symbol added and webhook ID generated" : "Symbol added successfully");
             navigate('/market/symbols');
         } catch (error) {
             console.error("Failed to add symbol", error);
@@ -190,6 +190,22 @@ const AddSymbol = () => {
                             {...register('name')}
                             error={errors.name?.message}
                         />
+
+                        <div className="md:col-span-2 space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground block">Webhook Symbol ID</label>
+                            <div className="relative">
+                                <KeyRound size={14} className="absolute left-3 top-3 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value="Auto-generated after first save"
+                                    className="ui-input w-full bg-secondary/20 border border-input rounded-lg pl-10 pr-4 py-2.5 text-xs text-muted-foreground font-mono cursor-not-allowed"
+                                />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                                Format will be <span className="font-mono">SEGMENT-SYMBOL-MONGOID</span>. Isi ID ko webhook payload mein use karna hai after symbol create ho jaye.
+                            </p>
+                        </div>
                     </div>
                 </Card>
 

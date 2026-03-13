@@ -29,10 +29,36 @@ const AllStrategies = () => {
     };
 
     useEffect(() => {
-        fetchStrategies();
-        // Poll every 10 seconds (reduced frequency)
-        const interval = setInterval(fetchStrategies, 10000);
-        return () => clearInterval(interval);
+        let interval = null;
+        const start = () => {
+            if (interval) return;
+            fetchStrategies();
+            interval = setInterval(() => {
+                if (!document.hidden) {
+                    fetchStrategies();
+                }
+            }, 30000);
+        };
+        const stop = () => {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        };
+        const handleVisibility = () => {
+            if (document.hidden) {
+                stop();
+            } else {
+                start();
+            }
+        };
+
+        start();
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            stop();
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
     }, []);
 
     const handleToggleStatus = async (strategy) => {

@@ -2,14 +2,37 @@
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/v1';
 const baseUrl = apiBase.replace('/v1', '').replace('http', 'ws');
 
-const token = localStorage.getItem('token');
-const wsUrl = `${baseUrl}/?token=${token}`;
-
 import monitor from '../utils/monitoring/MonitoringService';
 
 let wsInstance = null;
 const listeners = new Map();
 const sendQueue = [];
+let reconnectTimer = null;
+
+const normalizeToken = (value) => {
+    const token = String(value || '')
+        .trim()
+        .replace(/^Bearer\s+/i, '')
+        .replace(/^"+|"+$/g, '');
+
+    if (!token || token === 'null' || token === 'undefined') return '';
+    return token;
+};
+
+const isLikelyJwt = (token) => token.split('.').length === 3;
+
+const getSocketUrl = () => {
+    const token = normalizeToken(localStorage.getItem('token'));
+    if (!token || !isLikelyJwt(token)) return null;
+    return `${baseUrl}/?token=${encodeURIComponent(token)}&autoSubscribe=false`;
+};
+
+const scheduleReconnect = () => {
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = window.setTimeout(() => {
+        initSocket();
+    }, 5000);
+};
 
 const initSocket = () => {
     // If we're on a browser, handle the connection
@@ -19,10 +42,16 @@ const initSocket = () => {
         return;
     }
 
+    const wsUrl = getSocketUrl();
+    if (!wsUrl) {
+        return;
+    }
+
     wsInstance = new WebSocket(wsUrl);
 
     wsInstance.onopen = () => {
         console.log('socket connected');
+        window.clearTimeout(reconnectTimer);
         // Flush queue
         while (sendQueue.length > 0) {
             const msg = sendQueue.shift();
@@ -39,8 +68,8 @@ const initSocket = () => {
         if (listeners.has('disconnect')) {
             listeners.get('disconnect').forEach(callback => callback());
         }
-        // Basic reconnect
-        setTimeout(initSocket, 5000);
+        wsInstance = null;
+        scheduleReconnect();
     };
 
     wsInstance.onerror = (err) => {
@@ -87,6 +116,7 @@ export const socketWrapper = {
             listeners.set(event, new Set());
         }
         listeners.get(event).add(callback);
+        initSocket();
     },
     off: (event, callback) => {
         if (listeners.has(event)) {

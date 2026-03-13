@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, ShoppingCart, RefreshCcw, CheckCircle, XCircle, Hash, User, CreditCard, DollarSign, Calendar, Wallet, BadgeCheck, Mail } from 'lucide-react';
+import { Download, ShoppingCart, RefreshCcw, CheckCircle, XCircle, Hash, User, CreditCard, DollarSign, Calendar, BadgeCheck, Mail } from 'lucide-react';
 import TableHeaderCell from '../ui/TableHeaderCell';
 import TablePageFooter from '../ui/TablePageFooter';
 
@@ -20,7 +20,6 @@ const SubscriptionTable = ({ transactions, highlightTerm, isLoading, footerProps
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={CreditCard} label="Plan" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={DollarSign} label="Amount" align="center" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Calendar} label="Date" align="center" />
-                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Wallet} label="Method" align="center" />
                             <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={BadgeCheck} label="Status" align="center" />
                         </tr>
                     </thead>
@@ -79,9 +78,6 @@ const SubscriptionTable = ({ transactions, highlightTerm, isLoading, footerProps
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border text-muted-foreground text-[10px]">
                                             {txn.date}
-                                        </td>
-                                        <td className="px-5 py-3 text-center border-r border-border text-muted-foreground text-[10px]">
-                                            {txn.method || 'UPI'}
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             {(() => {

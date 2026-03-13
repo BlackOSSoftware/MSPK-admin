@@ -59,8 +59,11 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                                 </tr>
                             ))
                         ) : (
-                            plans.map((plan) => {
+                            plans.filter(plan => !(!plan?.isDemo && Number(plan?.price) === 0)).map((plan) => {
                                 const isHighlighted = highlightTerm && plan.name.toLowerCase().includes(highlightTerm.toLowerCase());
+                                const isCustom = !plan.isDemo && Number(plan.price) === 0;
+                                const priceLabel = plan.isDemo ? 'Free' : (isCustom ? '' : `₹ ${plan.price}`);
+                                const typeLabel = plan.isDemo ? 'Demo' : (isCustom ? 'Custom' : 'Premium');
                                 return (
                                     <tr
                                         key={plan.id}
@@ -71,9 +74,9 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                                         </td>
                                         <td className="px-5 py-3 border-r border-border">
                                             <div className="flex items-center gap-2">
-                                                <div className={`p-1.5 rounded-md ${plan.isDemo ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                                                    <CreditCard size={14} />
-                                                </div>
+                                            <div className={`p-1.5 rounded-md ${plan.isDemo ? 'bg-blue-500/10 text-blue-500' : (isCustom ? 'bg-purple-500/10 text-purple-500' : 'bg-amber-500/10 text-amber-500')}`}>
+                                                <CreditCard size={14} />
+                                            </div>
                                                 <span className="text-foreground font-semibold font-sans text-xs">{plan.name}</span>
                                             </div>
                                         </td>
@@ -83,7 +86,7 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                                             </span>
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border font-bold text-foreground">
-                                            ₹ {plan.price}
+                                            {priceLabel}
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border text-muted-foreground">
                                             <div className="flex items-center justify-center gap-1">
@@ -94,9 +97,9 @@ const PlanTable = ({ plans, onAction, isLoading, highlightTerm }) => {
                                         <td className="px-5 py-3 text-center border-r border-border">
                                             <span className={`px-2 py-0.5 border rounded-[4px] text-[9px] uppercase font-bold tracking-wider ${plan.isDemo
                                                 ? 'border-blue-500/20 text-blue-500 bg-blue-500/5'
-                                                : 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5'
+                                                : (isCustom ? 'border-purple-500/20 text-purple-500 bg-purple-500/5' : 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5')
                                                 }`}>
-                                                {plan.isDemo ? 'Demo' : 'Premium'}
+                                                {typeLabel}
                                             </span>
                                         </td>
                                         <td className="px-5 py-3 border-r border-border max-w-[200px]" title={plan.features.join('\n')}>

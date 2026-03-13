@@ -130,6 +130,7 @@ const SearchableSelect = ({
                                 const isSelected = multiple ? value?.includes(option.value) : value === option.value;
                                 return (
                                     <button
+                                        type="button"
                                         key={option.value}
                                         onClick={() => {
                                             if (multiple) {
@@ -166,6 +167,7 @@ const SearchableSelect = ({
                         {/* Custom Value Option */}
                         {allowCustom && searchTerm.length > 1 && !filteredOptions.find(o => o.label === searchTerm) && (
                             <button
+                                type="button"
                                 onClick={() => {
                                     const val = searchTerm.toUpperCase();
                                     if (multiple) {

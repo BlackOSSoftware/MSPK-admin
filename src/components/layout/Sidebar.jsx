@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Users, CreditCard,
     BarChart2, Settings,
     RefreshCcw, Radio, MessageSquare, Megaphone,
-    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X, FileText
+    ChevronLeft, ChevronRight, ChevronDown, Activity, Calendar, LogOut, X, FileText, Mail
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../store/authSlice';
@@ -202,7 +202,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     icon: BarChart2,
                     submenu: [
                         { name: 'Live Market', path: '/market/data', icon: Activity },
-                        { name: 'Manage Symbols', path: '/market/symbols', icon: Settings },
+                        { name: 'Script Master', path: '/market/symbols', icon: Settings },
                     ],
                 },
             ],
@@ -211,6 +211,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             title: 'Support',
             items: [
                 { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
+                { name: 'Web Enquiries', path: '/enquiries/all', icon: Mail },
             ],
         },
         {
@@ -257,6 +258,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { label: 'Signals', to: '/signals/all', icon: Radio, isActive: (p) => p.startsWith('/signals') },
         { label: 'Market', to: '/market/data', icon: Activity, isActive: (p) => p.startsWith('/market') },
         { label: 'Tickets', to: '/tickets/all', icon: MessageSquare, isActive: (p) => p.startsWith('/tickets') },
+        { label: 'Enquiries', to: '/enquiries/all', icon: Mail, isActive: (p) => p.startsWith('/enquiries') },
         { label: 'News', to: '/announcements/all', icon: Megaphone, isActive: (p) => p.startsWith('/announcements') },
         { label: 'Blogs', to: '/blogs/all', icon: FileText, isActive: (p) => p.startsWith('/blogs') },
     ];
@@ -286,7 +288,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </button>
             </div>
 
-            <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar pb-2">
+            <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden sidebar-scrollbar pb-2 pr-1">
                 {railLinks.map((link) => (
                     <RailLink
                         key={link.label}
@@ -367,7 +369,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
 
             {/* Navigation */}
-            <nav className="relative z-10 flex-1 overflow-y-auto no-scrollbar px-1.5 py-3">
+            <nav className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden sidebar-scrollbar px-1.5 py-3 pr-2">
                 {navigationSections.map((section) => (
                     <div key={section.title} className="mb-2">
                         <div className="space-y-0.5">
@@ -472,21 +474,21 @@ const Sidebar = ({ isOpen, onClose }) => {
 
             <aside
                 className={clsx(
-                    "fixed inset-y-0 left-0 z-40 shrink-0 md:static md:translate-x-0",
+                    "fixed inset-y-0 left-0 z-40 shrink-0 min-h-0 md:static md:translate-x-0",
                     "transition-transform duration-300 ease-out",
                     isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
                 )}
             >
-                <div className="h-full p-2">
+                <div className="h-full min-h-0 p-2">
                     {/* Desktop */}
-                    <div className="hidden md:block h-full">
+                    <div className="hidden md:block h-full min-h-0">
                         {collapsed ? (
-                            <div className="h-full w-16 flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
+                            <div className="h-full min-h-0 w-16 flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
                                 <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none" />
                                 {railContent}
                             </div>
                         ) : (
-                            <div className="h-full w-72 flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
+                            <div className="h-full min-h-0 w-72 flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
                                 <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none" />
                                 {panelContent}
                             </div>
@@ -494,8 +496,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Mobile */}
-                    <div className="md:hidden h-full">
-                        <div className="h-full w-[85vw] max-w-[360px] flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
+                    <div className="md:hidden h-full min-h-0">
+                        <div className="h-full min-h-0 w-[85vw] max-w-[360px] flex flex-col rounded-2xl border border-border/60 bg-secondary/60 backdrop-blur-xl overflow-hidden relative">
                             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none opacity-60" />
                             {panelContent}
                         </div>

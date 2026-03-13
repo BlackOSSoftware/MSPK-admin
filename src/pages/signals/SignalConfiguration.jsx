@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { Tag, Plus, Trash2, Shield, Send, Loader2 } from 'lucide-react'; // Added Loader2
+import { Tag, Plus, Trash2, Shield, Send, Loader2, Mail } from 'lucide-react'; // Added Loader2
 import { getSegments, createSegment, deleteSegment } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog'; // Import ConfirmDialog
@@ -180,6 +180,7 @@ const SignalConfiguration = () => {
 const AutomationSettings = () => {
     const toast = useToast();
     const [settings, setSettings] = useState({
+        email_config: { enabled: true },
         telegram_config: { enabled: false, botToken: '', channelId: '' },
         whatsapp_config: { enabled: false, apiKey: '', phoneNumberId: '' },
         push_config: { enabled: false, fcmServerKey: '' }
@@ -198,6 +199,7 @@ const AutomationSettings = () => {
 
             // Merge defaults in case backend returns partial data
             setSettings(prev => ({
+                email_config: { ...prev.email_config, ...(data.email_config || {}) },
                 telegram_config: { ...prev.telegram_config, ...(data.telegram_config || {}) },
                 whatsapp_config: { ...prev.whatsapp_config, ...(data.whatsapp_config || {}) },
                 push_config: { ...prev.push_config, ...(data.push_config || {}) },
@@ -217,6 +219,7 @@ const AutomationSettings = () => {
 
             // Prepare payload
             const payload = {
+                email_config: settings.email_config,
                 telegram_config: settings.telegram_config,
                 whatsapp_config: settings.whatsapp_config,
                 push_config: settings.push_config
@@ -243,6 +246,37 @@ const AutomationSettings = () => {
 
     return (
         <div className="p-6 space-y-8">
+            {/* Email */}
+            <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                        <div className="text-sm font-bold text-foreground flex items-center gap-2">
+                            Email Alerts
+                            {settings.email_config.enabled && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Send signal and reminder emails to active users</div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={settings.email_config.enabled}
+                            onChange={(e) => handleChange('email_config', 'enabled', e.target.checked)}
+                        />
+                        <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+
+                <div className="pl-4 border-l-2 border-primary/20">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Mail size={14} className="text-primary" />
+                        Delivery uses configured SMTP credentials or the MSG91 email provider.
+                    </div>
+                </div>
+            </div>
+
+            <div className="h-[1px] bg-white/5"></div>
+
             {/* Telegram */}
             <div className="space-y-3">
                 <div className="flex items-center justify-between">

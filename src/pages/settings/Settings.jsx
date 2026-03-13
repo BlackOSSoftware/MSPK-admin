@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { Settings as SettingsIcon, Shield, Headphones, CreditCard, Bell, Save } from 'lucide-react';
+import { Bell, CreditCard, Mail, MessageCircle, Save, Send, Smartphone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 
@@ -9,7 +10,8 @@ import useToast from '../../hooks/useToast';
 
 
 const Settings = () => {
-    const [activeTab, setActiveTab] = useState('support'); // support, payment, notifications
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('notifications'); // notifications
     const [settings, setSettings] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
@@ -61,16 +63,6 @@ const Settings = () => {
                 <div className="flex items-center gap-1 border-b border-border overflow-x-auto no-scrollbar">
 
                     <button
-                        onClick={() => setActiveTab('support')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 whitespace-nowrap",
-                            activeTab === 'support' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <Headphones size={14} /> Support
-                    </button>
-
-                    <button
                         onClick={() => setActiveTab('notifications')}
                         className={clsx(
                             "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 whitespace-nowrap",
@@ -86,60 +78,6 @@ const Settings = () => {
             <div className="flex-1 min-h-0 relative overflow-y-auto custom-scrollbar">
                 <div className="max-w-4xl mx-auto space-y-6 pb-10">
 
-
-                    {activeTab === 'support' && (
-                        <Card className="terminal-panel bg-card border-border" noPadding>
-                            <div className="p-4 border-b border-border bg-muted/20 flex items-center gap-2">
-                                <Headphones size={16} className="text-primary" />
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Support Configuration</h3>
-                            </div>
-                            <div className="p-6 space-y-6">
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase">Helpdesk Email</label>
-                                        <input
-                                            type="email"
-                                            value={settings.helpdesk_email || ''}
-                                            onChange={(e) => handleSettingChange('helpdesk_email', e.target.value)}
-                                            placeholder="help@mspktradesolutions.com"
-                                            className="w-full bg-secondary/20 border border-border rounded-lg px-4 py-2.5 text-xs font-mono text-foreground focus:border-primary/50 focus:outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase">Contact Number</label>
-                                        <input
-                                            type="text"
-                                            value={settings.contact_number || ''}
-                                            onChange={(e) => handleSettingChange('contact_number', e.target.value)}
-                                            placeholder="+91 98765 43210"
-                                            className="w-full bg-secondary/20 border border-border rounded-lg px-4 py-2.5 text-xs font-mono text-foreground focus:border-primary/50 focus:outline-none"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase">Operating Hours</label>
-                                    <input
-                                        type="text"
-                                        value={settings.operating_hours || ''}
-                                        onChange={(e) => handleSettingChange('operating_hours', e.target.value)}
-                                        placeholder="Mon - Fri, 9:00 AM - 6:00 PM IST"
-                                        className="w-full bg-secondary/20 border border-border rounded-lg px-4 py-2.5 text-xs font-mono text-foreground focus:border-primary/50 focus:outline-none"
-                                    />
-                                </div>
-
-                                <div className="pt-4 border-t border-white/5 flex justify-end gap-3">
-                                    <Button
-                                        variant="primary"
-                                        className="gap-2 shadow-lg shadow-primary/20"
-                                        onClick={() => saveSettings(['helpdesk_email', 'contact_number', 'operating_hours'])}
-                                        isLoading={isLoading}
-                                    >
-                                        <Save size={16} /> Update Support Settings
-                                    </Button>
-                                </div>
-                            </div>
-                        </Card>
-                    )}
 
                     {activeTab === 'payment' && (
                         <Card className="terminal-panel bg-card border-border" noPadding>
@@ -202,58 +140,84 @@ const Settings = () => {
                         <Card className="terminal-panel bg-card border-border" noPadding>
                             <div className="p-4 border-b border-border bg-muted/20 flex items-center gap-2">
                                 <Bell size={16} className="text-primary" />
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Notification Preferences</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Notification Control Center</h3>
                             </div>
                             <div className="p-6 space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/50">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-bold text-foreground uppercase">Email Alerts</h4>
-                                            <p className="text-[10px] text-muted-foreground">Send transactional emails for purchases and login.</p>
-                                        </div>
-                                        <div
-                                            onClick={() => handleSettingChange('enable_email_alerts', !settings.enable_email_alerts)}
-                                            className={`w-10 h-5 rounded-full relative cursor-pointer border transition-colors ${settings.enable_email_alerts ? 'bg-primary/20 border-primary/50' : 'bg-secondary border-border'}`}
-                                        >
-                                            <div className={`absolute top-0.5 h-4 w-4 rounded-full shadow-sm transition-all ${settings.enable_email_alerts ? 'right-0.5 bg-primary' : 'left-0.5 bg-muted-foreground'}`}></div>
-                                        </div>
+                                <div className="rounded-2xl border border-border bg-card/40 p-5">
+                                    <div className="max-w-3xl space-y-2">
+                                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Current stack</div>
+                                        <h4 className="text-lg font-semibold text-foreground">Email, Push, WhatsApp, Telegram, and in-app templates</h4>
+                                        <p className="text-sm leading-6 text-muted-foreground">
+                                            Admin notification controls follow the current backend delivery flow and are managed from
+                                            the dedicated notification center.
+                                        </p>
                                     </div>
+                                </div>
 
-                                    <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/50">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-bold text-foreground uppercase">WhatsApp Notifications</h4>
-                                            <p className="text-[10px] text-muted-foreground">Send trade signals and alerts via WhatsApp API.</p>
-                                        </div>
-                                        <div
-                                            onClick={() => handleSettingChange('enable_whatsapp_alerts', !settings.enable_whatsapp_alerts)}
-                                            className={`w-10 h-5 rounded-full relative cursor-pointer border transition-colors ${settings.enable_whatsapp_alerts ? 'bg-primary/20 border-primary/50' : 'bg-secondary border-border'}`}
-                                        >
-                                            <div className={`absolute top-0.5 h-4 w-4 rounded-full shadow-sm transition-all ${settings.enable_whatsapp_alerts ? 'right-0.5 bg-primary' : 'left-0.5 bg-muted-foreground'}`}></div>
-                                        </div>
-                                    </div>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                    {[
+                                        {
+                                            key: 'email_config',
+                                            title: 'Email Alerts',
+                                            description: 'Signal and reminder alerts delivered to user email addresses.',
+                                            icon: Mail,
+                                        },
+                                        {
+                                            key: 'push_config',
+                                            title: 'Push Notifications',
+                                            description: 'Browser and mobile alerts using FCM.',
+                                            icon: Smartphone,
+                                        },
+                                        {
+                                            key: 'whatsapp_config',
+                                            title: 'WhatsApp Delivery',
+                                            description: 'Signal alerts sent over WhatsApp Business.',
+                                            icon: MessageCircle,
+                                        },
+                                        {
+                                            key: 'telegram_config',
+                                            title: 'Telegram Broadcast',
+                                            description: 'Channel level market and signal broadcasts.',
+                                            icon: Send,
+                                        },
+                                    ].map((item) => {
+                                        const Icon = item.icon;
+                                        const enabled = settings[item.key]?.enabled;
 
-                                    <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/50">
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-bold text-foreground uppercase">Telegram Integration</h4>
-                                            <p className="text-[10px] text-muted-foreground">Broadcast messages to Telegram Channel.</p>
-                                        </div>
-                                        <div
-                                            onClick={() => handleSettingChange('enable_telegram_alerts', !settings.enable_telegram_alerts)}
-                                            className={`w-10 h-5 rounded-full relative cursor-pointer border transition-colors ${settings.enable_telegram_alerts ? 'bg-primary/20 border-primary/50' : 'bg-secondary border-border'}`}
-                                        >
-                                            <div className={`absolute top-0.5 h-4 w-4 rounded-full shadow-sm transition-all ${settings.enable_telegram_alerts ? 'right-0.5 bg-primary' : 'left-0.5 bg-muted-foreground'}`}></div>
-                                        </div>
-                                    </div>
+                                        return (
+                                            <div key={item.key} className="rounded-xl border border-border bg-card/50 p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={clsx(
+                                                        "grid h-10 w-10 place-items-center rounded-xl border",
+                                                        enabled
+                                                            ? "border-primary/30 bg-primary/10 text-primary"
+                                                            : "border-border/70 bg-background text-muted-foreground"
+                                                    )}>
+                                                        <Icon size={18} />
+                                                    </span>
+                                                    <div>
+                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-foreground">{item.title}</h5>
+                                                        <div className={clsx(
+                                                            "mt-1 text-[10px] font-semibold uppercase tracking-[0.18em]",
+                                                            enabled ? "text-emerald-400" : "text-muted-foreground"
+                                                        )}>
+                                                            {enabled ? 'Enabled' : 'Disabled'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{item.description}</p>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="pt-4 border-t border-white/5 flex justify-end">
                                     <Button
                                         variant="primary"
                                         className="gap-2 shadow-lg shadow-primary/20"
-                                        onClick={() => saveSettings(['enable_email_alerts', 'enable_whatsapp_alerts', 'enable_telegram_alerts'])}
-                                        isLoading={isLoading}
+                                        onClick={() => navigate('/settings/notifications')}
                                     >
-                                        <Save size={16} /> Update Preferences
+                                        <Save size={16} /> Open Notification Center
                                     </Button>
                                 </div>
                             </div>
