@@ -15,6 +15,7 @@ const SEGMENT_FILTERS = ['All', 'NSE', 'NFO', 'MCX', 'CURRENCY', 'CRYPTO'];
 const DATE_FILTERS = [
     { value: 'all', label: 'All' },
     { value: 'today', label: 'Today' },
+    { value: 'tomorrow', label: 'Tomorrow' },
     { value: 'week', label: 'Weekly' },
     { value: 'month', label: 'Monthly' },
 ];
@@ -45,6 +46,7 @@ const AllSignals = () => {
     });
     const [periodStats, setPeriodStats] = useState({
         todaySignals: 0,
+        tomorrowSignals: 0,
         weeklySignals: 0,
         monthlySignals: 0,
     });
@@ -59,13 +61,18 @@ const AllSignals = () => {
         grossLossPoints: 0,
         netPoints: 0,
         averagePoints: 0,
+        grossProfitInr: 0,
+        grossLossInr: 0,
+        netInr: 0,
+        averageInr: 0,
         winRate: 0,
         closedWithoutPoints: 0,
         targetHit: 0,
         partialProfit: 0,
         stoplossHit: 0,
+        lotSizeMissing: 0,
     });
-    const [pagination, setPagination] = useState({ page: 1, limit: 10, totalPages: 1, totalResults: 0 });
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalResults: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -452,6 +459,8 @@ const AllSignals = () => {
                                     {DATE_FILTERS.map((item) => {
                                         const count = item.value === 'today'
                                             ? periodStats.todaySignals
+                                            : item.value === 'tomorrow'
+                                                ? periodStats.tomorrowSignals
                                             : item.value === 'week'
                                                 ? periodStats.weeklySignals
                                                 : item.value === 'month'
@@ -527,11 +536,11 @@ const AllSignals = () => {
                                         <TrendingUp size={12} />
                                         Net Earnings
                                     </div>
-                                    <div className={`mt-2 text-lg font-black ${reportSummary.netPoints >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {reportSummary.netPoints} pts
+                                    <div className={`mt-2 text-lg font-black ${reportSummary.netInr >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        Rs {reportSummary.netInr}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        Avg {reportSummary.averagePoints} pts per closed signal
+                                        Avg Rs {reportSummary.averageInr} per closed signal
                                     </div>
                                 </div>
 
@@ -541,10 +550,10 @@ const AllSignals = () => {
                                     </div>
                                     <div className="mt-2 flex items-center gap-2 text-[11px]">
                                         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-bold text-emerald-400">
-                                            +{reportSummary.grossProfitPoints} pts
+                                            +Rs {reportSummary.grossProfitInr}
                                         </span>
                                         <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 font-bold text-red-400">
-                                            {reportSummary.grossLossPoints} pts
+                                            Rs {reportSummary.grossLossInr}
                                         </span>
                                     </div>
                                     <div className="mt-2 text-[11px] text-muted-foreground">
@@ -554,13 +563,13 @@ const AllSignals = () => {
 
                                 <div className="rounded-xl border border-border bg-secondary/20 p-3">
                                     <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                                        Today Report
+                                        Current Range
                                     </div>
-                                    <div className="mt-2 text-lg font-black text-sky-400">
-                                        {periodStats.todaySignals}
+                                    <div className={`mt-2 text-lg font-black ${reportSummary.netInr >= 0 ? 'text-sky-400' : 'text-red-400'}`}>
+                                        Rs {reportSummary.netInr}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        Signals in today filter window
+                                        Earnings for selected date filter
                                     </div>
                                 </div>
 
@@ -572,14 +581,14 @@ const AllSignals = () => {
                                         {reportSummary.closedSignals}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        Closed signals, {reportSummary.closedWithoutPoints} missing points
+                                        Closed signals, {reportSummary.lotSizeMissing} lot-size fallback
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="relative flex min-h-0 flex-1 flex-col">
-                            <div className="relative min-h-0 flex-1">
+                            <div className="relative min-h-[680px] flex-1 xl:min-h-[760px]">
                                 <SignalTable
                                     signals={rows}
                                     onAction={handleAction}
@@ -605,7 +614,7 @@ const AllSignals = () => {
                                 page={pagination.page}
                                 totalPages={pagination.totalPages || 1}
                                 perPage={pagination.limit}
-                                perPageOptions={[10, 20, 50]}
+                                perPageOptions={[20, 50, 100]}
                                 onPerPageChange={(value) => setPagination((prev) => ({ ...prev, limit: Number(value), page: 1 }))}
                                 onPrev={() => handlePageChange(pagination.page - 1)}
                                 onNext={() => handlePageChange(pagination.page + 1)}
