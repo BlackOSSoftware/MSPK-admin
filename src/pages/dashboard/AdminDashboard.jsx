@@ -45,7 +45,7 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="space-y-5 flex flex-col h-auto lg:h-full lg:overflow-hidden pb-4 lg:pb-0">
+        <div className="space-y-4 sm:space-y-5 flex flex-col h-auto lg:h-full lg:overflow-hidden pb-3 sm:pb-4 lg:pb-0">
             {error && (
                 <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg text-sm text-center">
                     {error} <button onClick={() => window.location.reload()} className="underline font-bold ml-2">Retry</button>
@@ -53,13 +53,13 @@ const AdminDashboard = () => {
             )}
 
             {/* ... */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 h-auto shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 h-auto shrink-0">
                 <VisualStatCard
                     title="Total Users"
                     value={stats.users?.total || 0}
                     change={`${stats.users?.growth || 0}%`}
                     type="bar"
-                    color="#4f46e5"
+                    color="#0ea5e9"
                     icon={Users}
                     onClick={() => navigate('/users/all')}
                 />
@@ -84,15 +84,15 @@ const AdminDashboard = () => {
 
             {/* Main Content Grid - Trading Layout with Admin Data */}
             {/* Layout Grid */}
-            <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:pb-2">
+            <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:pb-2">
                 {/* Left Column: Graph & Orders (8/12) */}
                 <div className="lg:col-span-9 flex flex-col gap-3 h-auto lg:h-full lg:min-h-0">
                     {/* Revenue Graph */}
-                    <div className="h-72 lg:h-auto lg:flex-1 lg:min-h-0">
+                    <div className="h-64 sm:h-72 lg:h-auto lg:flex-1 lg:min-h-0">
                         <AdminRevenueGraph data={stats.revenueGraph} totalRevenue={stats.revenue?.total} growth={stats.revenue?.growth} />
                     </div>
                     {/* Recent Orders*/}
-                    <div className="h-64 lg:h-56 shrink-0">
+                    <div className="hidden md:block h-56 lg:h-56 shrink-0">
                         <RecentOrdersTable orders={stats.recentOrders} />
                     </div>
                 </div>
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
                 {/* Right Column: Activity & Quick Actions (4/12) */}
                 <div className="lg:col-span-3 flex flex-col gap-3 h-auto lg:h-full lg:min-h-0">
                     {/* Activity Log */}
-                    <div className="h-80 lg:h-auto lg:flex-1 lg:min-h-0 rounded-2xl overflow-hidden">
+                    <div className="h-64 sm:h-80 lg:h-auto lg:flex-1 lg:min-h-0 rounded-2xl overflow-hidden">
                         <ActivityLog logs={stats.activityLog} />
                     </div>
                     {/* Quick Actions*/}

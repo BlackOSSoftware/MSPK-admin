@@ -180,7 +180,7 @@ const CreateStrategy = () => {
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => navigate('/strategies/all')}>
-                        <X size={16} className="mr-2" /> Cancel
+                        <X size={16} className="mr-2 btn-cancel" /> Cancel
                     </Button>
                     <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="min-w-[150px]">
                         {isSubmitting ? 'Deploying...' : 'Deploy Strategy'}

@@ -159,7 +159,7 @@ const EditPlan = () => {
                     </h1>
                     <p className="text-xs text-muted-foreground mt-1">Modify subscription details and feature access.</p>
                 </div>
-                <Button variant="outline" onClick={() => navigate('/plans/all')} className="gap-2">
+                <Button variant="outline" onClick={() => navigate('/plans/all')} className="gap-2 btn-cancel">
                     <X size={16} /> Cancel
                 </Button>
             </div>
@@ -290,7 +290,7 @@ const EditPlan = () => {
                 </Card>
 
                 <div className="flex justify-end gap-3 pt-2">
-                    <Button type="button" variant="outline" onClick={() => navigate('/plans/all')}>
+                    <Button className="btn-cancel" type="button" variant="outline" onClick={() => navigate('/plans/all')}>
                         Cancel
                     </Button>
                     <Button type="submit" variant="primary" disabled={loading} className="min-w-[150px] gap-2 shadow-lg shadow-primary/20">

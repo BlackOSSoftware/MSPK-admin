@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, CreditCard, Layers, CheckSquare, Square, Zap, FileText } from 'lucide-react';
+import { X, CreditCard, Layers, CheckSquare, Square, Zap, FileText } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -104,27 +104,32 @@ const CreatePlan = () => {
     const isDemo = watch("isDemo");
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        Create New Plan
-                    </h1>
+        <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+            <div className="relative rounded-xl sm:rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card/95 to-primary/5 shadow-[0_12px_36px_-24px_rgba(0,0,0,0.6)]">
+                <div className="absolute inset-0 rounded-xl sm:rounded-2xl ring-1 ring-primary/10 pointer-events-none" />
+                <div className="relative p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                    <div className="flex flex-col">
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Plan Builder</p>
+                        <h1 className="text-base sm:text-2xl font-bold text-foreground flex items-center gap-2">
+                            Create New Plan
+                        </h1>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Define pricing, validity, and access</p>
+                    </div>
+                    <Button variant="outline" onClick={() => navigate('/plans/all')} className="gap-2 h-8 sm:h-9 text-[10px] sm:text-[11px] btn-cancel">
+                        <X size={14} /> Cancel
+                    </Button>
                 </div>
-                <Button variant="outline" onClick={() => navigate('/plans/all')} className="gap-2">
-                    <X size={16} /> Cancel
-                </Button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-6">
 
                 {/* 1. Basic Configuration Card */}
-                <Card className="p-6 space-y-6 overflow-visible">
-                    <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-border pb-2">
-                        <CreditCard size={18} className="text-primary" /> Plan Details
+                <Card className="p-3 sm:p-6 space-y-3 sm:space-y-6 overflow-visible">
+                    <h2 className="text-xs sm:text-lg font-semibold flex items-center gap-2 border-b border-border/60 pb-2">
+                        <CreditCard size={16} className="text-primary" /> Plan Details
                     </h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
                         <Input
                             label="Plan Name"
                             placeholder="e.g. Platinum Nifty"
@@ -132,8 +137,8 @@ const CreatePlan = () => {
                             error={errors.name?.message}
                         />
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground block">Plan Type</label>
+                        <div className="space-y-1">
+                            <label className="text-[10px] sm:text-xs font-medium text-muted-foreground block">Plan Type</label>
                             <Controller
                                 name="isDemo"
                                 control={control}
@@ -153,8 +158,8 @@ const CreatePlan = () => {
                             />
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground block">Segment Access</label>
+                        <div className="space-y-1">
+                            <label className="text-[10px] sm:text-xs font-medium text-muted-foreground block">Segment Access</label>
                             <Controller
                                 name="segment"
                                 control={control}
@@ -192,15 +197,15 @@ const CreatePlan = () => {
                 </Card>
 
                 {/* 2. Features Card */}
-                <Card className="p-6 space-y-6">
-                    <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-border pb-2">
-                        <Layers size={18} className="text-primary" /> Feature Access & Logic
+                <Card className="p-3 sm:p-6 space-y-3 sm:space-y-6">
+                    <h2 className="text-xs sm:text-lg font-semibold flex items-center gap-2 border-b border-border/60 pb-2">
+                        <Layers size={16} className="text-primary" /> Feature Access & Logic
                     </h2>
 
-                    <div className="space-y-4">
-                        <label className="text-sm font-medium text-muted-foreground block">Select Signals to Include</label>
+                    <div className="space-y-3 sm:space-y-4">
+                        <label className="text-[10px] sm:text-sm font-medium text-muted-foreground block">Select Signals to Include</label>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                             {STANDARD_FEATURES.map((feature) => {
                                 const isSelected = selectedFeatures.includes(feature.id);
                                 return (
@@ -208,18 +213,18 @@ const CreatePlan = () => {
                                         key={feature.id}
                                         onClick={() => toggleFeature(feature.id)}
                                         className={`
-                                            flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
+                                            flex items-center gap-3 p-2.5 sm:p-3 rounded-lg border cursor-pointer transition-all
                                             ${isSelected
                                                 ? 'bg-primary/10 border-primary/50 text-foreground ring-1 ring-primary/20'
                                                 : 'bg-secondary/30 border-white/5 text-muted-foreground hover:bg-secondary/50'}
                                         `}
                                     >
                                         {isSelected
-                                            ? <CheckSquare size={18} className="text-primary shrink-0" />
-                                            : <Square size={18} className="text-muted-foreground/50 shrink-0" />}
+                                            ? <CheckSquare size={16} className="text-primary shrink-0" />
+                                            : <Square size={16} className="text-muted-foreground/50 shrink-0" />}
 
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-semibold select-none">{feature.label}</span>
+                                            <span className="text-[11px] sm:text-xs font-semibold select-none">{feature.label}</span>
                                             <span className="text-[9px] uppercase tracking-wider opacity-60 font-mono">{feature.category}</span>
                                         </div>
                                     </div>
@@ -227,26 +232,26 @@ const CreatePlan = () => {
                             })}
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-border">
-                            <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+                        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
+                            <label className="flex items-center gap-2 text-[10px] sm:text-sm font-medium text-muted-foreground mb-2">
                                 <FileText size={14} /> Additional Features (Description)
                             </label>
                             <textarea
                                 value={customFeatures}
                                 onChange={(e) => setCustomFeatures(e.target.value)}
-                                className="w-full bg-secondary/50 border border-input rounded-lg px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 h-24 resize-none placeholder:text-muted-foreground/50"
+                                className="w-full bg-secondary/50 border border-input rounded-lg px-3 py-2 text-[11px] sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 h-20 sm:h-24 resize-none placeholder:text-muted-foreground/50"
                                 placeholder="Enter any other features separated by commas (e.g. 24/7 Support, Personal Mentor, Risk Analysis...)"
                             />
                         </div>
                     </div>
                 </Card>
 
-                <div className="flex justify-end gap-3 pt-2">
-                    <Button type="button" variant="outline" onClick={() => navigate('/plans/all')}>
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-1 sm:pt-2">
+                    <Button type="button" variant="outline" onClick={() => navigate('/plans/all')} className="h-8 sm:h-9 text-[10px] sm:text-[11px] btn-cancel">
                         Cancel
                     </Button>
-                    <Button type="submit" variant="primary" disabled={loading} className="min-w-[150px] gap-2 shadow-lg shadow-primary/20">
-                        {loading ? 'Processing...' : <><Zap size={16} fill="currentColor" /> Create Plan</>}
+                    <Button type="submit" variant="primary" disabled={loading} className="h-8 sm:h-9 text-[10px] sm:text-[11px] min-w-[150px] gap-2 shadow-lg shadow-primary/20">
+                        {loading ? 'Processing...' : <><Zap size={14} fill="currentColor" /> Create Plan</>}
                     </Button>
                 </div>
             </form>

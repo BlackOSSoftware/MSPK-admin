@@ -37,13 +37,13 @@ const MarketTable = ({ symbols, onEdit, onDelete, isLoading }) => {
     }, [symbols]);
 
     return (
-        <div className="terminal-panel w-full h-full overflow-hidden border border-border bg-card rounded-lg shadow-2xl relative flex flex-col">
+        <div className="terminal-panel w-full h-full overflow-hidden border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
             {/* Table Header Backdrop */}
-            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+            <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
             <div className="overflow-auto flex-1 custom-scrollbar">
                 <table className="w-full text-left whitespace-nowrap">
-                    <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
+                    <thead className="bg-gradient-to-r from-card via-card/95 to-primary/5 sticky top-0 z-10 uppercase tracking-[0.2em] text-[9px] font-semibold text-muted-foreground border-b border-border/70 backdrop-blur-md">
                         <tr>
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={Activity} label="Instrument" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm text-right w-24" icon={TrendingUp} label="LTP" align="right" />
@@ -79,7 +79,11 @@ const MarketTable = ({ symbols, onEdit, onDelete, isLoading }) => {
                                 const precision = isHighPrecision ? 5 : 2;
 
                                 return (
-                                    <tr key={index} className="hover:bg-primary/[0.02] transition-colors group relative">
+                                    <tr
+                                        key={index}
+                                        className="group relative transition-all duration-300 hover:bg-primary/[0.03] animate-in fade-in slide-in-from-bottom-1"
+                                        style={{ animationDelay: `${Math.min(index * 20, 240)}ms` }}
+                                    >
                                         <td className="px-5 py-3 border-r border-border">
                                             <div className="flex flex-col">
                                                 <span className="text-foreground font-sans font-bold">{sym.symbol}</span>

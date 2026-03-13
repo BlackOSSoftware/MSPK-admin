@@ -1,8 +1,15 @@
 import React from 'react';
-import { Eye, Edit, Ban, AlertTriangle, ShieldAlert, UserCheck, Key, Hash, Users, User, Globe, CreditCard, Calendar, Clock, Activity, Shield, Settings } from 'lucide-react';
+import { Eye, Edit, Ban, AlertTriangle, ShieldAlert, UserCheck, Key, Hash, Users, User, Globe, CreditCard, Calendar, Clock, Activity, Shield, Settings, Trash2 } from 'lucide-react';
 import TableHeaderCell from '../ui/TableHeaderCell';
+import TablePageFooter from '../ui/TablePageFooter';
 
-const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
+const UserTable = ({
+    users,
+    onAction,
+    isLoading,
+    highlightTerm,
+    footerProps,
+}) => {
     const getInitials = (name, email) => {
         const source = name || email || 'User';
         const parts = source.trim().split(/\s+/);
@@ -11,8 +18,8 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
     };
 
     return (
-        <div className="dashboard-surface w-full h-full overflow-hidden border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
-            <div className="px-4 py-3 border-b border-border/70 bg-secondary/20 flex items-center justify-between">
+        <div className="dashboard-surface w-full h-full min-h-[600px] border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/70 bg-secondary/20 flex items-center justify-between">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Client Directory</p>
                     <p className="text-sm font-semibold text-foreground">All Users</p>
@@ -22,20 +29,21 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                 </div>
             </div>
 
-            <div className="overflow-auto flex-1 custom-scrollbar">
-                <table className="w-full text-left whitespace-nowrap">
-                    <thead className="bg-card/95 sticky top-0 z-10 uppercase tracking-[0.2em] text-[9px] font-semibold text-muted-foreground border-b border-border/70 backdrop-blur-md">
+            <div className="flex-1 overflow-hidden">
+                <div className="h-full overflow-auto custom-scrollbar">
+                    <table className="w-full min-w-[980px] text-left whitespace-nowrap">
+                    <thead className="bg-gradient-to-r from-card via-card/95 to-primary/5 sticky top-0 z-10 uppercase tracking-[0.2em] text-[9px] font-semibold text-muted-foreground border-b border-border/70 backdrop-blur-md">
                         <tr>
-                            <TableHeaderCell className="px-4 py-2.5" icon={Hash} label="Client ID" />
-                            <TableHeaderCell className="px-4 py-2.5" icon={Users} label="Sub Broker" />
-                            <TableHeaderCell className="px-4 py-2.5" icon={User} label="Name / Contact" />
-                            <TableHeaderCell className="px-4 py-2.5 text-center" icon={Globe} label="IP Address" align="center" />
-                            <TableHeaderCell className="px-4 py-2.5 text-center" icon={CreditCard} label="Plan" align="center" />
-                            <TableHeaderCell className="px-4 py-2.5 text-center" icon={Calendar} label="Start Date" align="center" />
-                            <TableHeaderCell className="px-4 py-2.5 text-center" icon={Clock} label="Expiry Date" align="center" />
-                            <TableHeaderCell className="px-4 py-2.5 w-48" icon={Activity} label="Validity Progress" />
-                            <TableHeaderCell className="px-4 py-2.5 text-center" icon={Shield} label="Status" align="center" />
-                            <TableHeaderCell className="px-4 py-2.5 text-center" icon={Settings} label="Actions" align="center" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5" icon={Hash} label="Client ID" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5" icon={Users} label="Sub Broker" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5" icon={User} label="Name / Contact" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 text-center" icon={Globe} label="IP Address" align="center" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 text-center" icon={CreditCard} label="Plan" align="center" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 text-center" icon={Calendar} label="Start Date" align="center" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 text-center" icon={Clock} label="Expiry Date" align="center" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 w-48" icon={Activity} label="Validity Progress" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 text-center" icon={Shield} label="Status" align="center" />
+                            <TableHeaderCell className="px-3 sm:px-4 py-2 sm:py-2.5 text-center" icon={Settings} label="Actions" align="center" />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border bg-transparent text-[11px] font-medium">
@@ -87,7 +95,6 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                         ) : (
                             users.map((user) => {
                                 // Status Logic
-                                const isLiquidated = user.status === 'Liquidated';
                                 const isBlocked = user.status === 'Blocked';
 
                                 // Sub Broker Badge Logic
@@ -139,21 +146,23 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                                 return (
                                     <tr
                                         key={user.id}
-                                        className={`transition-all duration-300 group ${isHighlighted ? 'bg-primary/10' : 'hover:bg-primary/5'}`}
+                                        className={`transition-all duration-300 group relative ${isHighlighted ? 'bg-primary/10' : 'hover:bg-primary/5'} hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]`}
                                     >
-                                        <td className="px-4 py-3 font-mono text-[11px] font-semibold text-foreground/90">
-                                            {user.clientId}
+                                        <td className="px-3 sm:px-4 py-3 font-mono text-[11px] font-semibold text-foreground/90">
+                                            <span className="inline-flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
+                                                {user.clientId}
+                                            </span>
                                         </td>
 
                                         {/* Sub Broker Column */}
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 sm:px-4 py-3">
                                             <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full w-fit text-[9px] font-semibold uppercase tracking-wider border ${isDirect ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/40 text-muted-foreground border-border/70'}`}>
                                                 <UserCheck size={10} />
                                                 {isDirect ? 'DIRECT' : user.subBrokerName?.split(' ')[0]}
                                             </div>
                                         </td>
 
-                                        <td className="px-4 py-3 font-sans">
+                                        <td className="px-3 sm:px-4 py-3 font-sans">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="h-8 w-8 rounded-full bg-primary/10 text-primary text-[10px] font-semibold flex items-center justify-center">
                                                     {getInitials(user.name, user.email)}
@@ -164,10 +173,10 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center font-mono text-[10px] text-muted-foreground">
+                                        <td className="px-3 sm:px-4 py-3 text-center font-mono text-[10px] text-muted-foreground">
                                             {user.ip === '::1' || user.ip === '127.0.0.1' ? 'Localhost' : (user.ip || '-')}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-3 sm:px-4 py-3 text-center">
                                             <span className={`px-2.5 py-0.5 border rounded-full text-[9px] uppercase font-semibold tracking-wider ${user.plan === 'Gold' ? 'border-amber-500/20 text-amber-600 bg-amber-500/10' :
                                                 user.plan === 'Platinum' ? 'border-sky-500/20 text-sky-600 bg-sky-500/10' :
                                                     user.plan === 'Silver' ? 'border-slate-400/20 text-slate-600 bg-slate-400/10' :
@@ -178,17 +187,17 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                                         </td>
 
                                         {/* Start Date */}
-                                        <td className="px-4 py-3 text-center text-muted-foreground">
+                                        <td className="px-3 sm:px-4 py-3 text-center text-muted-foreground">
                                             {formatDate(user.subscriptionStart)}
                                         </td>
 
                                         {/* Expiry Date */}
-                                        <td className="px-4 py-3 text-center font-semibold text-foreground">
+                                        <td className="px-3 sm:px-4 py-3 text-center font-semibold text-foreground">
                                             {formatDate(user.subscriptionExpiry)}
                                         </td>
 
                                         {/* Validity Progress Bar */}
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 sm:px-4 py-3">
                                             <div className="flex flex-col gap-1.5 w-full min-w-[140px]">
                                                 <div className="flex justify-between items-center text-[9px] uppercase font-semibold">
                                                     <span className="text-muted-foreground">Active</span>
@@ -203,12 +212,8 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                                             </div>
                                         </td>
 
-                                        <td className="px-4 py-3 text-center">
-                                            {isLiquidated ? (
-                                                <span className="flex items-center justify-center gap-1.5 text-rose-600 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase">
-                                                    <AlertTriangle size={10} /> LIQUIDATED
-                                                </span>
-                                            ) : isBlocked ? (
+                                        <td className="px-3 sm:px-4 py-3 text-center">
+                                            {isBlocked ? (
                                                 <span className="text-muted-foreground bg-muted/30 border border-border/60 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase">BLOCKED</span>
                                             ) : (
                                                 <span className="flex items-center justify-center gap-1.5 text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase">
@@ -244,22 +249,12 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                                                             <Ban size={14} />
                                                         </button>
 
-                                                        {user.status === 'Active' && (
-                                                            <button
-                                                                title="Liquidate Positions"
-                                                                onClick={() => onAction('liquidate', user)}
-                                                                className="p-1.5 hover:bg-rose-500/10 hover:text-rose-600 text-muted-foreground rounded-md transition-all duration-200"
-                                                            >
-                                                                <ShieldAlert size={14} />
-                                                            </button>
-                                                        )}
-
                                                         <button
                                                             title="Delete User"
                                                             onClick={() => onAction('delete', user)}
                                                             className="p-1.5 hover:bg-rose-500/10 hover:text-rose-600 text-muted-foreground rounded-md transition-all duration-200"
                                                         >
-                                                            <AlertTriangle size={14} />
+                                                            <Trash2 size={14} />
                                                         </button>
                                                     </>
                                                 )}
@@ -281,8 +276,15 @@ const UserTable = ({ users, onAction, isLoading, highlightTerm }) => {
                             })
                         )}
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
+
+            {footerProps && (
+                <div className="mt-2 shrink-0">
+                    <TablePageFooter {...footerProps} />
+                </div>
+            )}
         </div>
     );
 };

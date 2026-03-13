@@ -142,7 +142,7 @@ const AddSymbol = () => {
                     <h1 className="text-2xl font-bold text-foreground">Add Market Instrument</h1>
                     <p className="text-muted-foreground text-sm mt-1">Configure new trading symbol for the platform</p>
                 </div>
-                <Button variant="outline" onClick={() => navigate('/market/symbols')} className="gap-2">
+                <Button variant="outline" onClick={() => navigate('/market/symbols')} className="gap-2 btn-cancel">
                     <X size={16} /> Cancel
                 </Button>
             </div>
@@ -265,7 +265,7 @@ const AddSymbol = () => {
                 </Card>
 
                 <div className="flex justify-end gap-3 pt-2">
-                    <Button variant="outline" type="button" onClick={() => navigate('/market/symbols')}>
+                    <Button className="btn-cancel" variant="outline" type="button" onClick={() => navigate('/market/symbols')}>
                         Cancel
                     </Button>
                     <Button type="submit" variant="primary" disabled={isSubmitting} className="min-w-[150px] gap-2">

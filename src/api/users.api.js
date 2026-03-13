@@ -28,6 +28,3 @@ export const blockUser = async (id) => {
     return client.patch(`/admin/users/${id}/block`);
 };
 
-export const liquidateUser = async (id) => {
-    return client.patch(`/admin/users/${id}/liquidate`);
-};

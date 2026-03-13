@@ -1,31 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { Settings as SettingsIcon, Shield, Headphones, CreditCard, Bell, Save, Palette, LayoutTemplate } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Headphones, CreditCard, Bell, Save } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 
 import { getAllSettings, updateBulkSettings } from '../../api/settings.api';
 import useToast from '../../hooks/useToast';
 
-import { useTheme } from '../../components/theme-provider';
 
 const Settings = () => {
-    const [activeTab, setActiveTab] = useState('admin'); // admin, support, appearance, payment, notifications
-    const { theme: currentTheme, setTheme: setCurrentTheme } = useTheme(); // Hook into global theme
+    const [activeTab, setActiveTab] = useState('support'); // support, payment, notifications
     const [settings, setSettings] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
 
     // Available Themes
-    const LIGHT_THEMES = [
-        "theme-gradient",
-    ];
-
-    const THEMES = [
-        { id: 'theme-gradient', name: 'Modern Gradient White', colors: ['#eef2f7', '#4f46e5'] },
-        { id: 'theme-moonlight', name: 'Moonlight (Premium)', colors: ['#0b1220', '#6ea8ff'] },
-    ];
-
     useEffect(() => {
         loadSettings();
     }, []);
@@ -64,11 +53,6 @@ const Settings = () => {
         }
     };
 
-    const handleThemeChange = (themeId) => {
-        setCurrentTheme(themeId);
-        // Provider handles class application and localStorage
-    };
-
     return (
         <div className="h-full flex flex-col gap-4">
             {/* Header with Tabs */}
@@ -76,15 +60,6 @@ const Settings = () => {
                 {/* Tab Navigation */}
                 <div className="flex items-center gap-1 border-b border-border overflow-x-auto no-scrollbar">
 
-                    <button
-                        onClick={() => setActiveTab('appearance')}
-                        className={clsx(
-                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 whitespace-nowrap",
-                            activeTab === 'appearance' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <Palette size={14} /> Appearance
-                    </button>
                     <button
                         onClick={() => setActiveTab('support')}
                         className={clsx(
@@ -111,96 +86,6 @@ const Settings = () => {
             <div className="flex-1 min-h-0 relative overflow-y-auto custom-scrollbar">
                 <div className="max-w-4xl mx-auto space-y-6 pb-10">
 
-                    {activeTab === 'admin' && (
-                        <Card className="terminal-panel bg-card border-border" noPadding>
-                            <div className="p-4 border-b border-border bg-muted/20 flex items-center gap-2">
-                                <Shield size={16} className="text-primary" />
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Admin Configuration</h3>
-                            </div>
-                            <div className="p-6 space-y-6">
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase">System Name</label>
-                                        <input
-                                            type="text"
-                                            value={settings.system_name || ''}
-                                            onChange={(e) => handleSettingChange('system_name', e.target.value)}
-                                            placeholder="MSPK TRADE SOLUTIONS"
-                                            className="w-full bg-secondary/20 border border-border rounded-lg px-4 py-2.5 text-xs font-mono text-foreground focus:border-primary/50 focus:outline-none"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-muted-foreground uppercase">Support Email</label>
-                                        <input
-                                            type="text"
-                                            value={settings.support_email || ''}
-                                            onChange={(e) => handleSettingChange('support_email', e.target.value)}
-                                            placeholder="support@mspktradesolutions.com"
-                                            className="w-full bg-secondary/20 border border-border rounded-lg px-4 py-2.5 text-xs font-mono text-foreground focus:border-primary/50 focus:outline-none"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="pt-4 border-t border-white/5 flex justify-end">
-                                    <Button
-                                        variant="primary"
-                                        className="gap-2 shadow-lg shadow-primary/20"
-                                        onClick={() => saveSettings(['system_name', 'support_email'])}
-                                        isLoading={isLoading}
-                                    >
-                                        <Save size={16} /> Save Changes
-                                    </Button>
-                                </div>
-                            </div>
-                        </Card>
-                    )}
-
-                    {activeTab === 'appearance' && (
-                        <Card className="terminal-panel bg-card border-border" noPadding>
-                            <div className="p-4 border-b border-border bg-muted/20 flex items-center gap-2">
-                                <Palette size={16} className="text-primary" />
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Appearance</h3>
-                            </div>
-                            <div className="p-6 space-y-8">
-                                {/* Theme Selection */}
-                                <div className="space-y-4">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                                        <LayoutTemplate size={14} /> Color Theme
-                                    </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                                        {THEMES.map((theme) => (
-                                            <button
-                                                key={theme.id}
-                                                onClick={() => handleThemeChange(theme.id)}
-                                                className={clsx(
-                                                    "p-3 rounded-xl border text-left transition-all hover:scale-[1.05] relative overflow-hidden group",
-                                                    currentTheme === theme.id
-                                                        ? "border-primary ring-1 ring-primary shadow-lg shadow-primary/20"
-                                                        : "border-border hover:border-muted-foreground/50"
-                                                )}
-                                            >
-                                                <div className="absolute inset-0 z-0">
-                                                    <div className="h-full w-full" style={{ backgroundColor: theme.colors[0] }}></div>
-                                                </div>
-                                                <div className="relative z-10 flex flex-col items-center gap-3 py-2">
-                                                    <div className="w-8 h-8 rounded-full border-2 border-white/20 shadow-xl" style={{ backgroundColor: theme.colors[1] }}></div>
-                                                <span className={clsx(
-                                                    "text-[10px] font-bold uppercase tracking-wider",
-                                                    LIGHT_THEMES.includes(theme.id) ? "text-slate-900" : "text-white"
-                                                )}>
-                                                    {theme.name}
-                                                </span>
-                                                </div>
-                                                {currentTheme === theme.id && (
-                                                    <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full shadow-glow-sm"></div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                            </div>
-                        </Card>
-                    )}
 
                     {activeTab === 'support' && (
                         <Card className="terminal-panel bg-card border-border" noPadding>
@@ -242,32 +127,11 @@ const Settings = () => {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 pt-4 border-top border-border">
-                                    <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-secondary/10">
-                                        <span className="text-xs font-bold text-foreground">Enable Live Chat</span>
-                                        <div
-                                            onClick={() => handleSettingChange('enable_live_chat', !settings.enable_live_chat)}
-                                            className={`w-8 h-4 rounded-full relative cursor-pointer border transition-colors ${settings.enable_live_chat ? 'bg-primary/20 border-primary/50' : 'bg-secondary border-border'}`}
-                                        >
-                                            <div className={`absolute top-0.5 h-2.5 w-2.5 rounded-full shadow-sm transition-all ${settings.enable_live_chat ? 'right-0.5 bg-primary' : 'left-0.5 bg-muted-foreground'}`}></div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-secondary/10">
-                                        <span className="text-xs font-bold text-foreground">Ticket System</span>
-                                        <div
-                                            onClick={() => handleSettingChange('enable_ticket_system', !settings.enable_ticket_system)}
-                                            className={`w-8 h-4 rounded-full relative cursor-pointer border transition-colors ${settings.enable_ticket_system ? 'bg-primary/20 border-primary/50' : 'bg-secondary border-border'}`}
-                                        >
-                                            <div className={`absolute top-0.5 h-2.5 w-2.5 rounded-full shadow-sm transition-all ${settings.enable_ticket_system ? 'right-0.5 bg-primary' : 'left-0.5 bg-muted-foreground'}`}></div>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div className="pt-4 border-t border-white/5 flex justify-end gap-3">
                                     <Button
                                         variant="primary"
                                         className="gap-2 shadow-lg shadow-primary/20"
-                                        onClick={() => saveSettings(['helpdesk_email', 'contact_number', 'operating_hours', 'enable_live_chat', 'enable_ticket_system'])}
+                                        onClick={() => saveSettings(['helpdesk_email', 'contact_number', 'operating_hours'])}
                                         isLoading={isLoading}
                                     >
                                         <Save size={16} /> Update Support Settings

@@ -175,7 +175,7 @@ const CreateAnnouncement = () => {
                         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.2em]">Transmission System V2.4</span>
                     </div>
                 </h1>
-                <Button variant="outline" onClick={() => navigate('/announcements/all')} className="gap-2 h-10 px-4 rounded-xl border-white/5 bg-secondary/20 hover:bg-secondary/40 text-xs shadow-inner">
+                <Button variant="outline" onClick={() => navigate('/announcements/all')} className="gap-2 h-10 px-4 rounded-xl border-white/5 bg-secondary/20 hover:bg-secondary/40 text-xs shadow-inner btn-cancel">
                     <ArrowLeft size={16} /> Cancel
                 </Button>
             </div>

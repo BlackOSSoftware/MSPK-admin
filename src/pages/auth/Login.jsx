@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../../store/authSlice';
@@ -7,14 +7,22 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { Lock, Mail, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
     const dispatch = useDispatch();
-    const { loading, error } = useSelector((state) => state.auth);
+    const navigate = useNavigate();
+    const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
 
     const loginSideImage =
         "https://images.unsplash.com/photo-1767424412548-1a1ac7f4b9bc?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/');
+        }
+    }, [isAuthenticated, navigate]);
 
     const onSubmit = async (data) => {
         try {
@@ -31,14 +39,14 @@ const Login = () => {
 
             const result = await dispatch(login({ ...data, ip: userIp, sessionId }));
             if (result.meta.requestStatus === 'fulfilled') {
-                window.location.href = '/';
+                navigate('/');
             }
         } catch (err) {
             console.error("Login failed or IP fetch error", err);
             // Proceed even if IP fetch fails (optional fallback)
             const result = await dispatch(login(data));
             if (result.meta.requestStatus === 'fulfilled') {
-                window.location.href = '/';
+                navigate('/');
             }
         }
     };

@@ -148,6 +148,11 @@ const TicketDetails = () => {
     if (!ticket) return <div className="p-8 text-center text-muted-foreground">Ticket not found</div>;
 
     const user = ticket.user || {};
+    const subject = ticket.subject || '-';
+    const ticketType = ticket.ticketType || ticket.category || '-';
+    const contactEmail = ticket.contactEmail || user.email || '';
+    const contactNumber = ticket.contactNumber || user.phone || '';
+    const contactName = user.name || contactEmail || contactNumber || 'Unknown User';
 
     return (
         <div className="h-full flex flex-col gap-4 max-w-[1600px] mx-auto w-full">
@@ -175,7 +180,7 @@ const TicketDetails = () => {
                                 {ticket.priority} Priority
                             </span>
                         </div>
-                        <p className="text-sm text-foreground/80 mt-1 font-medium">{ticket.subject}</p>
+                        <p className="text-sm text-foreground/80 mt-1 font-medium">{subject}</p>
                     </div>
                 </div>
 
@@ -233,7 +238,7 @@ const TicketDetails = () => {
                                             : 'bg-secondary/40 text-foreground border border-white/5 rounded-tl-none'
                                     )}>
                                         <div className="flex justify-between items-center mb-2 gap-8 opacity-60 text-[10px] uppercase font-bold tracking-wider">
-                                            <span>{msg.sender === 'ADMIN' ? 'Support Team' : (user.name || 'User')}</span>
+                                            <span>{msg.sender === 'ADMIN' ? 'Support Team' : contactName}</span>
                                             <span className="flex items-center gap-1"><Clock size={10} /> {format(new Date(msg.timestamp || Date.now()), 'HH:mm')}</span>
                                         </div>
 
@@ -316,18 +321,18 @@ const TicketDetails = () => {
 
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-lg font-bold text-foreground">
-                                {user.name ? user.name.substring(0, 2).toUpperCase() : '??'}
+                                {contactName ? contactName.substring(0, 2).toUpperCase() : '??'}
                             </div>
                             <div className="overflow-hidden">
-                                <h4 className="font-bold text-foreground truncate">{user.name || 'Unknown User'}</h4>
-                                <p className="text-xs text-muted-foreground truncate">{user.email || 'No Email'}</p>
+                                <h4 className="font-bold text-foreground truncate">{contactName}</h4>
+                                <p className="text-xs text-muted-foreground truncate">{contactEmail || 'No Email'}</p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <div className="flex items-center gap-3 text-xs p-2 bg-secondary/20 rounded-lg border border-white/5">
                                 <Phone size={14} className="text-muted-foreground shrink-0" />
-                                <span className="text-foreground/80 truncate">{user.phone || 'No Phone'}</span>
+                                <span className="text-foreground/80 truncate">{contactNumber || 'No Phone'}</span>
                             </div>
                             <div className="flex items-center gap-3 text-xs p-2 bg-secondary/20 rounded-lg border border-white/5">
                                 <CreditCard size={14} className="text-muted-foreground shrink-0" />
@@ -340,7 +345,7 @@ const TicketDetails = () => {
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-white/5">
-                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => window.open(`mailto:${user.email}`)}>
+                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => window.open(`mailto:${contactEmail}`)} disabled={!contactEmail}>
                                 <Mail size={12} className="mr-2" /> Send Email
                             </Button>
                         </div>
@@ -353,8 +358,12 @@ const TicketDetails = () => {
                         </h3>
                         <div className="space-y-4 text-xs">
                             <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground">Category</span>
-                                <span className="bg-secondary px-2 py-1 rounded font-medium">{ticket.category}</span>
+                                <span className="text-muted-foreground">Type</span>
+                                <span className="bg-secondary px-2 py-1 rounded font-medium">{ticketType}</span>
+                            </div>
+                            <div className="flex justify-between items-center gap-3">
+                                <span className="text-muted-foreground">Description</span>
+                                <span className="text-foreground/80 text-right max-w-[65%] truncate">{ticket.description || '-'}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-muted-foreground">IP Address</span>

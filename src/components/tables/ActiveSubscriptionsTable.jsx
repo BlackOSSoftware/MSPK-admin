@@ -1,15 +1,17 @@
 import React from 'react';
 import { Activity, Calendar, Clock, CreditCard, Globe, User } from 'lucide-react';
 import TableHeaderCell from '../ui/TableHeaderCell';
+import TablePageFooter from '../ui/TablePageFooter';
 
-const ActiveSubscriptionsTable = ({ subscriptions, highlightTerm, isLoading }) => {
+const ActiveSubscriptionsTable = ({ subscriptions, highlightTerm, isLoading, footerProps }) => {
     return (
-        <div className="terminal-panel w-full h-full overflow-hidden border border-border bg-card rounded-lg shadow-2xl relative flex flex-col">
+        <div className="terminal-panel w-full h-full min-h-[600px] border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
             {/* Table Header Backdrop */}
             <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
-            <div className="overflow-auto flex-1 custom-scrollbar">
-                <table className="w-full text-left whitespace-nowrap">
+            <div className="flex-1 overflow-hidden">
+                <div className="h-full overflow-auto custom-scrollbar">
+                    <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-muted/50 sticky top-0 z-10 uppercase tracking-widest text-[9px] font-bold text-muted-foreground border-b border-border shadow-sm backdrop-blur-md">
                         <tr>
                             <TableHeaderCell className="px-5 py-3 border-r border-border bg-muted/90 backdrop-blur-sm" icon={User} label="User Identity" />
@@ -58,10 +60,10 @@ const ActiveSubscriptionsTable = ({ subscriptions, highlightTerm, isLoading }) =
                             ))
                         ) : (
                             subscriptions.map((sub, index) => {
-                                // Calculate progress (mock logic)
-                                const total = 30; // 30 days plan
+                                // Calculate progress based on actual duration when available
+                                const total = Number(sub.totalDays) > 0 ? Number(sub.totalDays) : 30;
                                 const remaining = sub.daysRemaining;
-                                const progress = ((total - remaining) / total) * 100;
+                                const progress = Math.min(Math.max(((total - remaining) / total) * 100, 0), 100);
 
                                 const isHighlighted = highlightTerm && (
                                     (sub.user && sub.user.toLowerCase().includes(highlightTerm.toLowerCase())) ||
@@ -109,8 +111,15 @@ const ActiveSubscriptionsTable = ({ subscriptions, highlightTerm, isLoading }) =
                                 );
                             }))}
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
+
+            {footerProps && (
+                <div className="mt-2 shrink-0">
+                    <TablePageFooter {...footerProps} />
+                </div>
+            )}
         </div>
     );
 };

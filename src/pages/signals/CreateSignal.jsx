@@ -113,7 +113,7 @@ const CreateSignal = () => {
                         Post New Signal
                     </h1>
                 </div>
-                <Button variant="outline" onClick={() => navigate('/signals/all')} className="gap-2">
+                <Button variant="outline" onClick={() => navigate('/signals/all')} className="gap-2 btn-cancel">
                     <X size={16} /> Cancel
                 </Button>
             </div>
@@ -255,10 +255,10 @@ const CreateSignal = () => {
                 </Card>
 
                 <div className="flex justify-end gap-3 pt-2">
-                    <Button type="button" variant="outline" onClick={() => navigate('/signals/all')}>
+                    <Button className="btn-cancel btn-primary-soft" type="button" variant="outline" onClick={() => navigate('/signals/all')}>
                         Cancel
                     </Button>
-                    <Button type="submit" variant="primary" disabled={isSubmitting} className="min-w-[150px] gap-2 shadow-lg shadow-primary/20">
+                    <Button type="submit" variant="primary" disabled={isSubmitting} className="min-w-[150px] gap-2 shadow-lg shadow-primary/20 btn-primary-soft">
                         {isSubmitting ? 'Publishing...' : <><Target size={16} /> Publish Signal</>}
                     </Button>
                 </div>

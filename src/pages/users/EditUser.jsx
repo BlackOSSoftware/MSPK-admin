@@ -40,6 +40,7 @@ const EditUser = () => {
                 setValue('name', user.name);
                 setValue('email', user.email);
                 setValue('phone', user.phone);
+                setValue('tradingViewId', user.tradingViewId || '');
                 setValue('role', user.role);
                 setValue('clientId', user.clientId);
                 setValue('walletBalance', user.walletBalance);
@@ -79,6 +80,9 @@ const EditUser = () => {
             if (!payload.password) delete payload.password;
             if (payload.planId === "") delete payload.planId;
             if (payload.subBrokerId === "") payload.subBrokerId = null;
+            if (payload.planId && !/^[a-fA-F0-9]{24}$/.test(payload.planId)) {
+                delete payload.planId;
+            }
 
             await updateUser(userId, payload);
             toast.success("Client details updated successfully");
@@ -108,7 +112,7 @@ const EditUser = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+                    <Button className="btn-cancel" type="button" variant="outline" onClick={() => navigate(-1)}>
                         <X size={16} /> Cancel
                     </Button>
                     <Button type="submit" variant="primary" disabled={isSubmitting} className="shadow-lg shadow-primary/20">
@@ -157,6 +161,17 @@ const EditUser = () => {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Phone Number</label>
                                 <input {...register('phone')} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground" />
+                            </div>
+                        )}
+
+                        {!isAdminBeingEdited && (
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TradingView ID</label>
+                                <input
+                                    {...register('tradingViewId')}
+                                    placeholder="e.g. trader_123"
+                                    className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground"
+                                />
                             </div>
                         )}
 
@@ -210,7 +225,6 @@ const EditUser = () => {
                             <option value="Inactive">Inactive</option>
                             <option value="Suspended">Suspended</option>
                             <option value="Blocked">Blocked</option>
-                            <option value="Liquidated">Liquidated</option>
                         </select>
                     </div>
                 </Card>
@@ -225,7 +239,7 @@ const EditUser = () => {
                                 <select {...register('planId')} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground [&>option]:bg-background">
                                     <option value="">Keep Current Plan</option>
                                     {plans.map(plan => (
-                                        <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}</option>
+                                        <option key={plan._id || plan.id} value={plan._id || plan.id}>{plan.name} - ₹{plan.price}</option>
                                     ))}
                                 </select>
                                 <p className="text-[10px] text-muted-foreground">Selecting a new plan will terminate the current subscription and start a new one.</p>
