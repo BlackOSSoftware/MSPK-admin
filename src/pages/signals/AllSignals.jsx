@@ -8,10 +8,11 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import TablePageFooter from '../../components/ui/TablePageFooter';
 import useToast from '../../hooks/useToast';
 import SignalConfiguration from './SignalConfiguration';
+import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const FEED_FILTERS = ['All', 'Active', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit', 'Closed'];
 const HISTORY_FILTERS = ['All', 'Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit'];
-const SEGMENT_FILTERS = ['All', 'NSE', 'NFO', 'MCX', 'CURRENCY', 'CRYPTO'];
+const SEGMENT_FILTERS = ['All', 'NSE', 'NFO', 'MCX', 'FOREX', 'CRYPTO'];
 const DATE_FILTERS = [
     { value: 'all', label: 'All' },
     { value: 'today', label: 'Today' },
@@ -47,6 +48,26 @@ const formatInr = (value) => {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return '--';
     return numeric.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+};
+
+const mapSegmentFilterToApi = (value) => {
+    if (value === 'FOREX') return 'CURRENCY';
+    if (value === 'MCX') return 'MCX';
+    return value !== 'All' ? value : undefined;
+};
+
+const getAdminSignalSegmentLabel = (signal) => {
+    const group = getSegmentGroup(signal);
+    if (group === 'COMMODITY') return 'MCX';
+    if (group === 'CURRENCY') return 'FOREX';
+    if (group === 'FNO') return 'NFO';
+    if (group === 'EQUITY') return 'NSE';
+    return group || String(signal?.segment || signal?.exchange || 'OTHER').toUpperCase();
+};
+
+const matchesSignalSegmentFilter = (signal, filter) => {
+    if (!filter || filter === 'All') return true;
+    return getAdminSignalSegmentLabel(signal) === filter;
 };
 
 const AllSignals = () => {
@@ -126,7 +147,7 @@ const AllSignals = () => {
                 limit: pagination.limit,
                 includeReport: 1,
                 search: searchTerm || undefined,
-                segment: segmentFilter !== 'All' ? segmentFilter : undefined,
+                segment: mapSegmentFilterToApi(segmentFilter),
                 datePreset: datePreset !== 'all' ? datePreset : undefined,
                 fromDate: datePreset === 'custom' ? (fromDate || undefined) : undefined,
                 toDate: datePreset === 'custom' ? (toDate || undefined) : undefined,
@@ -139,7 +160,8 @@ const AllSignals = () => {
             }
 
             const { data } = await fetchSignals(params);
-            setRows(Array.isArray(data?.results) ? data.results : []);
+            const nextRows = Array.isArray(data?.results) ? data.results.filter((item) => matchesSignalSegmentFilter(item, segmentFilter)) : [];
+            setRows(nextRows);
 
             if (data?.stats) {
                 setStats((prev) => ({ ...prev, ...data.stats }));
@@ -567,13 +589,13 @@ const AllSignals = () => {
                                 <div className="rounded-xl border border-border bg-secondary/20 p-3">
                                     <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                                         <TrendingUp size={12} />
-                                        Net Earnings
+                                        Net Points
                                     </div>
-                                    <div className={`mt-2 text-lg font-black ${reportSummary.netInr >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {hasReportSummary ? `Rs ${formatInr(reportSummary.netInr)}` : '--'}
+                                    <div className={`mt-2 text-lg font-black ${reportSummary.netPoints >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {hasReportSummary ? reportSummary.netPoints : '--'}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        {hasReportSummary ? `Avg Rs ${formatInr(reportSummary.averageInr)} per settled signal` : 'Backend report not available on this environment'}
+                                        {hasReportSummary ? `Avg ${reportSummary.averagePoints} points per settled signal` : 'Backend report not available on this environment'}
                                     </div>
                                 </div>
 
@@ -583,10 +605,10 @@ const AllSignals = () => {
                                     </div>
                                     <div className="mt-2 flex items-center gap-2 text-[11px]">
                                         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-bold text-emerald-400">
-                                            {hasReportSummary ? `+Rs ${formatInr(reportSummary.grossProfitInr)}` : '--'}
+                                            {hasReportSummary ? `+${reportSummary.grossProfitPoints}` : '--'}
                                         </span>
                                         <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 font-bold text-red-400">
-                                            {hasReportSummary ? `Rs ${formatInr(reportSummary.grossLossInr)}` : '--'}
+                                            {hasReportSummary ? reportSummary.grossLossPoints : '--'}
                                         </span>
                                     </div>
                                     <div className="mt-2 text-[11px] text-muted-foreground">
@@ -598,11 +620,11 @@ const AllSignals = () => {
                                     <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                                         Current Range
                                     </div>
-                                    <div className={`mt-2 text-lg font-black ${reportSummary.netInr >= 0 ? 'text-sky-400' : 'text-red-400'}`}>
-                                        {hasReportSummary ? `Rs ${formatInr(reportSummary.netInr)}` : '--'}
+                                    <div className={`mt-2 text-lg font-black ${reportSummary.netPoints >= 0 ? 'text-sky-400' : 'text-red-400'}`}>
+                                        {hasReportSummary ? reportSummary.netPoints : '--'}
                                     </div>
                                     <div className="mt-1 text-[11px] text-muted-foreground">
-                                        {hasReportSummary ? 'Estimated earnings for selected date filter' : 'Deploy backend update to get range earnings'}
+                                        {hasReportSummary ? 'Estimated points for selected date filter' : 'Deploy backend update to get range points'}
                                     </div>
                                 </div>
 

@@ -144,6 +144,16 @@ const getImpactScore = (impact) => {
 };
 
 const EventDetailsModal = ({ event, onClose }) => {
+    useEffect(() => {
+        if (!event) return undefined;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [event]);
+
     if (!event) return null;
 
     const impactMeta = IMPACT_LEVELS.find((item) => item.id === String(event.impact || 'none').toLowerCase()) || IMPACT_LEVELS[3];
@@ -216,14 +226,14 @@ const EventDetailsModal = ({ event, onClose }) => {
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[1100] overflow-y-auto bg-black/80 p-2 backdrop-blur-sm animate-in fade-in duration-200 sm:p-4"
+            className="fixed inset-0 z-[1100] flex items-center justify-center overflow-hidden bg-black/80 p-2 backdrop-blur-sm animate-in fade-in duration-200 sm:p-4"
             onClick={onClose}
         >
             <div
-                className="mx-auto my-3 flex min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl sm:my-6 sm:rounded-3xl"
+                className="flex min-h-0 max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl sm:max-h-[min(80vh,760px)] sm:rounded-3xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="border-b border-border bg-muted/20 px-4 py-4 sm:px-6 sm:py-5">
+                <div className="shrink-0 border-b border-border bg-muted/20 px-4 py-4 sm:px-6 sm:py-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="space-y-2 min-w-0">
                             <div className={clsx("inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em]", impactMeta.text, "border-current/20 bg-current/10")}>
@@ -246,7 +256,7 @@ const EventDetailsModal = ({ event, onClose }) => {
                     </div>
                 </div>
 
-                <div className="overflow-y-auto px-3 py-3 sm:px-6 sm:py-6">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-5">
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
                         <div className="rounded-2xl border border-border bg-muted/20 p-4">
                             <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Actual</div>
@@ -291,7 +301,7 @@ const EventDetailsModal = ({ event, onClose }) => {
                     </div>
                 </div>
 
-                <div className="border-t border-border bg-muted/10 px-4 py-3 sm:px-6">
+                <div className="shrink-0 border-t border-border bg-muted/10 px-4 py-3 sm:px-6">
                     <div className="text-xs text-muted-foreground">
                         Tap outside the modal or use Close to dismiss.
                     </div>

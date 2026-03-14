@@ -188,9 +188,9 @@ const Sidebar = ({ isOpen, onClose }) => {
             title: 'Management',
             items: [
                 { name: 'All Users', path: '/users/all', icon: Users },
+                { name: 'Sub Brokers', path: '/brokers/all', icon: Users },
                 { name: 'Plans', path: '/plans/all', icon: CreditCard },
                 { name: 'Subscriptions', path: '/subscriptions/all', icon: RefreshCcw },
-                { name: 'Sub Brokers', path: '/brokers/all', icon: Users },
             ],
         },
         {
@@ -203,6 +203,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     submenu: [
                         { name: 'Live Market', path: '/market/data', icon: Activity },
                         { name: 'Script Master', path: '/market/symbols', icon: Settings },
+                        { name: 'Default Watchlist', path: '/market/default-watchlist', icon: LayoutDashboard },
                     ],
                 },
             ],
@@ -211,8 +212,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             title: 'Support',
             items: [
                 { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
-                { name: 'Web Enquiries', path: '/enquiries/all', icon: Mail },
                 { name: 'Plan Enquiries', path: '/enquiries/plans', icon: CreditCard },
+                { name: 'Web Enquiries', path: '/enquiries/all', icon: Mail },
             ],
         },
         {
@@ -254,12 +255,14 @@ const Sidebar = ({ isOpen, onClose }) => {
     const railLinks = [
         { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, isActive: (p) => p === '/' || p.startsWith('/dashboard') },
         { label: 'Users', to: '/users/all', icon: Users, isActive: (p) => p.startsWith('/users') },
+        { label: 'Brokers', to: '/brokers/all', icon: Users, isActive: (p) => p.startsWith('/brokers') },
         { label: 'Plans', to: '/plans/all', icon: CreditCard, isActive: (p) => p.startsWith('/plans') },
         { label: 'Subscriptions', to: '/subscriptions/all', icon: RefreshCcw, isActive: (p) => p.startsWith('/subscriptions') },
         { label: 'Signals', to: '/signals/all', icon: Radio, isActive: (p) => p.startsWith('/signals') },
         { label: 'Market', to: '/market/data', icon: Activity, isActive: (p) => p.startsWith('/market') },
         { label: 'Tickets', to: '/tickets/all', icon: MessageSquare, isActive: (p) => p.startsWith('/tickets') },
-        { label: 'Enquiries', to: '/enquiries/all', icon: Mail, isActive: (p) => p.startsWith('/enquiries') },
+        { label: 'Plan Leads', to: '/enquiries/plans', icon: CreditCard, isActive: (p) => p.startsWith('/enquiries/plans') },
+        { label: 'Web Leads', to: '/enquiries/all', icon: Mail, isActive: (p) => p.startsWith('/enquiries') && !p.startsWith('/enquiries/plans') },
         { label: 'News', to: '/announcements/all', icon: Megaphone, isActive: (p) => p.startsWith('/announcements') },
         { label: 'Blogs', to: '/blogs/all', icon: FileText, isActive: (p) => p.startsWith('/blogs') },
     ];

@@ -16,6 +16,7 @@ import {
 import { clsx } from 'clsx';
 import { socket } from '../../api/socket';
 import TableHeaderCell from '../ui/TableHeaderCell';
+import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const CLOSED_STATUSES = new Set(['Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit']);
 
@@ -117,6 +118,15 @@ const isTargetHit = (targetValue, price, isBuy) => {
     return isBuy ? price >= target : price <= target;
 };
 
+const getAdminSignalSegmentLabel = (signal) => {
+    const group = getSegmentGroup(signal);
+    if (group === 'COMMODITY') return 'MCX';
+    if (group === 'CURRENCY') return 'FOREX';
+    if (group === 'FNO') return 'NFO';
+    if (group === 'EQUITY') return 'NSE';
+    return group || String(signal?.segment || signal?.exchange || 'OTHER').toUpperCase();
+};
+
 const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }) => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [ltpData, setLtpData] = useState({});
@@ -214,6 +224,8 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const isStoplossHit = signal.status === 'Stoploss Hit';
                                 const isTargetOutcome = signal.status === 'Target Hit';
                                 const isPartialOutcome = signal.status === 'Partial Profit Book';
+                                const segmentLabel = getAdminSignalSegmentLabel(signal);
+                                const metaBadges = [segmentLabel, signal.timeframe].filter(Boolean);
                                 const highlightMatch =
                                     highlightTerm &&
                                     `${signal.symbol} ${signal.uniqueId || ''} ${signal.webhookId || ''}`
@@ -243,7 +255,7 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                             </span>
                                                         </div>
                                                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                                            {[signal.segment, signal.category, signal.timeframe].filter(Boolean).map((item) => (
+                                                            {metaBadges.map((item) => (
                                                                 <span key={`${signalId}-${item}`} className="rounded-md border border-border/70 bg-muted/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
                                                                     {item}
                                                                 </span>

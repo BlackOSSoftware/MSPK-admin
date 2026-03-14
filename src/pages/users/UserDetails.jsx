@@ -6,6 +6,7 @@ import {
     Bell,
     CalendarClock,
     CheckCircle2,
+    ChevronRight,
     CreditCard,
     Edit,
     Globe,
@@ -96,6 +97,18 @@ const getPlanTone = (planStatus) => {
     return planStatus === 'Active'
         ? 'border-primary/20 bg-primary/10 text-primary'
         : 'border-border/70 bg-secondary/30 text-muted-foreground';
+};
+
+const getReferralTone = (status) => {
+    switch (status) {
+        case 'Blocked':
+            return 'border-rose-500/20 bg-rose-500/10 text-rose-500';
+        case 'Inactive':
+        case 'Suspended':
+            return 'border-amber-500/20 bg-amber-500/10 text-amber-500';
+        default:
+            return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500';
+    }
 };
 
 const getProgressState = (startValue, endValue) => {
@@ -458,6 +471,91 @@ const UserDetails = () => {
                             <InfoRow icon={MapPin} label="Location" value={formatLocation(user.profile)} />
                             <InfoRow icon={Smartphone} label="Current Device" value={user.currentDeviceId || 'Not captured'} mono />
                             <InfoRow icon={CheckCircle2} label="Verification" value={verificationSummary} />
+                        </div>
+                    </Card>
+
+                    <Card className="xl:col-span-2">
+                        <div className="flex items-center justify-between mb-4 gap-3">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Referrals</p>
+                                <h2 className="text-lg font-bold text-foreground mt-1">Referral Network</h2>
+                            </div>
+                            <div className="rounded-full border border-border/70 bg-secondary/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                {user?.referredUsers?.length || 0} Referred Users
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-semibold">Referral Code</p>
+                                <p className="mt-2 text-lg font-mono font-bold text-foreground">{user.referralCode || 'Not available'}</p>
+
+                                <div className="mt-4">
+                                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-semibold">Referred By</p>
+                                    {user.referredByUser ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/users/details?id=${user.referredByUser.id}`)}
+                                            className="mt-2 w-full rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-foreground">{user.referredByUser.name}</p>
+                                                    <p className="mt-1 break-all text-xs text-muted-foreground">{user.referredByUser.email || 'No email'}</p>
+                                                    <p className="mt-1 text-xs text-muted-foreground">{user.referredByUser.phone || 'No phone'}</p>
+                                                    <p className="mt-2 font-mono text-xs text-foreground">{user.referredByUser.clientId || 'No client ID'}</p>
+                                                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                                                        Referral Code: {user.referredByUser.referralCode || 'Not available'}
+                                                    </p>
+                                                </div>
+                                                <ChevronRight size={16} className="mt-1 shrink-0 text-muted-foreground" />
+                                            </div>
+                                        </button>
+                                    ) : (
+                                        <div className="mt-2 rounded-2xl border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm text-muted-foreground">
+                                            This user was not registered using another user's referral code.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-semibold">Users Referred By This User</p>
+                                <div className="mt-3 space-y-3">
+                                    {(user?.referredUsers || []).length > 0 ? (
+                                        user.referredUsers.map((referredUser) => (
+                                            <button
+                                                key={referredUser.id}
+                                                type="button"
+                                                onClick={() => navigate(`/users/details?id=${referredUser.id}`)}
+                                                className="w-full rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <p className="text-sm font-bold text-foreground">{referredUser.name}</p>
+                                                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] ${getReferralTone(referredUser.status)}`}>
+                                                                {referredUser.status}
+                                                            </span>
+                                                        </div>
+                                                        <p className="mt-1 break-all text-xs text-muted-foreground">{referredUser.email || 'No email'}</p>
+                                                        <p className="mt-1 text-xs text-muted-foreground">{referredUser.phone || 'No phone'}</p>
+                                                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                                                            <span className="font-mono text-foreground">{referredUser.clientId || 'No client ID'}</span>
+                                                            <span className="text-muted-foreground">Joined {formatDate(referredUser.joinDate, true)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={16} className="mt-1 shrink-0 text-muted-foreground" />
+                                                </div>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="rounded-2xl border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm text-muted-foreground">
+                                            No users have registered using this user's referral code yet.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </Card>
 

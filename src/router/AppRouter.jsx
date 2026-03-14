@@ -43,6 +43,7 @@ import GlobalAccess from '../pages/signals/GlobalAccess';
 import ManageSymbols from '../pages/market/ManageSymbols';
 import AddSymbol from '../pages/market/AddSymbol';
 import EditSymbol from '../pages/market/EditSymbol';
+import DefaultWatchlist from '../pages/market/DefaultWatchlist';
 
 // Support
 import AllTickets from '../pages/tickets/AllTickets';
@@ -137,6 +138,7 @@ const AppRouter = () => {
                     {/* Market Data */}
                     {/* Market Data */}
                     <Route path="market/symbols" element={<ManageSymbols />} />
+                    <Route path="market/default-watchlist" element={<DefaultWatchlist />} />
                     <Route path="market/add" element={<AddSymbol />} />
                     <Route path="market/edit" element={<EditSymbol />} />
                     <Route path="market/data" element={<MarketData />} />
