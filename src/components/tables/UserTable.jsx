@@ -190,18 +190,18 @@ const UserTable = ({
 
             <div className="hidden overflow-visible md:block">
                 <div className="overflow-x-auto overflow-y-visible rounded-b-2xl [overscroll-behavior-x:contain] [overscroll-behavior-y:auto] touch-pan-y">
-                    <table className="w-full min-w-[860px] table-fixed text-left lg:min-w-[920px]">
+                    <table className="w-full min-w-[1060px] table-fixed text-left lg:min-w-[1140px]">
                         <colgroup>
-                            <col className="w-[11%]" />
-                            <col className="w-[11%]" />
-                            <col className="w-[20%]" />
+                            <col className="w-[15%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[18%]" />
                             <col className="w-[11%]" />
                             <col className="w-[9%]" />
-                            <col className="w-[10%]" />
-                            <col className="w-[10%]" />
-                            <col className="w-[14%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[13%]" />
                             <col className="w-[8%]" />
-                            <col className="w-[12%]" />
+                            <col className="w-[14%]" />
                         </colgroup>
                         <thead className="sticky top-0 z-10 border-b border-border/70 bg-gradient-to-r from-card via-card/95 to-primary/5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground backdrop-blur-md">
                             <tr>
@@ -279,7 +279,10 @@ const UserTable = ({
                                             className={`group relative transition-all duration-300 ${isHighlighted ? 'bg-primary/10' : 'hover:bg-primary/5'} hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]`}
                                         >
                                             <td className="px-3 py-3 font-mono text-[11px] font-semibold text-foreground/90 sm:px-4">
-                                                <span className="inline-flex max-w-full items-center gap-2 truncate transition-transform duration-300 group-hover:translate-x-1">
+                                                <span
+                                                    className="inline-flex items-center gap-2 whitespace-nowrap transition-transform duration-300 group-hover:translate-x-1"
+                                                    title={user.clientId || '-'}
+                                                >
                                                     {user.clientId}
                                                 </span>
                                             </td>
@@ -355,7 +358,7 @@ const UserTable = ({
                                             </td>
 
                                             <td className="px-3 py-3 text-center">
-                                                <div className="flex flex-wrap items-center justify-center gap-1.5 opacity-80 transition-opacity group-hover:opacity-100">
+                                                <div className="flex flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap opacity-80 transition-opacity group-hover:opacity-100">
                                                     {user.role !== 'admin' && (
                                                         <>
                                                             <button

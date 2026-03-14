@@ -47,6 +47,7 @@ import EditSymbol from '../pages/market/EditSymbol';
 // Support
 import AllTickets from '../pages/tickets/AllTickets';
 import AllEnquiries from '../pages/enquiries/AllEnquiries';
+import PlanEnquiries from '../pages/enquiries/PlanEnquiries';
 import CreateTicket from '../pages/tickets/CreateTicket';
 import TicketDetails from '../pages/tickets/TicketDetails';
 import { ReplyTicket } from '../pages/tickets/TicketPages'; // Keep others if needed
@@ -145,6 +146,7 @@ const AppRouter = () => {
                     {/* Support / Tickets */}
                     <Route path="tickets/all" element={<AllTickets />} />
                     <Route path="enquiries/all" element={<AllEnquiries />} />
+                    <Route path="enquiries/plans" element={<PlanEnquiries />} />
                     {/* <Route path="tickets/create" element={<CreateTicket />} /> */}
                     <Route path="tickets/details" element={<TicketDetails />} />
                     <Route path="tickets/reply" element={<ReplyTicket />} />

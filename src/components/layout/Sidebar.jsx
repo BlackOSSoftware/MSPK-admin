@@ -212,6 +212,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             items: [
                 { name: 'Support Tickets', path: '/tickets/all', icon: MessageSquare },
                 { name: 'Web Enquiries', path: '/enquiries/all', icon: Mail },
+                { name: 'Plan Enquiries', path: '/enquiries/plans', icon: CreditCard },
             ],
         },
         {
