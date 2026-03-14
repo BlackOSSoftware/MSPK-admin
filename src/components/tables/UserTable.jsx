@@ -43,6 +43,19 @@ const UserTable = ({
         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
+    const getBrokerMeta = (user) => {
+        const rawId = String(user?.subBrokerId || '').trim();
+        const rawName = String(user?.subBrokerName || '').trim();
+        const normalizedName = rawName.toLowerCase();
+        const hasBrokerName = Boolean(rawName) && normalizedName !== 'direct client' && normalizedName !== 'direct';
+        const isDirect = !hasBrokerName && (!rawId || rawId === 'DIRECT');
+
+        return {
+            isDirect,
+            label: isDirect ? 'DIRECT' : (rawName || 'Broker'),
+        };
+    };
+
     const getDisplayIp = (user) => {
         const ipValue = user?.lastLoginIp || '';
         if (!ipValue) return '-';
@@ -113,7 +126,7 @@ const UserTable = ({
                 ) : (
                     users.map((user) => {
                         const isBlocked = user.status === 'Blocked';
-                        const isDirect = user.subBrokerId === 'DIRECT';
+                        const brokerMeta = getBrokerMeta(user);
 
                         return (
                             <div key={user.id} className="overflow-hidden rounded-2xl border border-border/70 bg-card/70 p-2.5 shadow-sm min-[360px]:p-3">
@@ -142,8 +155,8 @@ const UserTable = ({
                                                 <span className="truncate">{user.phone || '-'}</span>
                                             </div>
                                             <div className="flex flex-wrap gap-2">
-                                                <span className={`max-w-full truncate rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase min-[360px]:text-[9px] ${isDirect ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border/70 bg-muted/30 text-muted-foreground'}`}>
-                                                    {isDirect ? 'Direct' : user.subBrokerName || 'Broker'}
+                                                <span className={`max-w-full truncate rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase min-[360px]:text-[9px] ${brokerMeta.isDirect ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border/70 bg-muted/30 text-muted-foreground'}`}>
+                                                    {brokerMeta.label}
                                                 </span>
                                                 <span className="rounded-full border border-border/70 bg-muted/30 px-2 py-0.5 text-[8px] font-semibold uppercase text-muted-foreground min-[360px]:text-[9px]">
                                                     {user.plan || 'Free'}
@@ -253,7 +266,7 @@ const UserTable = ({
                             ) : (
                                 users.map((user) => {
                                     const isBlocked = user.status === 'Blocked';
-                                    const isDirect = user.subBrokerId === 'DIRECT';
+                                    const brokerMeta = getBrokerMeta(user);
                                     const { percentage, daysText, daysColor, progressColor } = getSubscriptionMeta(user);
                                     const isHighlighted = highlightTerm && (
                                         (user.name && user.name.toLowerCase().includes(highlightTerm.toLowerCase())) ||
@@ -273,11 +286,11 @@ const UserTable = ({
 
                                             <td className="px-3 py-3 sm:px-4">
                                                 <div
-                                                    className={`flex max-w-full w-fit items-center gap-1.5 truncate rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${isDirect ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border/70 bg-muted/40 text-muted-foreground'}`}
-                                                    title={isDirect ? 'DIRECT' : user.subBrokerName || 'Broker'}
+                                                    className={`flex max-w-full w-fit items-center gap-1.5 truncate rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${brokerMeta.isDirect ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border/70 bg-muted/40 text-muted-foreground'}`}
+                                                    title={brokerMeta.label}
                                                 >
                                                     <UserCheck size={10} />
-                                                    <span className="truncate">{isDirect ? 'DIRECT' : user.subBrokerName?.split(' ')[0]}</span>
+                                                    <span className="truncate">{brokerMeta.isDirect ? 'DIRECT' : brokerMeta.label.split(' ')[0]}</span>
                                                 </div>
                                             </td>
 
