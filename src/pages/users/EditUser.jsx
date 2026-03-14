@@ -86,7 +86,9 @@ const EditUser = () => {
                 setValue('status', user.status);
 
                 // Handle optional ID population (check if populated object or raw ID)
-                const sbId = user.subBrokerId && typeof user.subBrokerId === 'object' ? user.subBrokerId.id : user.subBrokerId;
+                const sbId = user.subBrokerId && typeof user.subBrokerId === 'object'
+                    ? (user.subBrokerId.id || user.subBrokerId._id)
+                    : user.subBrokerId;
                 setValue('subBrokerId', sbId || '');
 
                 // Determine plan (backend returns simplified plan name in some views, but we need ID for edit)
@@ -480,9 +482,12 @@ const EditUser = () => {
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign Sub-Broker</label>
                                 <select {...register('subBrokerId')} className="w-full bg-secondary/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:border-primary/50 focus:outline-none transition-colors text-foreground [&>option]:bg-background">
                                     <option value="">Direct Client (No Sub-Broker)</option>
-                                    {subBrokers.map(sb => (
-                                        <option key={sb.id} value={sb.id}>{sb.name} ({sb.clientId})</option>
-                                    ))}
+                                    {subBrokers.map(sb => {
+                                        const subBrokerValue = sb.id || sb._id;
+                                        return (
+                                            <option key={subBrokerValue} value={subBrokerValue}>{sb.name} ({sb.clientId})</option>
+                                        );
+                                    })}
                                 </select>
                             </div>
                         </div>

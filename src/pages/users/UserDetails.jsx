@@ -58,7 +58,8 @@ const formatCurrency = (value) => {
     }).format(numeric)}`;
 };
 
-const formatIp = (value) => {
+const formatIp = (...values) => {
+    const value = values.find((item) => typeof item === 'string' && item.trim());
     if (!value) return 'Not captured';
     if (value === '::1' || value === '127.0.0.1') return 'Localhost';
     return value;
@@ -317,7 +318,7 @@ const UserDetails = () => {
                                     </div>
                                     <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 backdrop-blur">
                                         <p className="text-[10px] uppercase tracking-[0.18em] text-slate-300/70 font-semibold">Last Login IP</p>
-                                        <p className="mt-1 text-sm text-white break-all">{formatIp(user.ip)}</p>
+                                        <p className="mt-1 text-sm text-white break-all">{formatIp(user.lastLoginIp, user.ipAddress, user.ip, user.last_ip)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -405,7 +406,7 @@ const UserDetails = () => {
                             <InfoRow icon={Phone} label="Phone" value={user.phone || 'Not provided'} mono />
                             <InfoRow icon={User2} label="TradingView ID" value={user.tradingViewId || 'Not linked'} mono />
                             <InfoRow icon={Activity} label="Client ID" value={user.clientId || user.id} mono />
-                            <InfoRow icon={Globe} label="Last Login IP" value={formatIp(user.ip)} mono />
+                            <InfoRow icon={Globe} label="Last Login IP" value={formatIp(user.lastLoginIp, user.ipAddress, user.ip, user.last_ip)} mono />
                             <InfoRow icon={CalendarClock} label="Joined On" value={formatDate(user.joinDate, true)} />
                         </div>
                     </Card>

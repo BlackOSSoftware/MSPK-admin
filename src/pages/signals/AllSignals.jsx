@@ -242,6 +242,18 @@ const AllSignals = () => {
             return;
         }
 
+        if (action === 'reopen') {
+            setPendingAction({ type: 'reopen', signal });
+            setDialogConfig({
+                title: 'Return Signal To Active',
+                message: `Return ${signal.symbol} to Active? This will clear exit time, exit price, points, and close outcome so the signal becomes live again.`,
+                variant: 'primary',
+                confirmText: 'Return Active',
+            });
+            setDialogOpen(true);
+            return;
+        }
+
         if (action === 'updateStatus') {
             try {
                 const { updateSignal } = await import('../../api/signals.api');
@@ -269,6 +281,12 @@ const AllSignals = () => {
                 const { updateSignal } = await import('../../api/signals.api');
                 await updateSignal(pendingAction.signal.id, { status: 'Closed' });
                 toast.success('Signal closed');
+            }
+
+            if (pendingAction.type === 'reopen') {
+                const { updateSignal } = await import('../../api/signals.api');
+                await updateSignal(pendingAction.signal.id, { status: 'Active' });
+                toast.success('Signal returned to Active');
             }
 
             setDialogOpen(false);

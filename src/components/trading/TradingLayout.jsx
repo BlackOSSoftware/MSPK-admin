@@ -16,6 +16,7 @@ import Button from '../ui/Button';
 import { socket } from '../../api/socket';
 import { getSymbols, updateSymbol } from '../../api/market.api';
 import { mapStrategyToIndicators } from '../../utils/strategyMapping';
+import { getSegmentGroup } from '../../utils/segmentGroups';
 import chartCache from '../../utils/ChartDataCache';
 
 const TradingLayout = ({ hideCharts = false }) => {
@@ -250,7 +251,7 @@ const TradingLayout = ({ hideCharts = false }) => {
 
             // Group for Watchlist
             const grouped = raw.reduce((acc, s) => {
-                const cat = s.segment || 'OTHER';
+                const cat = getSegmentGroup(s);
                 if (!acc[cat]) acc[cat] = [];
 
                 const price = parseFloat(s.lastPrice || 0);
@@ -871,9 +872,9 @@ const TradingLayout = ({ hideCharts = false }) => {
                                             <span className="text-xl font-black tracking-tight text-foreground">
                                                 {mergedLive?.symbol || 'Select a Symbol'}
                                             </span>
-                                            {mergedLive?.segment && (
+                                            {(mergedLive?.segment || mergedLive?.segmentGroup) && (
                                                 <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary">
-                                                    {mergedLive.segment}
+                                                    {getSegmentGroup(mergedLive)}
                                                 </span>
                                             )}
                                         </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FileText, Save, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,6 +11,11 @@ const toArray = (value) => {
     if (!value) return [];
     if (typeof value === 'string') return value.split(',').map((v) => v.trim()).filter(Boolean);
     return [];
+};
+
+const buildObjectPreview = (file) => {
+    if (!(file instanceof File)) return '';
+    return URL.createObjectURL(file);
 };
 
 const CreateBlog = () => {
@@ -40,11 +45,28 @@ const CreateBlog = () => {
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/v1';
     const mediaBase = apiBase.replace(/\/v1\/?$/, '');
 
-    const resolveMedia = (path) => {
+    const resolveMedia = useCallback((path) => {
         if (!path) return '';
         if (path.startsWith('http://') || path.startsWith('https://')) return path;
         return `${mediaBase}/${path.replace(/^\/+/, '')}`;
-    };
+    }, [mediaBase]);
+
+    const heroPreview = useMemo(() => {
+        if (form.heroImage) return buildObjectPreview(form.heroImage);
+        return form.heroImageUrl || '';
+    }, [form.heroImage, form.heroImageUrl]);
+
+    const metaPreview = useMemo(() => {
+        if (form.metaImage) return buildObjectPreview(form.metaImage);
+        return form.metaImageUrl || '';
+    }, [form.metaImage, form.metaImageUrl]);
+
+    useEffect(() => {
+        return () => {
+            if (form.heroImage && heroPreview.startsWith('blob:')) URL.revokeObjectURL(heroPreview);
+            if (form.metaImage && metaPreview.startsWith('blob:')) URL.revokeObjectURL(metaPreview);
+        };
+    }, [form.heroImage, form.metaImage, heroPreview, metaPreview]);
 
     useEffect(() => {
         const loadBlogs = async () => {
@@ -86,7 +108,7 @@ const CreateBlog = () => {
             }
         };
         loadBlog();
-    }, [id, isEditing, navigate]);
+    }, [id, isEditing, navigate, resolveMedia]);
 
     const relatedOptions = useMemo(() => availableBlogs.filter((b) => b._id !== id), [availableBlogs, id]);
 
@@ -229,9 +251,24 @@ const CreateBlog = () => {
                             <ImageIcon size={14} />
                             Hero Image
                         </div>
-                        {form.heroImageUrl && (
-                            <img src={form.heroImageUrl} alt="Hero" className="w-full rounded-xl border border-border object-cover max-h-56" />
-                        )}
+                        {heroPreview ? (
+                            <div className="flex items-start gap-3 rounded-2xl border border-border bg-background/40 p-3">
+                                <img
+                                    src={heroPreview}
+                                    alt="Hero preview"
+                                    className="h-20 w-20 shrink-0 rounded-xl border border-border object-cover sm:h-24 sm:w-24"
+                                />
+                                <div className="min-w-0 space-y-1">
+                                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</div>
+                                    <div className="truncate text-xs text-foreground">
+                                        {form.heroImage?.name || 'Current hero image'}
+                                    </div>
+                                    <div className="text-[11px] text-muted-foreground">
+                                        Compact preview for quick check before save
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
                         <input
                             type="file"
                             accept="image/*"
@@ -307,9 +344,24 @@ const CreateBlog = () => {
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-muted-foreground">Meta Image</label>
-                            {form.metaImageUrl && (
-                                <img src={form.metaImageUrl} alt="Meta" className="mt-2 w-full rounded-xl border border-border object-cover max-h-44" />
-                            )}
+                            {metaPreview ? (
+                                <div className="mt-2 flex items-start gap-3 rounded-2xl border border-border bg-background/40 p-3">
+                                    <img
+                                        src={metaPreview}
+                                        alt="Meta preview"
+                                        className="h-20 w-20 shrink-0 rounded-xl border border-border object-cover sm:h-24 sm:w-24"
+                                    />
+                                    <div className="min-w-0 space-y-1">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</div>
+                                        <div className="truncate text-xs text-foreground">
+                                            {form.metaImage?.name || 'Current meta image'}
+                                        </div>
+                                        <div className="text-[11px] text-muted-foreground">
+                                            Small responsive preview with current selection
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
                             <input
                                 type="file"
                                 accept="image/*"

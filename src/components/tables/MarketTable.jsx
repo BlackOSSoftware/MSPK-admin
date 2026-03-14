@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { socket } from '../../api/socket';
 import TableHeaderCell from '../ui/TableHeaderCell';
+import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor, isLoading }) => {
     const [ltpData, setLtpData] = useState({});
@@ -90,7 +91,8 @@ const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor,
                         ) : (
                             symbols.map((symbol, index) => {
                                 const livePrice = ltpData[symbol.symbol]?.price ?? symbol.ltp ?? symbol.lastPrice ?? 0;
-                                const isHighPrecision = ['CURRENCY', 'FOREX', 'CRYPTO', 'BINANCE'].includes(symbol.segment?.toUpperCase()) || symbol.exchange === 'FOREX';
+                                const segmentGroup = getSegmentGroup(symbol);
+                                const isHighPrecision = ['CURRENCY', 'CRYPTO'].includes(segmentGroup) || symbol.exchange === 'FOREX';
                                 const precision = isHighPrecision ? 5 : 2;
                                 const hasSymbolId = Boolean(symbol.symbolId);
                                 const isGenerating = generatingIdFor === symbol._id;
@@ -135,7 +137,10 @@ const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor,
                                             </span>
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border text-muted-foreground">
-                                            {symbol.segment}
+                                            <div>{segmentGroup}</div>
+                                            {symbol.rawSegment && symbol.rawSegment !== segmentGroup && (
+                                                <div className="mt-1 text-[9px] text-muted-foreground/70">{symbol.rawSegment}</div>
+                                            )}
                                         </td>
                                         <td className="px-5 py-3 text-center border-r border-border font-bold text-primary font-mono">
                                             {symbol.lotSize}

@@ -3,6 +3,7 @@ import { Search, X, Plus, Check, TrendingUp, Globe, Bitcoin, Box, Activity } fro
 import { getSymbols, updateSymbol } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 import SymbolLogo from './SymbolLogo';
+import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const TABS = [
     { id: 'ALL', label: 'All' },
@@ -16,11 +17,11 @@ const TABS = [
 const mapSegmentToTab = (segment) => {
     if (!segment) return 'OTHERS';
     const s = segment.toUpperCase();
-    if (s.includes('CRYPTO') || s.includes('BINANCE')) return 'CRYPTO';
-    if (s.includes('FUT') || s.includes('MCX') || s.includes('DERIVATIVE')) return 'FUTURES';
-    if (s.includes('FOREX') || s.includes('CUR') || s.includes('FX')) return 'FOREX';
-    if (s.includes('EQ') || s.includes('NSE') || s.includes('BSE')) return 'STOCKS';
-    if (s.includes('INDEX') || s.includes('INDICES')) return 'INDICES';
+    if (s === 'CRYPTO') return 'CRYPTO';
+    if (s === 'COMMODITY' || s === 'FNO') return 'FUTURES';
+    if (s === 'CURRENCY') return 'FOREX';
+    if (s === 'EQUITY') return 'STOCKS';
+    if (s === 'INDICES') return 'INDICES';
     return 'OTHERS';
 };
 
@@ -48,7 +49,7 @@ const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
 
         // 1. Tab Filter
         if (activeTab !== 'ALL') {
-            result = result.filter(s => mapSegmentToTab(s.segment) === activeTab);
+            result = result.filter(s => mapSegmentToTab(getSegmentGroup(s)) === activeTab);
         }
 
         // 2. Search Filter
@@ -92,7 +93,7 @@ const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
                 else toast.info(`${symbol.symbol} removed from Watchlist`);
 
                 if (onSelect) onSelect(symbol); // Trigger sidebar refresh if needed
-            } catch (err) {
+            } catch {
                 toast.error("Failed to update watchlist");
                 loadSymbols(); // Revert
             }
@@ -200,15 +201,15 @@ const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
 
                                         {/* Exchange Badge */}
                                         <div className="w-24 text-right flex items-center justify-end">
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-muted-foreground border border-border/50 uppercase">
-                                                {sym.segment?.split('-')[0] || 'OTC'}
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-muted-foreground border border-border/50 uppercase">
+                                                {sym.exchange || 'OTC'}
                                             </span>
                                         </div>
 
                                         {/* Type/Segment Badge */}
                                         <div className="w-24 text-center hidden sm:block">
                                             <span className="text-[10px] text-muted-foreground font-medium uppercase truncate px-2">
-                                                {mapSegmentToTab(sym.segment)}
+                                                {getSegmentGroup(sym)}
                                             </span>
                                         </div>
 

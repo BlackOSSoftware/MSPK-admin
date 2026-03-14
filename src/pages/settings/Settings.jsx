@@ -1,27 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { clsx } from 'clsx';
-import { Bell, CreditCard, Mail, MessageCircle, Save, Send, Smartphone } from 'lucide-react';
+import { Bell, CreditCard, ExternalLink, KeyRound, Mail, MessageCircle, Save, Send, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 
 import { getAllSettings, updateBulkSettings } from '../../api/settings.api';
+import { getLoginUrl } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 
 
 const Settings = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('notifications'); // notifications
+    const [activeTab, setActiveTab] = useState('notifications');
     const [settings, setSettings] = useState({});
     const [isLoading, setIsLoading] = useState(false);
+    const [isLaunchingKite, setIsLaunchingKite] = useState(false);
     const toast = useToast();
 
     // Available Themes
-    useEffect(() => {
-        loadSettings();
-    }, []);
-
-    const loadSettings = async () => {
+    const loadSettings = useCallback(async () => {
         setIsLoading(true);
         try {
             const data = await getAllSettings();
@@ -32,7 +30,11 @@ const Settings = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        loadSettings();
+    }, [loadSettings]);
 
     const handleSettingChange = (key, value) => {
         setSettings(prev => ({ ...prev, [key]: value }));
@@ -55,6 +57,25 @@ const Settings = () => {
         }
     };
 
+    const handleOpenKiteLogin = async () => {
+        try {
+            setIsLaunchingKite(true);
+            const { url } = await getLoginUrl('kite');
+            if (!url) {
+                toast.error('Failed to generate Zerodha login URL');
+                return;
+            }
+
+            window.open(url, '_blank', 'noopener,noreferrer');
+            toast.success('Zerodha login opened in a new tab');
+        } catch (error) {
+            console.error('Failed to open Zerodha login', error);
+            toast.error(error?.response?.data?.message || 'Failed to open Zerodha login');
+        } finally {
+            setIsLaunchingKite(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col gap-4">
             {/* Header with Tabs */}
@@ -71,6 +92,15 @@ const Settings = () => {
                     >
                         <Bell size={14} /> Notifications
                     </button>
+                    <button
+                        onClick={() => setActiveTab('configuration')}
+                        className={clsx(
+                            "px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 whitespace-nowrap",
+                            activeTab === 'configuration' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                        )}
+                    >
+                        <KeyRound size={14} /> Configuration
+                    </button>
                 </div>
             </div>
 
@@ -78,6 +108,42 @@ const Settings = () => {
             <div className="flex-1 min-h-0 relative overflow-y-auto custom-scrollbar">
                 <div className="max-w-4xl mx-auto space-y-6 pb-10">
 
+
+                    {activeTab === 'configuration' && (
+                        <Card className="terminal-panel bg-card border-border" noPadding>
+                            <div className="p-4 border-b border-border bg-muted/20 flex items-center gap-2">
+                                <KeyRound size={16} className="text-primary" />
+                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Zerodha Kite Configuration</h3>
+                            </div>
+                            <div className="p-4 sm:p-6 space-y-6">
+                                <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-5">
+                                    <div className="max-w-3xl space-y-2">
+                                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Kite access</div>
+                                        <h4 className="text-base sm:text-lg font-semibold text-foreground">Save Zerodha login credentials and launch Kite login quickly</h4>
+                                        <p className="text-sm leading-6 text-muted-foreground">
+                                            Your saved configuration stays inside admin settings. The login button opens Zerodha in a new tab using the current Kite API configuration.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs leading-6 text-amber-100">
+                                    Zerodha login opens in a new tab. This configuration tab is kept intentionally simple with a single login action.
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <Button
+                                        variant="primary"
+                                        className="h-10 rounded-xl px-4 text-xs gap-2 w-full sm:w-auto"
+                                        onClick={handleOpenKiteLogin}
+                                        disabled={isLaunchingKite}
+                                    >
+                                        <ExternalLink size={14} />
+                                        {isLaunchingKite ? 'Opening...' : 'Open Zerodha Login'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
 
                     {activeTab === 'payment' && (
                         <Card className="terminal-panel bg-card border-border" noPadding>

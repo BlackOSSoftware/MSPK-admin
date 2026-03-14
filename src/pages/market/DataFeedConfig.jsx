@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { Database, Zap, Activity, Shield, Save, RefreshCw, Eye, EyeOff, Terminal, Trash2 } from 'lucide-react';
@@ -14,6 +14,7 @@ const DataFeedConfig = () => {
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [showSecrets, setShowSecrets] = useState(false);
+    const [showKiteLoginPrompt, setShowKiteLoginPrompt] = useState(false);
 
     // Status State
     // Status State
@@ -46,10 +47,49 @@ const DataFeedConfig = () => {
         return stats.alltick || stats.marketData || stats.mt5 || { connected: false, latency: 'Disconnected', tickCount: 0 };
     };
 
+    const fetchStats = useCallback(async () => {
+        try {
+            const stats = await getMarketStats();
+            if (stats) {
+                setStatus(prev => ({
+                    ...prev,
+                    provider: stats.provider,
+                    mode: stats.mode,
+                    uptime: formatUptime(stats.uptime),
+                    kite: stats.kite || { connected: false, latency: 'Disconnected', ticks: 0 },
+                    alltick: getProviderStats(stats, 'alltick')
+                }));
+            }
+        } catch (error) {
+            console.error("Failed to fetch market stats", error);
+        }
+    }, []);
+
+    const loadSettings = useCallback(async () => {
+        setLoading(true);
+        try {
+            const settings = await getAllSettings();
+            if (settings) {
+                setAllSettings(settings);
+
+                const currentProvider = settings.data_feed_provider || 'kite';
+
+                setConfig({
+                    data_feed_provider: currentProvider,
+                    data_feed_api_key: settings[`${currentProvider}_api_key`] || '',
+                    data_feed_api_secret: settings[`${currentProvider}_api_secret`] || ''
+                });
+            }
+        } catch (error) {
+            console.error("Failed to load settings", error);
+            toast.error("Failed to load settings");
+        } finally {
+            setLoading(false);
+        }
+    }, [toast]);
+
     useEffect(() => {
         loadSettings();
-
-        // Initial Fetch
         fetchStats();
 
         // Socket Listener (Optimized)
@@ -83,55 +123,27 @@ const DataFeedConfig = () => {
         } catch (e) {
             console.error("Socket not available", e);
         }
-    }, []);
+    }, [fetchStats, loadSettings]);
 
-    const fetchStats = async () => {
-        try {
-            const stats = await getMarketStats();
-            if (stats) {
-                setStatus(prev => ({
-                    ...prev,
-                    provider: stats.provider,
-                    mode: stats.mode,
-                    uptime: formatUptime(stats.uptime),
-                    kite: stats.kite || { connected: false, latency: 'Disconnected', ticks: 0 },
-                    alltick: getProviderStats(stats, 'alltick')
-                }));
-            }
-        } catch (error) {
-            console.error("Failed to fetch market stats", error);
-        }
-    };
+    useEffect(() => {
+        const kiteStats = status.kite || {};
+        const tickCount = Number(kiteStats.tickCount || kiteStats.ticks || 0);
+        const shouldPrompt =
+            config.data_feed_provider === 'kite' &&
+            !testing &&
+            !loading &&
+            Boolean(allSettings.kite_api_key) &&
+            Boolean(allSettings.kite_api_secret) &&
+            (!kiteStats.connected || tickCount <= 0);
+
+        setShowKiteLoginPrompt(shouldPrompt);
+    }, [allSettings.kite_api_key, allSettings.kite_api_secret, config.data_feed_provider, loading, status.kite, testing]);
 
     const formatUptime = (seconds) => {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = seconds % 60;
         return `${h}h ${m}m ${s}s`;
-    };
-
-    const loadSettings = async () => {
-        setLoading(true);
-        try {
-            const settings = await getAllSettings();
-            if (settings) {
-                setAllSettings(settings);
-
-                // Set Default View based on current provider or default to kite
-                const currentProvider = settings.data_feed_provider || 'kite';
-
-                setConfig({
-                    data_feed_provider: currentProvider,
-                    data_feed_api_key: settings[`${currentProvider}_api_key`] || '',
-                    data_feed_api_secret: settings[`${currentProvider}_api_secret`] || ''
-                });
-            }
-        } catch (error) {
-            console.error("Failed to load settings", error);
-            toast.error("Failed to load settings");
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleProviderChange = (provider) => {
@@ -226,6 +238,71 @@ const DataFeedConfig = () => {
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto p-4">
+            {showKiteLoginPrompt && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-2 sm:p-4 backdrop-blur-sm">
+                    <div className="flex max-h-[calc(100vh-1rem)] w-full max-w-xl flex-col overflow-hidden rounded-[24px] border border-border/70 bg-background shadow-2xl shadow-black/25 sm:max-h-[calc(100vh-2rem)] sm:rounded-3xl">
+                        <div className="border-b border-border/70 bg-gradient-to-r from-primary/10 via-transparent to-secondary/10 px-4 py-4 sm:px-6 sm:py-5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="space-y-2">
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-primary">
+                                        <Shield size={12} />
+                                        Kite Login Required
+                                    </div>
+                                    <h3 className="text-lg font-black tracking-tight text-foreground sm:text-xl">
+                                        Zerodha live data is disconnected or returning zero ticks
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Open Zerodha login in a new tab and complete authentication to restore live market feed.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowKiteLoginPrompt(false)}
+                                    className="rounded-xl border border-border/70 px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <Card className="border border-border/70 bg-secondary/10 p-4">
+                                    <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Connection</div>
+                                    <div className={`mt-2 text-lg font-black ${status.kite?.connected ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {status.kite?.connected ? 'Connected' : 'Disconnected'}
+                                    </div>
+                                </Card>
+                                <Card className="border border-border/70 bg-secondary/10 p-4">
+                                    <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Tick Count</div>
+                                    <div className="mt-2 text-lg font-black text-foreground">
+                                        {Number(status.kite?.tickCount || status.kite?.ticks || 0).toLocaleString()}
+                                    </div>
+                                </Card>
+                            </div>
+                            <Card className="border border-primary/15 bg-primary/5 p-4 text-sm text-muted-foreground">
+                                Zerodha login opens in a separate tab. Once login is complete, come back here and the feed status should recover automatically.
+                            </Card>
+                        </div>
+                        <div className="flex flex-col-reverse gap-3 border-t border-border/70 bg-secondary/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+                            <Button
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() => setShowKiteLoginPrompt(false)}
+                            >
+                                Dismiss
+                            </Button>
+                            <Button
+                                variant="primary"
+                                className="w-full gap-2 sm:w-auto"
+                                onClick={handleTestConnection}
+                                disabled={testing}
+                            >
+                                <RefreshCw size={14} className={testing ? 'animate-spin' : ''} />
+                                {testing ? 'Opening...' : 'Login To Zerodha'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Status Card */}
             {/* Status Card */}

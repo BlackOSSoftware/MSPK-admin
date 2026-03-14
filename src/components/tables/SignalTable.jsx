@@ -59,7 +59,7 @@ const getStatusClasses = (status) => {
         case 'Partial Profit Book':
             return 'border-amber-500/30 text-amber-500 bg-amber-500/10';
         case 'Stoploss Hit':
-            return 'border-red-500/30 text-red-500 bg-red-500/10';
+            return 'border-red-500/40 text-red-300 bg-red-500/15 shadow-[0_0_18px_rgba(239,68,68,0.22)]';
         case 'Closed':
             return 'border-amber-500/30 text-amber-500 bg-amber-500/10';
         default:
@@ -211,6 +211,9 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const resolvedPoints = resolvePoints(signal, livePrice);
                                 const priceForTargets = typeof livePrice === 'number' ? livePrice : resolvedExit;
                                 const signalTime = signal.signalTime || signal.createdAt || signal.timestamp;
+                                const isStoplossHit = signal.status === 'Stoploss Hit';
+                                const isTargetOutcome = signal.status === 'Target Hit';
+                                const isPartialOutcome = signal.status === 'Partial Profit Book';
                                 const highlightMatch =
                                     highlightTerm &&
                                     `${signal.symbol} ${signal.uniqueId || ''} ${signal.webhookId || ''}`
@@ -319,11 +322,38 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
 
                                         <td className="border-r border-border px-4 py-4">
                                             <div className="grid gap-1.5">
-                                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
-                                                    <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">SL</span>
-                                                    <span className="text-[10px] font-bold text-red-400">{formatPrice(signal.stoploss)}</span>
+                                                <div
+                                                    className={clsx(
+                                                        'flex items-center justify-between gap-3 rounded-lg border px-2.5 py-1.5',
+                                                        isStoplossHit
+                                                            ? 'border-red-500/40 bg-red-500/15 shadow-[0_0_12px_rgba(239,68,68,0.18)]'
+                                                            : 'border-border/60 bg-muted/[0.06]'
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={clsx(
+                                                            'text-[9px] font-black uppercase tracking-wide',
+                                                            isStoplossHit ? 'text-red-300' : 'text-muted-foreground'
+                                                        )}
+                                                    >
+                                                        SL
+                                                    </span>
+                                                    <span className={clsx('text-[10px] font-bold', isStoplossHit ? 'text-red-200' : 'text-red-400')}>
+                                                        {formatPrice(signal.stoploss)}
+                                                    </span>
                                                 </div>
-                                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
+                                                <div
+                                                    className={clsx(
+                                                        'flex items-center justify-between gap-3 rounded-lg border px-2.5 py-1.5',
+                                                        isStoplossHit
+                                                            ? 'border-red-500/25 bg-red-500/10'
+                                                            : isTargetOutcome
+                                                                ? 'border-emerald-500/25 bg-emerald-500/10'
+                                                                : isPartialOutcome
+                                                                    ? 'border-amber-500/25 bg-amber-500/10'
+                                                                    : 'border-border/60 bg-muted/[0.06]'
+                                                    )}
+                                                >
                                                     <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">
                                                         {isClosed ? 'Exit' : 'LTP'}
                                                     </span>
@@ -331,9 +361,31 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                         {formatPrice(isClosed ? resolvedExit : livePrice)}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/[0.06] px-2.5 py-1.5">
+                                                <div
+                                                    className={clsx(
+                                                        'flex items-center justify-between gap-3 rounded-lg border px-2.5 py-1.5',
+                                                        isStoplossHit
+                                                            ? 'border-red-500/25 bg-red-500/10'
+                                                            : isTargetOutcome
+                                                                ? 'border-emerald-500/25 bg-emerald-500/10'
+                                                                : isPartialOutcome
+                                                                    ? 'border-amber-500/25 bg-amber-500/10'
+                                                                    : 'border-border/60 bg-muted/[0.06]'
+                                                    )}
+                                                >
                                                     <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">Points</span>
-                                                    <span className="text-[10px] font-bold text-foreground">
+                                                    <span
+                                                        className={clsx(
+                                                            'text-[10px] font-bold',
+                                                            isStoplossHit
+                                                                ? 'text-red-200'
+                                                                : isTargetOutcome
+                                                                    ? 'text-emerald-300'
+                                                                    : isPartialOutcome
+                                                                        ? 'text-amber-300'
+                                                                        : 'text-foreground'
+                                                        )}
+                                                    >
                                                         {resolvedPoints ?? '---'}
                                                     </span>
                                                 </div>
@@ -364,7 +416,13 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                 'mx-auto inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.2em]',
                                                 getStatusClasses(signal.status)
                                             )}>
-                                                {signal.status === 'Active' ? <Radio size={8} className="animate-pulse" /> : <BadgeCheck size={8} />}
+                                                {signal.status === 'Active' ? (
+                                                    <Radio size={8} className="animate-pulse" />
+                                                ) : signal.status === 'Stoploss Hit' ? (
+                                                    <AlertTriangle size={8} className="text-red-300" />
+                                                ) : (
+                                                    <BadgeCheck size={8} />
+                                                )}
                                                 {signal.status || 'Unknown'}
                                             </span>
                                         </td>
@@ -423,7 +481,18 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                                 <XCircle size={14} /> Force Close
                                                             </button>
                                                         </>
-                                                    ) : null}
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                onAction?.('reopen', signal);
+                                                                setOpenDropdownId(null);
+                                                            }}
+                                                            className="flex items-center gap-2.5 border-t border-border/10 px-3 py-2 text-left text-[10px] font-bold hover:bg-primary/10 hover:text-primary"
+                                                        >
+                                                            <Radio size={14} /> Return Active
+                                                        </button>
+                                                    )}
 
                                                     <button
                                                         type="button"

@@ -20,6 +20,10 @@ export const deleteSubBroker = async (id) => {
     return await client.delete(`/sub-brokers/${id}`);
 };
 
-export const processPayout = async (id) => {
-    return await client.post(`/sub-brokers/${id}/payout`);
+export const processPayout = async (id, payload) => {
+    return await client.post(`/sub-brokers/${id}/payout`, payload, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
 };

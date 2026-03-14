@@ -43,6 +43,13 @@ const UserTable = ({
         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
+    const getDisplayIp = (user) => {
+        const ipValue = user?.lastLoginIp || '';
+        if (!ipValue) return '-';
+        if (ipValue === '::1' || ipValue === '127.0.0.1') return 'Localhost';
+        return ipValue;
+    };
+
     const getSubscriptionMeta = (user) => {
         const hasSubscription = user.subscriptionStart && user.subscriptionExpiry;
         if (!hasSubscription) {
@@ -169,8 +176,20 @@ const UserTable = ({
             </div>
 
             <div className="hidden overflow-visible md:block">
-                <div className="overflow-x-auto overflow-y-visible [overscroll-behavior-x:contain] [overscroll-behavior-y:auto] touch-pan-y">
-                    <table className="w-full min-w-[980px] whitespace-nowrap text-left">
+                <div className="overflow-x-auto overflow-y-visible rounded-b-2xl [overscroll-behavior-x:contain] [overscroll-behavior-y:auto] touch-pan-y">
+                    <table className="w-full min-w-[860px] table-fixed text-left lg:min-w-[920px]">
+                        <colgroup>
+                            <col className="w-[11%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[20%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[14%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[12%]" />
+                        </colgroup>
                         <thead className="sticky top-0 z-10 border-b border-border/70 bg-gradient-to-r from-card via-card/95 to-primary/5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground backdrop-blur-md">
                             <tr>
                                 <TableHeaderCell className="px-3 py-2 sm:px-4 sm:py-2.5" icon={Hash} label="Client ID" />
@@ -247,15 +266,18 @@ const UserTable = ({
                                             className={`group relative transition-all duration-300 ${isHighlighted ? 'bg-primary/10' : 'hover:bg-primary/5'} hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]`}
                                         >
                                             <td className="px-3 py-3 font-mono text-[11px] font-semibold text-foreground/90 sm:px-4">
-                                                <span className="inline-flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
+                                                <span className="inline-flex max-w-full items-center gap-2 truncate transition-transform duration-300 group-hover:translate-x-1">
                                                     {user.clientId}
                                                 </span>
                                             </td>
 
                                             <td className="px-3 py-3 sm:px-4">
-                                                <div className={`flex w-fit items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${isDirect ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border/70 bg-muted/40 text-muted-foreground'}`}>
+                                                <div
+                                                    className={`flex max-w-full w-fit items-center gap-1.5 truncate rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${isDirect ? 'border-primary/20 bg-primary/10 text-primary' : 'border-border/70 bg-muted/40 text-muted-foreground'}`}
+                                                    title={isDirect ? 'DIRECT' : user.subBrokerName || 'Broker'}
+                                                >
                                                     <UserCheck size={10} />
-                                                    {isDirect ? 'DIRECT' : user.subBrokerName?.split(' ')[0]}
+                                                    <span className="truncate">{isDirect ? 'DIRECT' : user.subBrokerName?.split(' ')[0]}</span>
                                                 </div>
                                             </td>
 
@@ -265,16 +287,22 @@ const UserTable = ({
                                                         {getInitials(user.name, user.email)}
                                                     </div>
                                                     <div className="flex min-w-0 flex-col">
-                                                        <span className="truncate text-xs font-semibold text-foreground">{user.name || '-'}</span>
-                                                        <span className="truncate text-[10px] text-muted-foreground">{user.email || '-'}</span>
+                                                        <span className="truncate text-xs font-semibold text-foreground" title={user.name || '-'}>
+                                                            {user.name || '-'}
+                                                        </span>
+                                                        <span className="truncate text-[10px] text-muted-foreground" title={user.email || '-'}>
+                                                            {user.email || '-'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-3 py-3 text-center font-mono text-[10px] text-muted-foreground sm:px-4">
-                                                {user.ip === '::1' || user.ip === '127.0.0.1' ? 'Localhost' : (user.ip || '-')}
+                                                <span className="block truncate" title={getDisplayIp(user)}>
+                                                    {getDisplayIp(user)}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-3 text-center sm:px-4">
-                                                <span className={`rounded-full border px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${user.plan === 'Gold' ? 'border-amber-500/20 bg-amber-500/10 text-amber-600' :
+                                                <span className={`inline-flex max-w-full items-center justify-center truncate rounded-full border px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${user.plan === 'Gold' ? 'border-amber-500/20 bg-amber-500/10 text-amber-600' :
                                                     user.plan === 'Platinum' ? 'border-sky-500/20 bg-sky-500/10 text-sky-600' :
                                                         user.plan === 'Silver' ? 'border-slate-400/20 bg-slate-400/10 text-slate-600' :
                                                             'border-border/70 bg-muted/30 text-muted-foreground'
@@ -289,10 +317,10 @@ const UserTable = ({
                                                 {formatDate(user.subscriptionExpiry)}
                                             </td>
                                             <td className="px-3 py-3 sm:px-4">
-                                                <div className="flex min-w-[140px] w-full flex-col gap-1.5">
+                                                <div className="flex w-full min-w-0 flex-col gap-1.5">
                                                     <div className="flex items-center justify-between text-[9px] font-semibold uppercase">
                                                         <span className="text-muted-foreground">Active</span>
-                                                        <span className={daysColor}>{daysText}</span>
+                                                        <span className={`truncate text-right ${daysColor}`} title={daysText}>{daysText}</span>
                                                     </div>
                                                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/40">
                                                         <div
@@ -305,16 +333,16 @@ const UserTable = ({
 
                                             <td className="px-3 py-3 text-center sm:px-4">
                                                 {isBlocked ? (
-                                                    <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[9px] font-semibold uppercase text-muted-foreground">BLOCKED</span>
+                                                    <span className="inline-flex max-w-full items-center justify-center rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[9px] font-semibold uppercase text-muted-foreground">BLOCKED</span>
                                                 ) : (
-                                                    <span className="flex items-center justify-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase text-emerald-600">
+                                                    <span className="inline-flex max-w-full items-center justify-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase text-emerald-600">
                                                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> ACTIVE
                                                     </span>
                                                 )}
                                             </td>
 
                                             <td className="px-3 py-3 text-center">
-                                                <div className="flex items-center justify-center gap-2 opacity-80 transition-opacity group-hover:opacity-100">
+                                                <div className="flex flex-wrap items-center justify-center gap-1.5 opacity-80 transition-opacity group-hover:opacity-100">
                                                     {user.role !== 'admin' && (
                                                         <>
                                                             <button
@@ -354,10 +382,10 @@ const UserTable = ({
                                                         <button
                                                             title="Change Password"
                                                             onClick={() => onAction('edit', user)}
-                                                            className="flex items-center gap-1.5 rounded-md p-1.5 text-muted-foreground transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                                            className="flex max-w-full items-center gap-1.5 rounded-md p-1.5 text-muted-foreground transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                                                         >
                                                             <Key size={14} />
-                                                            <span className="text-[10px] font-bold uppercase tracking-tighter">Change Password</span>
+                                                            <span className="truncate text-[10px] font-bold uppercase tracking-tighter">Change Password</span>
                                                         </button>
                                                     )}
                                                 </div>

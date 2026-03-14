@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useToast from '../../hooks/useToast';
 import { getSegments, getSymbols } from '../../api/market.api';
+import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const schema = yup.object({
     symbol: yup.string().required('Symbol is required').uppercase(),
@@ -147,7 +148,7 @@ const CreateSignal = () => {
                                 control={control}
                                 render={({ field }) => (
                                     <SearchableSelect
-                                        options={symbols.map(s => ({ label: s.symbol, value: s.symbol }))}
+                                        options={symbols.map(s => ({ label: `${s.symbol} · ${getSegmentGroup(s)}`, value: s.symbol }))}
                                         value={field.value}
                                         onChange={field.onChange}
                                         placeholder="Select Instrument..."
