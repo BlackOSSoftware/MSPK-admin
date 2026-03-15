@@ -9,7 +9,7 @@ import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useToast from '../../hooks/useToast';
-import { getSegments, getSymbols } from '../../api/market.api';
+import { getSegments, getSymbols, searchInstruments } from '../../api/market.api';
 import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const schema = yup.object({
@@ -31,6 +31,9 @@ const CreateSignal = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [segments, setSegments] = useState([]);
     const [symbols, setSymbols] = useState([]);
+    const [segmentSymbols, setSegmentSymbols] = useState([]);
+    const [symbolSearchTerm, setSymbolSearchTerm] = useState('');
+    const [isSymbolSearching, setIsSymbolSearching] = useState(false);
 
     const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
@@ -67,7 +70,9 @@ const CreateSignal = () => {
             if (!selectedSegment) return;
             try {
                 const data = await getSymbols(selectedSegment);
+                setSegmentSymbols(data);
                 setSymbols(data);
+                setSymbolSearchTerm('');
                 setValue('symbol', '');
             } catch (error) {
                 console.error("Failed to load symbols", error);
@@ -76,6 +81,43 @@ const CreateSignal = () => {
         };
         loadSymbols();
     }, [selectedSegment, setValue]);
+
+    // 3. Live Search (watchlist-style)
+    useEffect(() => {
+        let isActive = true;
+        const term = symbolSearchTerm.trim();
+
+        if (!selectedSegment) return undefined;
+
+        if (term.length < 2) {
+            setSymbols(segmentSymbols);
+            setIsSymbolSearching(false);
+            return undefined;
+        }
+
+        const runSearch = async () => {
+            setIsSymbolSearching(true);
+            try {
+                const results = await searchInstruments(term);
+                if (!isActive) return;
+                const filtered = (Array.isArray(results) ? results : []).filter(
+                    (item) => getSegmentGroup(item) === selectedSegment
+                );
+                setSymbols(filtered);
+            } catch (error) {
+                console.error("Failed to search symbols", error);
+                toast.error("Failed to search symbols");
+            } finally {
+                if (isActive) setIsSymbolSearching(false);
+            }
+        };
+
+        runSearch();
+
+        return () => {
+            isActive = false;
+        };
+    }, [symbolSearchTerm, selectedSegment, segmentSymbols]);
 
     const onSubmit = async (data) => {
         setIsSubmitting(true);
@@ -148,16 +190,20 @@ const CreateSignal = () => {
                                 control={control}
                                 render={({ field }) => (
                                     <SearchableSelect
-                                        options={symbols.map(s => ({ label: `${s.symbol} · ${getSegmentGroup(s)}`, value: s.symbol }))}
+                                        options={symbols.map(s => ({ label: `${s.symbol} - ${getSegmentGroup(s)}`, value: s.symbol }))}
                                         value={field.value}
                                         onChange={field.onChange}
                                         placeholder="Select Instrument..."
                                         searchPlaceholder="Search NIFTY, RELIANCE..."
                                         variant="standard"
                                         disabled={!selectedSegment}
+                                        onSearchChange={setSymbolSearchTerm}
                                     />
                                 )}
                             />
+                            {isSymbolSearching && (
+                                <p className="text-[10px] text-muted-foreground mt-1">Searching scripts...</p>
+                            )}
                             {errors.symbol && <p className="text-xs text-red-500">{errors.symbol.message}</p>}
                         </div>
 

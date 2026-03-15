@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../../store/authSlice';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import { Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,6 +14,7 @@ const Login = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
+    const [showPassword, setShowPassword] = useState(false);
 
     const loginSideImage =
         "https://images.unsplash.com/photo-1767424412548-1a1ac7f4b9bc?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
@@ -127,13 +128,21 @@ const Login = () => {
                                 <div className="relative group">
                                     <Lock className="absolute left-3 top-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
                                     <Input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="Password"
-                                        className="pl-10 h-12 bg-background/50"
+                                        className="pl-10 pr-10 h-12 bg-background/50"
                                         autoComplete="current-password"
                                         {...register("password", { required: "Password is required" })}
                                         error={errors.password?.message}
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
                                 </div>
                             </div>
 
