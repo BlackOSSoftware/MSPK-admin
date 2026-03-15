@@ -8,6 +8,8 @@ const FOREX_CODES = new Set([
 
 const INDEX_HINTS = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANKEX', 'VIX', 'INDEX'];
 const COMMODITY_REGEX = /(?:CRUDE|WTI|BRENT|USOIL|UKOIL|XAU|XAG|GOLD|SILVER|NATURAL GAS|NG|COPPER|ALUMINIUM|ZINC|LEAD|NICKEL|MENTHA|COTTON|GUAR|JEERA|SOY|WHEAT|CORN|SUGAR)/i;
+const COMEX_EXCHANGES = new Set(['COMEX', 'NYMEX']);
+const COMEX_SUBSEGMENTS = new Set(['ENERGY', 'METALS', 'AGRICULTURE', 'FUTURES_OTHER', 'RATES_FUTURES']);
 
 const isCryptoLikeSymbol = (symbol = '') => {
   const normalized = normalizeUpper(symbol).replace(/(\.P|PERP)$/i, '');
@@ -39,11 +41,16 @@ export const getSegmentGroup = (symbolLike = {}) => {
   const symbol = normalizeUpper(symbolLike?.symbol || symbolLike?.sourceSymbol);
   const name = normalizeUpper(symbolLike?.name || symbolLike?.description);
 
-  if (segment && ['EQUITY', 'FNO', 'COMMODITY', 'CURRENCY', 'CRYPTO', 'INDICES'].includes(segment)) return segment;
+  if (segment && ['EQUITY', 'FNO', 'COMMODITY', 'COMEX', 'CURRENCY', 'CRYPTO', 'INDICES'].includes(segment)) return segment;
   if (isCryptoLikeSymbol(symbol) || ['CRYPTO', 'BINANCE'].includes(segment) || ['CRYPTO', 'BINANCE'].includes(exchange)) return 'CRYPTO';
+  const isComexSegment = COMEX_EXCHANGES.has(segment);
+  const isComexExchange = COMEX_EXCHANGES.has(exchange);
+  const isComexCommodityHint = COMEX_SUBSEGMENTS.has(subsegment) || COMMODITY_REGEX.test(`${symbol} ${name}`);
+  if (isComexExchange || (isComexSegment && isComexCommodityHint)) return 'COMEX';
+  if (COMMODITY_REGEX.test(`${symbol} ${name}`) && exchange && exchange !== 'MCX' && exchange !== 'NSE' && exchange !== 'BSE') return 'COMEX';
   if (
-    ['COMMODITY', 'MCX', 'COMEX', 'NYMEX'].includes(segment) ||
-    ['MCX', 'COMEX', 'NYMEX'].includes(exchange) ||
+    ['COMMODITY', 'MCX'].includes(segment) ||
+    ['MCX'].includes(exchange) ||
     ['ENERGY', 'METALS', 'AGRICULTURE'].includes(subsegment) ||
     COMMODITY_REGEX.test(`${symbol} ${name}`)
   ) return 'COMMODITY';
@@ -55,5 +62,6 @@ export const getSegmentGroup = (symbolLike = {}) => {
   if (['INDICES', 'INDEX', 'NSEIX'].includes(segment) || exchange === 'NSEIX' || isIndexLike(symbol, name)) return 'INDICES';
   if (['FNO', 'FO', 'NFO', 'OPTIONS', 'OPTION', 'FUTURES'].includes(segment) || exchange === 'NFO') return 'FNO';
   if (['EQUITY', 'EQ', 'CM', 'NSE', 'BSE'].includes(segment) || ['NSE', 'BSE'].includes(exchange)) return 'EQUITY';
+  if (isComexSegment && !isComexCommodityHint && !isComexExchange) return exchange || 'OTHER';
   return segment || exchange || 'OTHER';
 };

@@ -18,6 +18,62 @@ import { getSymbols, updateSymbol } from '../../api/market.api';
 import { mapStrategyToIndicators } from '../../utils/strategyMapping';
 import { getSegmentGroup } from '../../utils/segmentGroups';
 import chartCache from '../../utils/ChartDataCache';
+import { matchesSignalTimeframe, normalizeSignalTimeframe, snapSignalTimeToResolution } from '../../utils/timeframe';
+
+const ACTIVE_SIGNAL_STATUSES = new Set(['ACTIVE', 'ENTRY_PENDING']);
+
+const getSignalEventTime = (signal) => signal?.signalTime || signal?.createdAt || signal?.timestamp || null;
+
+const buildSignalMarker = (signal, resolution) => {
+    const snappedTime = snapSignalTimeToResolution(getSignalEventTime(signal), resolution);
+    if (snappedTime === null) return null;
+
+    return {
+        time: snappedTime,
+        position: signal.type === 'BUY' ? 'belowBar' : 'aboveBar',
+        color: signal.type === 'BUY' ? '#10b981' : '#ef4444',
+        shape: signal.type === 'BUY' ? 'arrowUp' : 'arrowDown',
+        text: `${signal.type} `,
+        size: 2,
+        strategyId: signal.strategyId ? String(signal.strategyId) : 'MANUAL'
+    };
+};
+
+const getSignalIdentity = (signal) =>
+    String(
+        signal?.id ||
+        signal?._id ||
+        signal?.uniqueId ||
+        [
+            signal?.symbol || '',
+            normalizeSignalTimeframe(signal?.timeframe) || '',
+            signal?.type || '',
+            getSignalEventTime(signal) || ''
+        ].join('|')
+    );
+
+const upsertSignal = (collection, signal) => {
+    const nextIdentity = getSignalIdentity(signal);
+    const nextIndex = collection.findIndex((item) => getSignalIdentity(item) === nextIdentity);
+
+    if (nextIndex === -1) {
+        return [...collection, signal];
+    }
+
+    const nextCollection = [...collection];
+    nextCollection[nextIndex] = { ...nextCollection[nextIndex], ...signal };
+    return nextCollection;
+};
+
+const MULTI_TIMEFRAME_WINDOWS = [
+    { value: '5', label: '5m', description: 'Fast Execution' },
+    { value: '15', label: '15m', description: 'Trend Confirmation' },
+    { value: '60', label: '1h', description: 'Higher Timeframe Bias' }
+];
+
+const MULTI_TIMEFRAME_WINDOW_SET = new Set(MULTI_TIMEFRAME_WINDOWS.map((item) => item.value));
+
+const resolveSignalStrategyId = (signal) => signal?.strategyId ? String(signal.strategyId) : 'MANUAL';
 
 const TradingLayout = ({ hideCharts = false }) => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -31,7 +87,10 @@ const TradingLayout = ({ hideCharts = false }) => {
 
     // -- Layout State --
     const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
-    const [timeframe, setTimeframe] = useState(() => localStorage.getItem('mspk_timeframe') || '5');
+    const [timeframe, setTimeframe] = useState(() => {
+        const saved = localStorage.getItem('mspk_timeframe');
+        return MULTI_TIMEFRAME_WINDOW_SET.has(saved) ? saved : '5';
+    });
     const [chartType, setChartType] = useState(() => localStorage.getItem('mspk_chart_type') || 'candle');
 
     // Load Indicators from Storage
@@ -48,14 +107,13 @@ const TradingLayout = ({ hideCharts = false }) => {
     });
 
     const [clearToggle, setClearToggle] = useState(0);
-    const [snapshotTrigger, setSnapshotTrigger] = useState(0);
+    const [snapshotTrigger, setSnapshotTrigger] = useState({ id: 0, timeframe: '5' });
 
     // -- Signals State --
-    const [activeSignals, setActiveSignals] = useState([]);
-    const [signalMarkers, setSignalMarkers] = useState([]);
+    const [symbolSignals, setSymbolSignals] = useState([]);
 
     // -- Quick Signal State --
-    const [quickSignal, setQuickSignal] = useState({ isOpen: false, type: 'BUY' });
+    const [quickSignal, setQuickSignal] = useState({ isOpen: false, type: 'BUY', timeframe: '5' });
 
     // -- Search Modal State --
     const [searchModal, setSearchModal] = useState({ isOpen: false, mode: 'VIEW' });
@@ -396,61 +454,14 @@ const TradingLayout = ({ hideCharts = false }) => {
         if (!selectedSymbol) return;
         try {
             const { fetchSignals } = await import('../../api/signals.api');
-            const res = await fetchSignals({ symbol: selectedSymbol.symbol });
+            const res = await fetchSignals({ symbol: selectedSymbol.symbol, limit: 120 });
             const signalsData = res.data?.results || res.results || (Array.isArray(res.data) ? res.data : []);
-
-            if (signalsData.length > 0) {
-                const allSignals = signalsData;
-
-                // 1. Active Lines
-                const active = allSignals.filter(s => ['Active', 'ENTRY_PENDING'].includes(s.status));
-                setActiveSignals(active);
-
-                // 2. Markers (History + Active)
-                const markers = allSignals.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).map(s => {
-                    const time = new Date(s.createdAt).getTime() / 1000;
-
-                    // NEW: Improved snap logic for all resolutions (including D, W, M)
-                    let snappedTime = time;
-                    if (timeframe === 'D' || timeframe === '1D') {
-                        const date = new Date(time * 1000);
-                        date.setUTCHours(0, 0, 0, 0);
-                        snappedTime = date.getTime() / 1000;
-                    } else if (timeframe === 'W' || timeframe === '1W') {
-                        const date = new Date(time * 1000);
-                        const day = date.getUTCDay();
-                        const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1); // ISO week start (Monday)
-                        date.setUTCDate(diff);
-                        date.setUTCHours(0, 0, 0, 0);
-                        snappedTime = date.getTime() / 1000;
-                    } else if (timeframe === 'M' || timeframe === '1M') {
-                        const date = new Date(time * 1000);
-                        date.setUTCDate(1);
-                        date.setUTCHours(0, 0, 0, 0);
-                        snappedTime = date.getTime() / 1000;
-                    } else {
-                        const tfMinutes = parseInt(timeframe) || 5;
-                        const tfSeconds = tfMinutes * 60;
-                        snappedTime = Math.floor(time - (time % tfSeconds));
-                    }
-
-                    return {
-                        time: snappedTime,
-                        position: s.type === 'BUY' ? 'belowBar' : 'aboveBar',
-                        color: s.type === 'BUY' ? '#10b981' : '#ef4444',
-                        shape: s.type === 'BUY' ? 'arrowUp' : 'arrowDown',
-                        text: `${s.type} `,
-                        size: 2,
-                        strategyId: s.strategyId ? String(s.strategyId) : 'MANUAL'
-                    };
-                });
-                console.log("DEBUG: Refresh Signals - Markers generated:", markers);
-                setSignalMarkers(markers);
-            }
+            setSymbolSignals(Array.isArray(signalsData) ? signalsData : []);
         } catch (error) {
             console.error("Failed to fetch signals", error);
+            setSymbolSignals([]);
         }
-    }, [selectedSymbol, timeframe]);
+    }, [selectedSymbol]);
 
     // -- Strategies State --
     const [symbolStrategies, setSymbolStrategies] = useState([]);
@@ -493,12 +504,12 @@ const TradingLayout = ({ hideCharts = false }) => {
         if (!selectedSymbol) return;
 
         // 2a. Fetch Signals
-        setActiveSignals([]);
+        setSymbolSignals([]);
         refreshSignals();
 
         // 2b. Fetch Strategies
         loadStrategies();
-    }, [selectedSymbol, timeframe]);
+    }, [selectedSymbol]);
 
     // ... (Socket effect below needs update)
 
@@ -665,33 +676,16 @@ const TradingLayout = ({ hideCharts = false }) => {
             // Listen for New Signals
             socket.on('new_signal', (signal) => {
                 const currentSelected = selectedSymbolRef.current;
+                const normalizedSignalTimeframe = normalizeSignalTimeframe(signal.timeframe);
 
-                // If signal belongs to current symbol, add it
-                if (signal.symbol === currentSelected?.symbol) {
-                    // 1. Add to Active Signals (Lines)
-                    setActiveSignals(prev => [...prev, signal]);
+                // If signal belongs to current symbol and one of the visible panes, keep it in local cache
+                if (
+                    signal.symbol === currentSelected?.symbol &&
+                    MULTI_TIMEFRAME_WINDOWS.some((pane) => matchesSignalTimeframe(normalizedSignalTimeframe, pane.value))
+                ) {
+                    setSymbolSignals(prev => upsertSignal(prev, signal));
 
-                    // 2. Markers logic (Recalculated in real-time)
-                    setSignalMarkers(prev => {
-                        const time = new Date(signal.createdAt).getTime() / 1000;
-                        let snappedTime = time;
-                        // Simplified snap just for alerting, full recalc happens on refresh
-                        const tfMinutes = parseInt(timeframe) || 5;
-                        if (!isNaN(tfMinutes)) snappedTime = time - (time % (tfMinutes * 60));
-
-                        const newMarker = {
-                            time: snappedTime,
-                            position: signal.type === 'BUY' ? 'belowBar' : 'aboveBar',
-                            color: signal.type === 'BUY' ? '#10b981' : '#ef4444',
-                            shape: signal.type === 'BUY' ? 'arrowUp' : 'arrowDown',
-                            text: `${signal.type} `,
-                            size: 2,
-                            strategyId: signal.strategyId ? String(signal.strategyId) : 'MANUAL'
-                        };
-                        return [...prev, newMarker];
-                    });
-
-                    // 3. Play Sound
+                    // Play Sound
                     const audio = new Audio('/sounds/signal_alert.mp3');
                     audio.play().catch(e => { });
                 }
@@ -713,11 +707,12 @@ const TradingLayout = ({ hideCharts = false }) => {
 
     // -- Handlers --
 
-    const handleQuickSignal = (type) => {
+    const handleQuickSignal = (type, targetTimeframe = timeframe) => {
         setQuickSignal({
             isOpen: true,
             type,
-            price: lastTick?.price ? parseFloat(lastTick.price) : selectedSymbol?.price
+            price: lastTick?.price ? parseFloat(lastTick.price) : selectedSymbol?.price,
+            timeframe: targetTimeframe
         });
     };
 
@@ -805,20 +800,38 @@ const TradingLayout = ({ hideCharts = false }) => {
         localStorage.removeItem('mspk_show_volume');
     };
 
-    // -- Memoized Signals for Chart --
-    const filteredActiveSignals = React.useMemo(() =>
-        activeSignals.filter(s => strategyFilter === 'ALL' || s.strategyId === strategyFilter),
-        [activeSignals, strategyFilter]
-    );
+    // -- Memoized Signals for Multi-Timeframe Charts --
+    const chartSignalsByTimeframe = React.useMemo(() => {
+        return MULTI_TIMEFRAME_WINDOWS.reduce((accumulator, pane) => {
+            const paneSignals = symbolSignals.filter((signal) => {
+                if (!matchesSignalTimeframe(signal.timeframe, pane.value)) return false;
+                if (strategyFilter === 'ALL') return true;
+                return resolveSignalStrategyId(signal) === strategyFilter;
+            });
 
-    const filteredSignalMarkers = React.useMemo(() =>
-        signalMarkers.filter(m => strategyFilter === 'ALL' || m.strategyId === strategyFilter),
-        [signalMarkers, strategyFilter]
-    );
+            accumulator[pane.value] = {
+                activeSignals: paneSignals.filter((signal) =>
+                    ACTIVE_SIGNAL_STATUSES.has(String(signal.status || '').toUpperCase())
+                ),
+                signalMarkers: paneSignals
+                    .slice()
+                    .sort((left, right) => {
+                        const leftTime = new Date(getSignalEventTime(left) || 0).getTime();
+                        const rightTime = new Date(getSignalEventTime(right) || 0).getTime();
+                        return leftTime - rightTime;
+                    })
+                    .map((signal) => buildSignalMarker(signal, pane.value))
+                    .filter(Boolean)
+            };
+
+            return accumulator;
+        }, {});
+    }, [symbolSignals, strategyFilter]);
 
     if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-background text-foreground font-mono animate-pulse">Initializing Trading Engine...</div>;
 
     const showCharts = !hideCharts;
+    const activePaneTimeframe = MULTI_TIMEFRAME_WINDOW_SET.has(timeframe) ? timeframe : '5';
     const allSymbols = Object.values(marketData).flat();
     const liveSymbol = selectedSymbol ? allSymbols.find(s => s.symbol === selectedSymbol.symbol) : null;
     const mergedSymbol = liveSymbol ? { ...selectedSymbol, ...liveSymbol } : selectedSymbol;
@@ -991,12 +1004,13 @@ const TradingLayout = ({ hideCharts = false }) => {
                     onTitleClick={() => setSearchModal({ isOpen: true, mode: 'VIEW' })} // Open Search to VIEW
                     timeframe={timeframe}
                     onTimeframeChange={setTimeframe}
+                    timeframeOptions={MULTI_TIMEFRAME_WINDOWS.map((item) => item.value)}
                     chartType={chartType}
                     onChartTypeChange={setChartType}
                     onIndicatorsClick={() => setIndicatorsModalOpen(true)}
                     onSettingsClick={() => setSettingsModalOpen(true)}
                     onResetChart={handleResetChart}
-                    onSnapshotClick={() => setSnapshotTrigger(Date.now())}
+                    onSnapshotClick={() => setSnapshotTrigger({ id: Date.now(), timeframe: activePaneTimeframe })}
                     hideChartControls={hideCharts}
                     hideWatchlistToggle={hideCharts}
                 />
@@ -1019,36 +1033,58 @@ const TradingLayout = ({ hideCharts = false }) => {
                 {showCharts && (
                     <div className="flex-1 relative min-w-0 bg-background/50">
                         {selectedSymbol && (
-                            <TradingChart
-                                symbol={(() => {
-                                    // Find the latest live version of this symbol from marketData
-                                    // Flatten marketData values to find the match
-                                    const allSymbols = Object.values(marketData).flat();
-                                    const liveSymbol = allSymbols.find(s => s.symbol === selectedSymbol.symbol);
-                                    // Merge: Static < Live
-                                    return liveSymbol ? { ...selectedSymbol, ...liveSymbol } : selectedSymbol;
-                                })()}
-                                latestTick={lastTick?.symbol === selectedSymbol.symbol ? lastTick : null}
-                                activeSignals={filteredActiveSignals}
-                                signalMarkers={filteredSignalMarkers}
-                                onQuickSignal={handleQuickSignal}
-                                timeframe={timeframe}
-                                chartType={chartType}
-                                onChartTypeChange={setChartType}
-                                // Indicators
-                                activeIndicators={activeIndicators}
-                                showVolume={showVolume}
-                                onRemoveIndicator={(uuid) => {
-                                    if (uuid === 'VOLUME_ID') setShowVolume(false);
-                                    else setActiveIndicators(prev => prev.filter(i => i.uuid !== uuid));
-                                }}
-                                onEditIndicator={(ind) => setEditingIndicator(ind)}
-                                activeTool={activeTool}
-                                clearDrawingsToggle={clearToggle}
-                                chartSettings={chartSettings}
-                                snapshotTrigger={snapshotTrigger}
-                                onSnapshotCaptured={handleSnapshotCaptured}
-                            />
+                            <div className="grid h-full auto-rows-fr grid-cols-1 gap-3 overflow-auto p-3 lg:grid-cols-2 2xl:grid-cols-3">
+                                {MULTI_TIMEFRAME_WINDOWS.map((pane) => {
+                                    const paneState = chartSignalsByTimeframe[pane.value] || {
+                                        activeSignals: [],
+                                        signalMarkers: []
+                                    };
+                                    const isActivePane = activePaneTimeframe === pane.value;
+
+                                    return (
+                                        <div
+                                            key={pane.value}
+                                            className={`flex min-h-[320px] min-w-0 flex-col overflow-hidden rounded-2xl border bg-card/70 shadow-sm transition ${isActivePane ? 'border-primary/60 shadow-[0_0_0_1px_rgba(59,130,246,0.18)]' : 'border-border/70'}`}
+                                            onMouseDownCapture={() => setTimeframe(pane.value)}
+                                        >
+                                            <div className="flex items-center justify-between border-b border-border/70 bg-card/90 px-4 py-2.5">
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{pane.label}</p>
+                                                    <p className="text-xs text-muted-foreground">{pane.description}</p>
+                                                </div>
+                                                <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.24em] ${isActivePane ? 'bg-primary/10 text-primary' : 'bg-muted/20 text-muted-foreground'}`}>
+                                                    {isActivePane ? 'Active Pane' : 'Visible'}
+                                                </span>
+                                            </div>
+
+                                            <div className="min-h-0 flex-1">
+                                                <TradingChart
+                                                    symbol={mergedLive}
+                                                    latestTick={lastTick?.symbol === selectedSymbol.symbol ? lastTick : null}
+                                                    activeSignals={paneState.activeSignals}
+                                                    signalMarkers={paneState.signalMarkers}
+                                                    onQuickSignal={(type) => handleQuickSignal(type, pane.value)}
+                                                    timeframe={pane.value}
+                                                    chartType={chartType}
+                                                    onChartTypeChange={setChartType}
+                                                    activeIndicators={activeIndicators}
+                                                    showVolume={showVolume}
+                                                    onRemoveIndicator={(uuid) => {
+                                                        if (uuid === 'VOLUME_ID') setShowVolume(false);
+                                                        else setActiveIndicators(prev => prev.filter(i => i.uuid !== uuid));
+                                                    }}
+                                                    onEditIndicator={(ind) => setEditingIndicator(ind)}
+                                                    activeTool={activeTool}
+                                                    clearDrawingsToggle={clearToggle}
+                                                    chartSettings={chartSettings}
+                                                    snapshotTrigger={snapshotTrigger.timeframe === pane.value ? snapshotTrigger.id : 0}
+                                                    onSnapshotCaptured={isActivePane ? handleSnapshotCaptured : undefined}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
                 )}
@@ -1127,7 +1163,7 @@ const TradingLayout = ({ hideCharts = false }) => {
                 symbol={selectedSymbol}
                 type={quickSignal.type}
                 currentPrice={quickSignal.price}
-                timeframe={timeframe}
+                timeframe={quickSignal.timeframe || activePaneTimeframe}
                 onSuccess={handleSignalSuccess}
             />
 

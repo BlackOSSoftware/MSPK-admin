@@ -9,6 +9,7 @@ const TABS = [
     { id: 'ALL', label: 'All' },
     { id: 'STOCKS', label: 'Stocks' },
     { id: 'FUTURES', label: 'Futures' },
+    { id: 'COMEX', label: 'Comex' },
     { id: 'FOREX', label: 'Forex' },
     { id: 'CRYPTO', label: 'Crypto' },
     { id: 'INDICES', label: 'Indices' },
@@ -17,12 +18,30 @@ const TABS = [
 const mapSegmentToTab = (segment) => {
     if (!segment) return 'OTHERS';
     const s = segment.toUpperCase();
+    if (s === 'COMEX') return 'COMEX';
     if (s === 'CRYPTO') return 'CRYPTO';
     if (s === 'COMMODITY' || s === 'FNO') return 'FUTURES';
     if (s === 'CURRENCY') return 'FOREX';
     if (s === 'EQUITY') return 'STOCKS';
     if (s === 'INDICES') return 'INDICES';
     return 'OTHERS';
+};
+
+const DEDUPE_SUFFIX_PATTERN = /(\.PR|\.X)$/i;
+
+const getSymbolAliasBase = (symbol = '') => {
+    const normalized = String(symbol || '').trim().toUpperCase();
+    if (!normalized) return '';
+    return normalized.replace(DEDUPE_SUFFIX_PATTERN, '');
+};
+
+const getSymbolDedupeKey = (symbolLike = {}) => {
+    const symbolBase = getSymbolAliasBase(symbolLike.symbol);
+    if (!symbolBase) return '';
+    const name = String(symbolLike.name || symbolLike.description || '').trim().toUpperCase();
+    const segment = getSegmentGroup(symbolLike);
+    const exchange = String(symbolLike.exchange || '').trim().toUpperCase();
+    return `${segment}|${exchange}|${symbolBase}|${name}`;
 };
 
 const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
@@ -61,7 +80,16 @@ const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
             );
         }
 
-        setFilteredSymbols(result.slice(0, 100)); // Limit for performance
+        const used = new Set();
+        const deduped = [];
+        for (const item of result) {
+            const key = getSymbolDedupeKey(item);
+            if (!key || used.has(key)) continue;
+            used.add(key);
+            deduped.push(item);
+        }
+
+        setFilteredSymbols(deduped.slice(0, 100)); // Limit for performance
     }, [searchTerm, activeTab, allSymbols]);
 
     const loadSymbols = async () => {

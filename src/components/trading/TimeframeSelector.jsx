@@ -17,7 +17,7 @@ const ALL_TIMEFRAMES = [
 
 const DEFAULT_FAVORITES = ['1', '5', '15', '60', 'D'];
 
-const TimeframeSelector = ({ timeframe, onTimeframeChange }) => {
+const TimeframeSelector = ({ timeframe, onTimeframeChange, allowedValues = null }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [favorites, setFavorites] = useState(() => {
         const saved = localStorage.getItem('mspk_tf_favorites');
@@ -48,13 +48,18 @@ const TimeframeSelector = ({ timeframe, onTimeframeChange }) => {
         localStorage.setItem('mspk_tf_favorites', JSON.stringify(newFavs));
     };
 
-    const activeTF = ALL_TIMEFRAMES.find(tf => tf.value === timeframe) || ALL_TIMEFRAMES[0];
+    const availableTimeframes =
+        Array.isArray(allowedValues) && allowedValues.length > 0
+            ? ALL_TIMEFRAMES.filter(tf => allowedValues.includes(tf.value))
+            : ALL_TIMEFRAMES;
+
+    const activeTF = availableTimeframes.find(tf => tf.value === timeframe) || availableTimeframes[0] || ALL_TIMEFRAMES[0];
 
     return (
         <div className="flex items-center gap-0.5" ref={containerRef}>
             {/* Favorites Bar */}
             <div className="flex items-center gap-0.5 mr-1 hidden md:flex">
-                {ALL_TIMEFRAMES.filter(tf => favorites.includes(tf.value)).map(tf => (
+                {availableTimeframes.filter(tf => favorites.includes(tf.value)).map(tf => (
                     <button
                         key={tf.value}
                         onClick={() => onTimeframeChange(tf.value)}
@@ -92,7 +97,7 @@ const TimeframeSelector = ({ timeframe, onTimeframeChange }) => {
                             Time Intervals
                         </div>
                         <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                            {ALL_TIMEFRAMES.map((tf) => {
+                            {availableTimeframes.map((tf) => {
                                 const isFav = favorites.includes(tf.value);
                                 const isSelected = timeframe === tf.value;
                                 return (

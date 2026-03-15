@@ -1,6 +1,7 @@
 import { getHistory } from '../../api/market.api';
 import { fetchSignals as fetchBackendSignals } from '../../api/signals.api';
 import { formatPrice } from '../../utils/chartUtils';
+import { normalizeSignalTimeframe } from '../../utils/timeframe';
 import { useState, useEffect } from 'react';
 
 const TIMEFRAMES = [
@@ -8,18 +9,6 @@ const TIMEFRAMES = [
     { key: '15m', label: '15 Min' },
     { key: '1h', label: '1 Hour' },
 ];
-
-const normalizeTimeframe = (value) => {
-    if (!value) return null;
-    const tf = String(value).trim().toLowerCase();
-    if (tf === '5' || tf === '5m' || tf === '05' || tf === '05m') return '5m';
-    if (tf === '15' || tf === '15m') return '15m';
-    if (tf === '60' || tf === '60m' || tf === '1h' || tf === '1hr' || tf === '1hour') return '1h';
-    if (tf.includes('5') && tf.includes('m')) return '5m';
-    if (tf.includes('15') && tf.includes('m')) return '15m';
-    if (tf.includes('1h') || tf.includes('60')) return '1h';
-    return tf;
-};
 
 const formatTimeAgo = (value) => {
     if (!value) return '—';
@@ -160,7 +149,7 @@ const SignalCardsPanel = ({ symbol }) => {
                 TIMEFRAMES.forEach(tf => { latestByTf[tf.key] = null; });
 
                 sorted.forEach((s) => {
-                    const key = normalizeTimeframe(s.timeframe);
+                    const key = normalizeSignalTimeframe(s.timeframe);
                     if (key && latestByTf[key]) return;
                     if (key && latestByTf[key] === null) {
                         latestByTf[key] = s;

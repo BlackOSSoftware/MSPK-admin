@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { clsx } from 'clsx';
-import { Bell, CreditCard, ExternalLink, KeyRound, Mail, MessageCircle, Save, Send, Smartphone } from 'lucide-react';
+import { Bell, CreditCard, ExternalLink, KeyRound, Mail, MessageCircle, RefreshCw, Save, Send, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 
 import { getAllSettings, updateBulkSettings } from '../../api/settings.api';
-import { getLoginUrl } from '../../api/market.api';
+import { getLoginUrl, syncInstruments } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 
 
@@ -16,6 +16,7 @@ const Settings = () => {
     const [settings, setSettings] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [isLaunchingKite, setIsLaunchingKite] = useState(false);
+    const [isSyncingInstruments, setIsSyncingInstruments] = useState(false);
     const toast = useToast();
 
     // Available Themes
@@ -73,6 +74,21 @@ const Settings = () => {
             toast.error(error?.response?.data?.message || 'Failed to open Zerodha login');
         } finally {
             setIsLaunchingKite(false);
+        }
+    };
+
+    const handleSyncInstruments = async () => {
+        try {
+            setIsSyncingInstruments(true);
+            const result = await syncInstruments();
+            const count = Number(result?.count || 0);
+            const nfoCount = Number(result?.nfoFutures || 0);
+            toast.success(`Instrument sync done. Total ${count}, FNO current-month ${nfoCount}.`);
+        } catch (error) {
+            console.error('Failed to sync instruments', error);
+            toast.error(error?.response?.data?.message || 'Instrument sync failed');
+        } finally {
+            setIsSyncingInstruments(false);
         }
     };
 
@@ -140,6 +156,27 @@ const Settings = () => {
                                         <ExternalLink size={14} />
                                         {isLaunchingKite ? 'Opening...' : 'Open Zerodha Login'}
                                     </Button>
+                                </div>
+
+                                <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-5">
+                                    <div className="max-w-3xl space-y-2">
+                                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Instrument sync</div>
+                                        <h4 className="text-base sm:text-lg font-semibold text-foreground">Sync current-month F&O instruments</h4>
+                                        <p className="text-sm leading-6 text-muted-foreground">
+                                            This pulls the latest Zerodha instruments and keeps only current-month FNO contracts in the database.
+                                        </p>
+                                    </div>
+                                    <div className="mt-4 flex justify-end">
+                                        <Button
+                                            variant="secondary"
+                                            className="h-10 rounded-xl px-4 text-xs gap-2 w-full sm:w-auto"
+                                            onClick={handleSyncInstruments}
+                                            disabled={isSyncingInstruments}
+                                        >
+                                            <RefreshCw size={14} className={isSyncingInstruments ? 'animate-spin' : ''} />
+                                            {isSyncingInstruments ? 'Syncing...' : 'Sync Instruments'}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </Card>

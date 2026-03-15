@@ -43,6 +43,11 @@ export const getLoginUrl = async (provider) => {
     return response.data;
 };
 
+export const syncInstruments = async () => {
+    const response = await client.post('/market/sync');
+    return response.data;
+};
+
 export const verifyBrokerLogin = async (provider, authCode) => {
     // Fyers sends 'auth_code' in the query string
     const response = await client.get(`/market/login/${provider}?auth_code=${authCode}`);

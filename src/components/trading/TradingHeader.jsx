@@ -31,6 +31,7 @@ const TradingHeader = ({
     onTitleClick,
     timeframe,
     onTimeframeChange,
+    timeframeOptions = null,
     chartType,
     onChartTypeChange,
     onIndicatorsClick,
@@ -138,7 +139,11 @@ const TradingHeader = ({
                         <Separator />
 
                         {/* Timeframe Selector */}
-                        <TimeframeSelector timeframe={timeframe} onTimeframeChange={onTimeframeChange} />
+                        <TimeframeSelector
+                            timeframe={timeframe}
+                            onTimeframeChange={onTimeframeChange}
+                            allowedValues={timeframeOptions}
+                        />
 
                         <Separator />
 
