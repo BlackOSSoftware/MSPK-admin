@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Search,
     Plus,
@@ -40,6 +40,8 @@ const DEFAULT_SUMMARY = {
 
 const filterInputClassName = "h-10 rounded-xl border border-border/70 bg-secondary/30 px-3 text-xs font-semibold text-foreground outline-none transition focus:border-primary/50 focus:bg-secondary/50";
 
+const normalizeSegmentValue = (value) => String(value ?? '').trim().toUpperCase();
+
 const ManageSymbols = () => {
     const navigate = useNavigate();
     const toast = useToast();
@@ -60,6 +62,20 @@ const ManageSymbols = () => {
     const [reloadToken, setReloadToken] = useState(0);
     const [generatingIdFor, setGeneratingIdFor] = useState('');
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, data: null });
+
+    const segmentOptions = useMemo(() => {
+        const unique = new Map();
+        (Array.isArray(segments) ? segments : []).forEach((segment) => {
+            const rawValue = segment?.code ?? segment?.segment_code ?? segment?.segmentCode ?? segment?.segment ?? segment?.name;
+            const value = normalizeSegmentValue(rawValue);
+            if (!value || unique.has(value)) return;
+            unique.set(value, {
+                value,
+                label: segment?.name || segment?.code || segment?.segment_code || segment?.segment || value,
+            });
+        });
+        return Array.from(unique.values());
+    }, [segments]);
 
     useEffect(() => {
         const timer = window.setTimeout(() => {
@@ -314,15 +330,15 @@ const ManageSymbols = () => {
                                 <select
                                     value={segmentFilter}
                                     onChange={(event) => {
-                                        setSegmentFilter(event.target.value);
+                                        setSegmentFilter(normalizeSegmentValue(event.target.value));
                                         setCurrentPage(1);
                                     }}
                                     className={filterInputClassName}
                                 >
                                     <option value="">All Segments</option>
-                                    {segments.map((segment) => (
-                                        <option key={segment._id || segment.code} value={segment.code}>
-                                            {segment.code}
+                                    {segmentOptions.map((segment) => (
+                                        <option key={segment.value} value={segment.value}>
+                                            {segment.label}
                                         </option>
                                     ))}
                                 </select>
