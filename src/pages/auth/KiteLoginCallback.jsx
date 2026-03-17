@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import client from '../../api/client';
 
 const KiteLoginCallback = () => {
     const [searchParams] = useSearchParams();
@@ -30,20 +30,12 @@ const KiteLoginCallback = () => {
             }
 
             try {
-                // Backend verifies and generates session
-                // Note: The backend controller expects query params, so we pass them along
-                // Use the callback endpoint on backend
-                // Correct Route: /v1/market/login/:provider
-
-                // Construct backend URL (assuming proxy or full path)
-                const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/v1';
-                const backendUrl = `${apiBase}/market/login/kite?request_token=${requestToken}`;
-
-                // Or if you use an axios instance with base URL:
-                // await api.get(`/market/login/kite?request_token=${requestToken}`);
-
-                // Since we don't know exact Axios setup, using direct fetch for safety or assuming generic axios
-                await axios.get(backendUrl, { withCredentials: true });
+                // Exchange request_token for access_token and persist it in DB (backend stores under `kite_access_token` setting).
+                // Use the shared axios client so baseURL normalization works even if env has a trailing slash.
+                await client.get('/market/login/kite', {
+                    params: { request_token: requestToken },
+                    withCredentials: true,
+                });
 
                 setStatus('Login Successful!');
                 toast.success('Kite Login Successful');
