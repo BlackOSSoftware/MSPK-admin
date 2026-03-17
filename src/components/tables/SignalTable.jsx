@@ -144,12 +144,17 @@ const isTargetHit = (targetValue, price, isBuy) => {
 };
 
 const getAdminSignalSegmentLabel = (signal) => {
-    const group = getSegmentGroup(signal);
-    if (group === 'COMMODITY') return 'MCX';
-    if (group === 'CURRENCY') return 'FOREX';
-    if (group === 'FNO') return 'NFO';
-    if (group === 'EQUITY') return 'NSE';
-    return group || String(signal?.segment || signal?.exchange || 'OTHER').toUpperCase();
+    const group = String(
+        getSegmentGroup(signal) || signal?.segment || signal?.exchange || 'OTHER'
+    ).toUpperCase();
+
+    if (['COMMODITY', 'COMEX', 'MCX', 'NYMEX'].includes(group)) return 'MCX';
+    if (['CURRENCY', 'FOREX', 'CDS', 'BCD', 'FX', 'CUR'].includes(group)) return 'FOREX';
+    if (['FNO', 'FO', 'NFO', 'OPTIONS', 'OPTION', 'FUTURES'].includes(group)) return 'NFO';
+    if (['EQUITY', 'INDICES', 'INDEX', 'NSE', 'BSE', 'NSEIX'].includes(group)) return 'NSE';
+    if (['CRYPTO', 'BINANCE'].includes(group)) return 'CRYPTO';
+
+    return group;
 };
 
 const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }) => {
@@ -246,7 +251,15 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const resolvedExit = resolveExitPrice(signal, livePrice);
                                 const resolvedPoints = resolvePoints(signal, livePrice);
                                 const priceForTargets = typeof livePrice === 'number' ? livePrice : resolvedExit;
-                                const signalTime = signal.signalTime || signal.createdAt || signal.timestamp;
+                                const signalTime =
+                                    signal.displaySignalTime ||
+                                    signal.signalTime ||
+                                    signal.createdAt ||
+                                    signal.timestamp;
+                                const exitTime =
+                                    signal.displayExitTime ||
+                                    signal.exitTime ||
+                                    (isClosed ? signal.updatedAt || signal.createdAt : null);
                                 const isStoplossHit = signal.status === 'Stoploss Hit';
                                 const isTargetOutcome = signal.status === 'Target Hit';
                                 const isPartialOutcome = signal.status === 'Partial Profit Book';
@@ -454,7 +467,7 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                 </div>
                                                 <div>
                                                     <div className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">Exit Time</div>
-                                                    <div className="mt-1 text-[10px] font-semibold text-foreground">{formatDateTime(signal.exitTime)}</div>
+                                                    <div className="mt-1 text-[10px] font-semibold text-foreground">{formatDateTime(exitTime)}</div>
                                                 </div>
                                             </div>
                                         </td>

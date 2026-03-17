@@ -256,7 +256,7 @@ const UserSignalDeliveries = ({ userId, isEmbedded = false }) => {
                                                 <div className="space-y-2 text-xs">
                                                     <div>
                                                         <div className="font-bold uppercase tracking-wider text-muted-foreground">Signal Time</div>
-                                                        <div className="text-foreground">{formatDateTime(signal?.signalTime || signal?.createdAt)}</div>
+                                                        <div className="text-foreground">{formatDateTime(signal?.displaySignalTime || signal?.signalTime || signal?.createdAt)}</div>
                                                     </div>
                                                     <div>
                                                         <div className="font-bold uppercase tracking-wider text-muted-foreground">Delivered At</div>

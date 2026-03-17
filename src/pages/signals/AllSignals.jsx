@@ -8,7 +8,6 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import TablePageFooter from '../../components/ui/TablePageFooter';
 import useToast from '../../hooks/useToast';
 import SignalConfiguration from './SignalConfiguration';
-import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const FEED_FILTERS = ['All', 'Active', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit', 'Closed'];
 const HISTORY_FILTERS = ['All', 'Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit'];
@@ -54,20 +53,6 @@ const mapSegmentFilterToApi = (value) => {
     if (value === 'FOREX') return 'CURRENCY';
     if (value === 'MCX') return 'MCX';
     return value !== 'All' ? value : undefined;
-};
-
-const getAdminSignalSegmentLabel = (signal) => {
-    const group = getSegmentGroup(signal);
-    if (group === 'COMMODITY') return 'MCX';
-    if (group === 'CURRENCY') return 'FOREX';
-    if (group === 'FNO') return 'NFO';
-    if (group === 'EQUITY') return 'NSE';
-    return group || String(signal?.segment || signal?.exchange || 'OTHER').toUpperCase();
-};
-
-const matchesSignalSegmentFilter = (signal, filter) => {
-    if (!filter || filter === 'All') return true;
-    return getAdminSignalSegmentLabel(signal) === filter;
 };
 
 const AllSignals = () => {
@@ -160,7 +145,7 @@ const AllSignals = () => {
             }
 
             const { data } = await fetchSignals(params);
-            const nextRows = Array.isArray(data?.results) ? data.results.filter((item) => matchesSignalSegmentFilter(item, segmentFilter)) : [];
+            const nextRows = Array.isArray(data?.results) ? data.results : [];
             setRows(nextRows);
 
             if (data?.stats) {
@@ -195,7 +180,7 @@ const AllSignals = () => {
     const exportParams = useMemo(() => {
         const params = {
             search: searchTerm || undefined,
-            segment: segmentFilter !== 'All' ? segmentFilter : undefined,
+            segment: mapSegmentFilterToApi(segmentFilter),
             datePreset: datePreset !== 'all' ? datePreset : undefined,
             fromDate: datePreset === 'custom' ? (fromDate || undefined) : undefined,
             toDate: datePreset === 'custom' ? (toDate || undefined) : undefined,
