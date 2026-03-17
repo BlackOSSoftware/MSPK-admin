@@ -55,10 +55,6 @@ const DEFAULT_TEMPLATES = {
     title: 'Plan Expiry Reminder',
     body: 'Your {{planName}} expires in {{daysLeft}} day(s). Renew to continue access.',
   },
-  TICKET_REPLY: {
-    title: 'New Ticket Reply: {{ticketId}}',
-    body: 'Admin reply: {{message}}',
-  },
 };
 
 const VARIABLES_HELP = {
@@ -70,7 +66,6 @@ const VARIABLES_HELP = {
   ANNOUNCEMENT: ['{{title}}', '{{message}}'],
   ECONOMIC_ALERT: ['{{event}}', '{{country}}', '{{forecast}}', '{{previous}}'],
   PLAN_EXPIRY_REMINDER: ['{{planName}}', '{{daysLeft}}'],
-  TICKET_REPLY: ['{{ticketId}}', '{{message}}'],
 };
 
 const MOCK_DATA = {
@@ -95,7 +90,6 @@ const MOCK_DATA = {
   '{{previous}}': '0.4%',
   '{{planName}}': 'Pro Signals',
   '{{daysLeft}}': '2',
-  '{{ticketId}}': 'TKT-2041',
 };
 
 const CHANNEL_META = {
