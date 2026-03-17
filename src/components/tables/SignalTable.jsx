@@ -19,6 +19,31 @@ import TableHeaderCell from '../ui/TableHeaderCell';
 import { getSegmentGroup } from '../../utils/segmentGroups';
 
 const CLOSED_STATUSES = new Set(['Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit']);
+const LIVE_SYMBOL_ALIASES = new Map([
+    ['NIFTY', 'NSE:NIFTY 50-INDEX'],
+    ['NIFTY1!', 'NSE:NIFTY 50-INDEX'],
+    ['NIFTY50', 'NSE:NIFTY 50-INDEX'],
+    ['NSE:NIFTY', 'NSE:NIFTY 50-INDEX'],
+    ['NSE:NIFTY50', 'NSE:NIFTY 50-INDEX'],
+    ['NSE:NIFTY 50', 'NSE:NIFTY 50-INDEX'],
+    ['BANKNIFTY', 'NSE:NIFTY BANK-INDEX'],
+    ['BANKNIFTY1!', 'NSE:NIFTY BANK-INDEX'],
+    ['NSE:BANKNIFTY', 'NSE:NIFTY BANK-INDEX'],
+    ['NSE:NIFTYBANK', 'NSE:NIFTY BANK-INDEX'],
+    ['NSE:NIFTY BANK', 'NSE:NIFTY BANK-INDEX'],
+    ['FINNIFTY', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['FINNIFTY1!', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['NSE:FINNIFTY', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['NSE:NIFTY FIN SERVICE', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['INDIAVIX', 'NSE:INDIA VIX'],
+    ['NSE:INDIAVIX', 'NSE:INDIA VIX'],
+]);
+
+const normalizeLiveSymbol = (value) => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (!normalized) return '';
+    return LIVE_SYMBOL_ALIASES.get(normalized) || normalized;
+};
 
 const formatPrice = (value) => {
     if (value === null || value === undefined || value === '') return '---';
@@ -146,15 +171,16 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
     useEffect(() => {
         if (!signals || signals.length === 0) return undefined;
 
-        const symbols = [...new Set(signals.map((signal) => signal.symbol).filter(Boolean))];
+        const symbols = [...new Set(signals.map((signal) => normalizeLiveSymbol(signal.symbol)).filter(Boolean))];
         symbols.forEach((symbol) => socket.emit('subscribe', symbol));
 
         const onTick = (tick) => {
-            if (!tick?.symbol || !symbols.includes(tick.symbol)) return;
+            const liveSymbol = normalizeLiveSymbol(tick?.symbol);
+            if (!liveSymbol || !symbols.includes(liveSymbol)) return;
 
             setLtpData((prev) => ({
                 ...prev,
-                [tick.symbol]: {
+                [liveSymbol]: {
                     price: tick.price ?? tick.last_price,
                     change: tick.change ?? 0,
                 },
@@ -216,7 +242,7 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const isBuy = signal.type === 'BUY';
                                 const isClosed = CLOSED_STATUSES.has(signal.status);
                                 const targets = signal.targets || {};
-                                const livePrice = ltpData[signal.symbol]?.price;
+                                const livePrice = ltpData[normalizeLiveSymbol(signal.symbol)]?.price;
                                 const resolvedExit = resolveExitPrice(signal, livePrice);
                                 const resolvedPoints = resolvePoints(signal, livePrice);
                                 const priceForTargets = typeof livePrice === 'number' ? livePrice : resolvedExit;
@@ -226,9 +252,14 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                 const isPartialOutcome = signal.status === 'Partial Profit Book';
                                 const segmentLabel = getAdminSignalSegmentLabel(signal);
                                 const metaBadges = [segmentLabel, signal.timeframe].filter(Boolean);
+                                const displaySymbol = signal.symbolName || signal.symbol || '---';
+                                const showCanonicalSymbol =
+                                    signal.symbol &&
+                                    signal.symbolName &&
+                                    String(signal.symbolName).trim().toUpperCase() !== String(signal.symbol).trim().toUpperCase();
                                 const highlightMatch =
                                     highlightTerm &&
-                                    `${signal.symbol} ${signal.uniqueId || ''} ${signal.webhookId || ''}`
+                                    `${signal.symbolName || ''} ${signal.symbol} ${signal.uniqueId || ''} ${signal.webhookId || ''}`
                                         .toLowerCase()
                                         .includes(highlightTerm.toLowerCase());
 
@@ -246,13 +277,18 @@ const SignalTable = ({ signals, onAction, onRowClick, isLoading, highlightTerm }
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-sans text-sm font-extrabold tracking-tight text-foreground">{signal.symbol || '---'}</span>
+                                                            <span className="font-sans text-sm font-extrabold tracking-tight text-foreground">{displaySymbol}</span>
                                                             <span className={clsx(
                                                                 'rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.22em]',
                                                                 signal.isFree ? 'border-sky-500/30 bg-sky-500/10 text-sky-400' : 'border-violet-500/30 bg-violet-500/10 text-violet-400'
                                                             )}>
                                                                 {signal.isFree ? 'Free' : 'Premium'}
                                                             </span>
+                                                            {showCanonicalSymbol && (
+                                                                <span className="rounded-md border border-border/70 bg-muted/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                                                                    {signal.symbol}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                                                             {metaBadges.map((item) => (

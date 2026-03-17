@@ -10,6 +10,30 @@ const TIMEFRAMES = [
     { key: '1h', label: '1 Hour' },
 ];
 
+const getSignalEventTime = (signal) => signal?.exitTime || signal?.signalTime || signal?.createdAt || signal?.timestamp || null;
+
+const isSignalClosed = (signal) => {
+    if (!signal) return false;
+    const status = String(signal.status || '').trim().toLowerCase();
+    if (signal.exitTime) return true;
+    return status.includes('target') || status.includes('partial') || status.includes('stop') || status.includes('close');
+};
+
+const shouldReplaceSignal = (nextSignal, existingSignal) => {
+    if (!existingSignal) return true;
+
+    const nextIsActive = !isSignalClosed(nextSignal);
+    const existingIsActive = !isSignalClosed(existingSignal);
+
+    if (nextIsActive !== existingIsActive) {
+        return nextIsActive;
+    }
+
+    const nextTime = new Date(getSignalEventTime(nextSignal) || 0).getTime();
+    const existingTime = new Date(getSignalEventTime(existingSignal) || 0).getTime();
+    return nextTime >= existingTime;
+};
+
 const formatTimeAgo = (value) => {
     if (!value) return '—';
     const ts = new Date(value).getTime();
@@ -127,21 +151,14 @@ const SignalCardsPanel = ({ symbol }) => {
             try {
                 const response = await fetchBackendSignals({
                     symbol: symbol.symbol,
-                    limit: 40,
+                    sortBy: 'latest-event',
+                    limit: 120,
                 });
 
                 const signalsData = response.data?.results || response.results || [];
-                const statusWeight = (status) => {
-                    const normalized = String(status || '').toUpperCase();
-                    if (normalized === 'ACTIVE' || normalized === 'ENTRY_PENDING') return 2;
-                    return 1;
-                };
-
                 const sorted = [...signalsData].sort((a, b) => {
-                    const w = statusWeight(b.status) - statusWeight(a.status);
-                    if (w !== 0) return w;
-                    const tA = new Date(a.signalTime || a.createdAt || a.timestamp || 0).getTime();
-                    const tB = new Date(b.signalTime || b.createdAt || b.timestamp || 0).getTime();
+                    const tA = new Date(getSignalEventTime(a) || 0).getTime();
+                    const tB = new Date(getSignalEventTime(b) || 0).getTime();
                     return tB - tA;
                 });
 
@@ -150,8 +167,7 @@ const SignalCardsPanel = ({ symbol }) => {
 
                 sorted.forEach((s) => {
                     const key = normalizeSignalTimeframe(s.timeframe);
-                    if (key && latestByTf[key]) return;
-                    if (key && latestByTf[key] === null) {
+                    if (key && shouldReplaceSignal(s, latestByTf[key])) {
                         latestByTf[key] = s;
                     }
                 });
@@ -162,7 +178,7 @@ const SignalCardsPanel = ({ symbol }) => {
                         newSignals[tf.key] = {
                             symbol: symbol.symbol,
                             type: 'NEUTRAL',
-                            statusLabel: 'No active signal',
+                            statusLabel: 'No signal',
                             timeAgo: '—',
                             sourceLabel: tf.label,
                         };
@@ -175,7 +191,7 @@ const SignalCardsPanel = ({ symbol }) => {
                     const t1 = lastSignal.targets?.target1;
                     const t2 = lastSignal.targets?.target2;
                     const t3 = lastSignal.targets?.target3;
-                    const currentPrice = symbol.price || entry;
+                    const currentPrice = lastSignal.exitPrice || symbol.price || entry;
                     const pnl = typeof entry === 'number' && typeof currentPrice === 'number'
                         ? (isBuy ? (currentPrice - entry) : (entry - currentPrice))
                         : null;
@@ -184,7 +200,7 @@ const SignalCardsPanel = ({ symbol }) => {
                         symbol: lastSignal.symbol || symbol.symbol,
                         type: lastSignal.type || 'NEUTRAL',
                         statusLabel: lastSignal.status || 'Active',
-                        timeAgo: formatTimeAgo(lastSignal.signalTime || lastSignal.createdAt || lastSignal.timestamp),
+                        timeAgo: formatTimeAgo(getSignalEventTime(lastSignal)),
                         sourceLabel: tf.label,
                         entry: entry ? formatPrice(entry, symbol.symbol) : '—',
                         t1: t1 ? formatPrice(t1, symbol.symbol) : '—',
@@ -242,7 +258,7 @@ const SignalCardsPanel = ({ symbol }) => {
                                 signal={signals[tf.key] || {
                                     symbol: symbol?.symbol,
                                     type: 'NEUTRAL',
-                                    statusLabel: 'No active signal',
+                                    statusLabel: 'No signal',
                                     timeAgo: '—',
                                     sourceLabel: tf.label,
                                 }}

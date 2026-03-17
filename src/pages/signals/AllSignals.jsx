@@ -322,8 +322,9 @@ const AllSignals = () => {
     };
 
     const handleRowClick = (signal) => {
-        const strategyParam = signal.strategyId ? `&strategyId=${signal.strategyId}` : '';
-        navigate(`/market/data?symbol=${signal.symbol}${strategyParam}`);
+        const encodedSymbol = encodeURIComponent(String(signal.symbol || '').trim());
+        const strategyParam = signal.strategyId ? `&strategyId=${encodeURIComponent(signal.strategyId)}` : '';
+        navigate(`/market/data?symbol=${encodedSymbol}${strategyParam}`);
     };
 
     const currentFilters = activeTab === 'history' ? HISTORY_FILTERS : FEED_FILTERS;

@@ -14,7 +14,7 @@ import SnapshotModal from './SnapshotModal';
 import SignalCardsPanel from './SignalCardsPanel';
 import Button from '../ui/Button';
 import { socket } from '../../api/socket';
-import { getSymbols, updateSymbol } from '../../api/market.api';
+import { getSymbols, searchInstruments, updateSymbol } from '../../api/market.api';
 import { mapStrategyToIndicators } from '../../utils/strategyMapping';
 import { getSegmentGroup } from '../../utils/segmentGroups';
 import chartCache from '../../utils/ChartDataCache';
@@ -74,6 +74,118 @@ const MULTI_TIMEFRAME_WINDOWS = [
 const MULTI_TIMEFRAME_WINDOW_SET = new Set(MULTI_TIMEFRAME_WINDOWS.map((item) => item.value));
 
 const resolveSignalStrategyId = (signal) => signal?.strategyId ? String(signal.strategyId) : 'MANUAL';
+const LIVE_SYMBOL_ALIASES = new Map([
+    ['NIFTY', 'NSE:NIFTY 50-INDEX'],
+    ['NIFTY1!', 'NSE:NIFTY 50-INDEX'],
+    ['NIFTY50', 'NSE:NIFTY 50-INDEX'],
+    ['NSE:NIFTY', 'NSE:NIFTY 50-INDEX'],
+    ['NSE:NIFTY50', 'NSE:NIFTY 50-INDEX'],
+    ['NSE:NIFTY 50', 'NSE:NIFTY 50-INDEX'],
+    ['BANKNIFTY', 'NSE:NIFTY BANK-INDEX'],
+    ['BANKNIFTY1!', 'NSE:NIFTY BANK-INDEX'],
+    ['NSE:BANKNIFTY', 'NSE:NIFTY BANK-INDEX'],
+    ['NSE:NIFTYBANK', 'NSE:NIFTY BANK-INDEX'],
+    ['NSE:NIFTY BANK', 'NSE:NIFTY BANK-INDEX'],
+    ['FINNIFTY', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['FINNIFTY1!', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['NSE:FINNIFTY', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['NSE:NIFTY FIN SERVICE', 'NSE:NIFTY FIN SERVICE-INDEX'],
+    ['INDIAVIX', 'NSE:INDIA VIX'],
+    ['NSE:INDIAVIX', 'NSE:INDIA VIX'],
+]);
+const normalizeLiveSymbol = (value) => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (!normalized) return '';
+    return LIVE_SYMBOL_ALIASES.get(normalized) || normalized;
+};
+const compactSymbolValue = (value) => normalizeLiveSymbol(value).replace(/[^A-Z0-9]/g, '');
+const getSymbolSuffix = (value) => {
+    const normalized = normalizeLiveSymbol(value);
+    if (!normalized) return '';
+    return normalized.includes(':') ? normalized.split(':').slice(1).join(':') : normalized;
+};
+const symbolsMatch = (left, right) => {
+    const normalizedLeft = normalizeLiveSymbol(left);
+    const normalizedRight = normalizeLiveSymbol(right);
+    return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
+};
+const getSymbolMatchScore = (query, candidate = {}) => {
+    const normalizedQuery = normalizeLiveSymbol(query);
+    const compactQuery = compactSymbolValue(query);
+    if (!normalizedQuery || !compactQuery) return -1;
+
+    const symbol = normalizeLiveSymbol(candidate.symbol);
+    const sourceSymbol = normalizeLiveSymbol(candidate.sourceSymbol);
+    const name = normalizeLiveSymbol(candidate.name);
+    const symbolSuffix = getSymbolSuffix(symbol);
+    const sourceSuffix = getSymbolSuffix(sourceSymbol);
+    const fields = [symbol, sourceSymbol, name, symbolSuffix, sourceSuffix].filter(Boolean);
+    let score = -1;
+
+    if (symbol === normalizedQuery) score = Math.max(score, 1000);
+    if (sourceSymbol === normalizedQuery) score = Math.max(score, 980);
+    if (name === normalizedQuery) score = Math.max(score, 960);
+    if (symbolSuffix === normalizedQuery) score = Math.max(score, 940);
+    if (sourceSuffix === normalizedQuery) score = Math.max(score, 930);
+
+    if (compactSymbolValue(symbol) === compactQuery) score = Math.max(score, 920);
+    if (compactSymbolValue(sourceSymbol) === compactQuery) score = Math.max(score, 900);
+    if (compactSymbolValue(name) === compactQuery) score = Math.max(score, 890);
+    if (compactSymbolValue(symbolSuffix) === compactQuery) score = Math.max(score, 880);
+    if (compactSymbolValue(sourceSuffix) === compactQuery) score = Math.max(score, 870);
+
+    if (score < 0) {
+        for (const field of fields) {
+            const compactField = compactSymbolValue(field);
+            if (!compactField) continue;
+            if (compactField.startsWith(compactQuery)) score = Math.max(score, 720);
+            if (compactField.includes(compactQuery)) score = Math.max(score, 680);
+            if (compactQuery.startsWith(compactField)) score = Math.max(score, 640);
+        }
+    }
+
+    if (score < 0) return -1;
+    if (candidate.isWatchlist) score += 35;
+    if (candidate.isActive) score += 10;
+    if (candidate.provider === 'kite') score += 5;
+    return score;
+};
+const resolveBestSymbolCandidate = (query, candidates = []) => {
+    let best = null;
+    let bestScore = -1;
+
+    for (const candidate of Array.isArray(candidates) ? candidates : []) {
+        const score = getSymbolMatchScore(query, candidate);
+        if (score > bestScore) {
+            bestScore = score;
+            best = candidate;
+        }
+    }
+
+    return bestScore >= 0 ? best : null;
+};
+const parseTickPrice = (tick, fallback = NaN) => {
+    const value = Number(
+        tick?.price ??
+        tick?.last_price ??
+        tick?.last ??
+        tick?.ltp ??
+        fallback
+    );
+    return Number.isFinite(value) ? value : fallback;
+};
+const parseTickVolume = (tick, fallback = 0) => {
+    const value = Number(
+        tick?.total_volume ??
+        tick?.volume ??
+        tick?.v ??
+        tick?.vol ??
+        tick?.lastVolume ??
+        tick?.last_quantity ??
+        fallback
+    );
+    return Number.isFinite(value) ? value : fallback;
+};
 
 const TradingLayout = ({ hideCharts = false }) => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -425,19 +537,24 @@ const TradingLayout = ({ hideCharts = false }) => {
         const strategyParam = searchParams.get('strategyId');
 
         if (symbolParam) {
-            const matchInWatchlist = symbols.find(s => s.symbol.toUpperCase() === symbolParam.toUpperCase());
+            const matchInWatchlist = resolveBestSymbolCandidate(symbolParam, symbols);
             if (matchInWatchlist) {
                 setSelectedSymbol(matchInWatchlist);
             } else {
                 // Not in watchlist, fetch complete symbol info
                 const fetchAndSelect = async () => {
                     try {
-                        const res = await getSymbols({ search: symbolParam });
-                        if (res && res.length > 0) {
-                            // Find exact match
-                            const exact = res.find(s => s.symbol.toUpperCase() === symbolParam.toUpperCase());
-                            if (exact) setSelectedSymbol(exact);
+                        const candidates = [];
+                        const symbolResults = await getSymbols({ search: symbolParam });
+                        if (Array.isArray(symbolResults)) candidates.push(...symbolResults);
+
+                        if (candidates.length === 0) {
+                            const instrumentResults = await searchInstruments(symbolParam);
+                            if (Array.isArray(instrumentResults)) candidates.push(...instrumentResults);
                         }
+
+                        const resolved = resolveBestSymbolCandidate(symbolParam, candidates);
+                        if (resolved) setSelectedSymbol(resolved);
                     } catch (e) { console.error("Link fetch failed", e); }
                 };
                 fetchAndSelect();
@@ -580,6 +697,7 @@ const TradingLayout = ({ hideCharts = false }) => {
     const [lastTick, setLastTick] = useState(null);
     const selectedSymbolRef = React.useRef(selectedSymbol);
     const symbolsRef = React.useRef(symbols);
+    const activeSocketCleanupRef = React.useRef({ onTick: null, onBotStatus: null, onNewSignal: null });
 
     // Keep refs updated
     useEffect(() => {
@@ -590,7 +708,7 @@ const TradingLayout = ({ hideCharts = false }) => {
     useEffect(() => {
         // Subscribe to current watchlist symbols AND selected symbol (if not in watchlist)
         const subList = [...symbols];
-        if (selectedSymbol && !subList.find(s => s.symbol === selectedSymbol.symbol)) {
+        if (selectedSymbol && !subList.find((item) => symbolsMatch(item.symbol, selectedSymbol.symbol))) {
             subList.push(selectedSymbol);
         }
 
@@ -605,6 +723,7 @@ const TradingLayout = ({ hideCharts = false }) => {
             activeSocket = socket;
 
             const onTick = (tick) => {
+                if (!tick?.symbol) return;
                 const currentSelected = selectedSymbolRef.current;
 
                 setMarketData(prev => {
@@ -612,16 +731,16 @@ const TradingLayout = ({ hideCharts = false }) => {
                     if (!prev) return prev;
 
                     // Find category - Optimization: Map lookup would be faster but object scan is acceptable for <100 items
-                    const cat = Object.keys(prev).find(key => prev[key].some(s => s.symbol === tick.symbol));
+                    const cat = Object.keys(prev).find((key) => prev[key].some((item) => symbolsMatch(item.symbol, tick.symbol)));
                     if (!cat) return prev;
 
                     if (prev[cat]) {
                         const newState = { ...prev };
-                        const idx = newState[cat].findIndex(s => s.symbol === tick.symbol);
+                        const idx = newState[cat].findIndex((item) => symbolsMatch(item.symbol, tick.symbol));
 
                         if (idx !== -1) {
                             const currentItem = newState[cat][idx];
-                            const incomingPrice = parseFloat(tick.price || 0);
+                            const incomingPrice = parseTickPrice(tick, currentItem.price);
                             const finalPrice = incomingPrice > 0 ? incomingPrice : currentItem.price;
 
                             // Dynamic Change Calculation
@@ -642,11 +761,12 @@ const TradingLayout = ({ hideCharts = false }) => {
                             newState[cat][idx] = {
                                 ...currentItem,
                                 price: finalPrice,
+                                lastPrice: finalPrice,
                                 change: finalChange,
                                 changePercent: finalChangePercent,
                                 bid: parseFloat(tick.bid || currentItem.bid || 0),
                                 ask: parseFloat(tick.ask || currentItem.ask || 0),
-                                volume: parseFloat(tick.total_volume || tick.volume || tick.v || tick.vol || tick.lastVolume || currentItem.volume || 0)
+                                volume: parseTickVolume(tick, currentItem.volume || 0)
                             };
                         }
                         return newState;
@@ -654,14 +774,32 @@ const TradingLayout = ({ hideCharts = false }) => {
                     return prev;
                 });
 
-                if (tick.symbol) {
-                    // Normalize symbols for comparison
-                    const tickSym = tick.symbol.toUpperCase();
-                    const currSym = currentSelected?.symbol?.toUpperCase();
+                if (symbolsMatch(tick.symbol, currentSelected?.symbol)) {
+                    setLastTick({
+                        ...tick,
+                        symbol: currentSelected?.symbol || tick.symbol,
+                        price: parseTickPrice(tick, 0),
+                        volume: parseTickVolume(tick, 0),
+                    });
+                }
+            };
 
-                    if (tickSym === currSym) {
-                        setLastTick(tick);
-                    }
+            const onBotStatus = (data) => {
+                if (isMounted) setActiveBot(data.status === 'ON');
+            };
+
+            const onNewSignal = (signal) => {
+                const currentSelected = selectedSymbolRef.current;
+                const normalizedSignalTimeframe = normalizeSignalTimeframe(signal.timeframe);
+
+                if (
+                    symbolsMatch(signal.symbol, currentSelected?.symbol) &&
+                    MULTI_TIMEFRAME_WINDOWS.some((pane) => matchesSignalTimeframe(normalizedSignalTimeframe, pane.value))
+                ) {
+                    setSymbolSignals((prev) => upsertSignal(prev, signal));
+
+                    const audio = new Audio('/sounds/signal_alert.mp3');
+                    audio.play().catch(e => { });
                 }
             };
 
@@ -669,41 +807,27 @@ const TradingLayout = ({ hideCharts = false }) => {
             socket.on('tick', onTick);
 
             // Listen for Global Bot Status
-            socket.on('bot_status', (data) => {
-                if (isMounted) setActiveBot(data.status === 'ON');
-            });
+            socket.on('bot_status', onBotStatus);
 
             // Listen for New Signals
-            socket.on('new_signal', (signal) => {
-                const currentSelected = selectedSymbolRef.current;
-                const normalizedSignalTimeframe = normalizeSignalTimeframe(signal.timeframe);
+            socket.on('new_signal', onNewSignal);
 
-                // If signal belongs to current symbol and one of the visible panes, keep it in local cache
-                if (
-                    signal.symbol === currentSelected?.symbol &&
-                    MULTI_TIMEFRAME_WINDOWS.some((pane) => matchesSignalTimeframe(normalizedSignalTimeframe, pane.value))
-                ) {
-                    setSymbolSignals(prev => upsertSignal(prev, signal));
-
-                    // Play Sound
-                    const audio = new Audio('/sounds/signal_alert.mp3');
-                    audio.play().catch(e => { });
-                }
-            });
+            activeSocketCleanupRef.current = { onTick, onBotStatus, onNewSignal };
         };
         initSocket();
 
         return () => {
             isMounted = false;
             if (activeSocket) {
+                const cleanup = activeSocketCleanupRef.current || {};
                 // Thorough cleanup
                 subList.forEach(s => activeSocket.emit('unsubscribe', s.symbol));
-                activeSocket.off('tick');
-                activeSocket.off('bot_status');
-                activeSocket.off('new_signal');
+                activeSocket.off('tick', cleanup.onTick);
+                activeSocket.off('bot_status', cleanup.onBotStatus);
+                activeSocket.off('new_signal', cleanup.onNewSignal);
             }
         };
-    }, [symbols, selectedSymbol]); // Dependencies remain, but internal logic uses Refs for safety
+    }, [symbols, selectedSymbol?.symbol]); // Dependencies remain, but internal logic uses Refs for safety
 
     // -- Handlers --
 
@@ -833,9 +957,9 @@ const TradingLayout = ({ hideCharts = false }) => {
     const showCharts = !hideCharts;
     const activePaneTimeframe = MULTI_TIMEFRAME_WINDOW_SET.has(timeframe) ? timeframe : '5';
     const allSymbols = Object.values(marketData).flat();
-    const liveSymbol = selectedSymbol ? allSymbols.find(s => s.symbol === selectedSymbol.symbol) : null;
+    const liveSymbol = selectedSymbol ? allSymbols.find((item) => symbolsMatch(item.symbol, selectedSymbol.symbol)) : null;
     const mergedSymbol = liveSymbol ? { ...selectedSymbol, ...liveSymbol } : selectedSymbol;
-    const mergedLive = (lastTick?.symbol && mergedSymbol?.symbol && lastTick.symbol === mergedSymbol.symbol)
+    const mergedLive = symbolsMatch(lastTick?.symbol, mergedSymbol?.symbol)
         ? { ...mergedSymbol, ...lastTick }
         : mergedSymbol;
     const priceValue = typeof mergedLive?.price === 'number' ? mergedLive.price : Number(mergedLive?.lastPrice || 0) || 0;
@@ -992,7 +1116,7 @@ const TradingLayout = ({ hideCharts = false }) => {
             {/* Top Header */}
             <div className="h-12 border-b border-border flex-none bg-card/50 backdrop-blur-sm z-[100] relative">
                 <TradingHeader
-                    symbol={selectedSymbol && lastTick?.symbol === selectedSymbol.symbol ? { ...selectedSymbol, ...lastTick } : selectedSymbol}
+                    symbol={symbolsMatch(lastTick?.symbol, selectedSymbol?.symbol) ? { ...selectedSymbol, ...lastTick } : selectedSymbol}
                     onSymbolChange={setSelectedSymbol}
                     allSymbols={symbols}
                     onToggleWatchlist={() => setRightSidebarOpen(!rightSidebarOpen)}
@@ -1060,7 +1184,7 @@ const TradingLayout = ({ hideCharts = false }) => {
                                             <div className="min-h-0 flex-1">
                                                 <TradingChart
                                                     symbol={mergedLive}
-                                                    latestTick={lastTick?.symbol === selectedSymbol.symbol ? lastTick : null}
+                                                    latestTick={symbolsMatch(lastTick?.symbol, selectedSymbol?.symbol) ? lastTick : null}
                                                     activeSignals={paneState.activeSignals}
                                                     signalMarkers={paneState.signalMarkers}
                                                     onQuickSignal={(type) => handleQuickSignal(type, pane.value)}

@@ -120,7 +120,11 @@ export const socketWrapper = {
     },
     off: (event, callback) => {
         if (listeners.has(event)) {
-            listeners.get(event).delete(callback);
+            if (callback) {
+                listeners.get(event).delete(callback);
+            } else {
+                listeners.get(event).clear();
+            }
         }
     },
     emit: (type, payload) => {

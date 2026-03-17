@@ -7,7 +7,7 @@ self.onmessage = async (e) => {
     const { type, payload } = e.data;
 
     if (type === 'PREFETCH') {
-        const { symbols, timeframe, token } = payload;
+        const { symbols, timeframe, token, count = 500 } = payload;
         
         // Process in Concurrency Batches (e.g., 3 at a time)
         const BATCH_SIZE = 3;
@@ -17,26 +17,7 @@ self.onmessage = async (e) => {
             await Promise.all(batch.map(async (symbol) => {
                 try {
                     const end = Math.floor(Date.now() / 1000);
-                    
-                    // Smart Range Optimization: Fetch ~1000 candles for instant load
-                    // This is smaller than full history but enough to fill the screen immediately.
-                    let durationSeconds = 1000 * 60 * 60 * 24 * 2; // Default 2 days
-                    
-                    const tfNum = parseInt(timeframe);
-                    if (!isNaN(tfNum)) {
-                         // minutes * 1000 candles * 60s
-                         // e.g. 5m * 1000 = 5000m = ~3.5 days
-                         durationSeconds = tfNum * 1000 * 60; 
-                    } else if (timeframe === 'D') {
-                        // 1000 days
-                        durationSeconds = 1000 * 24 * 60 * 60; 
-                    } else if (timeframe === 'W') {
-                        durationSeconds = 200 * 7 * 24 * 60 * 60; 
-                    }
-
-                    const start = end - durationSeconds;
-
-                    const url = `${self.location.origin}/api/market/history?symbol=${symbol}&resolution=${timeframe}&from=${start}&to=${end}`;
+                    const url = `${self.location.origin}/api/market/history?symbol=${encodeURIComponent(symbol)}&resolution=${encodeURIComponent(timeframe)}&to=${end}&count=${count}`;
                     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
                     const response = await fetch(url, { headers });
@@ -48,7 +29,7 @@ self.onmessage = async (e) => {
                         if (Array.isArray(rawData) && rawData.length > 0) {
                             self.postMessage({
                                 type: 'PREFETCH_SUCCESS',
-                                payload: { symbol, timeframe, data: rawData }
+                                payload: { symbol, timeframe, count, data: rawData }
                             });
                         }
                     }

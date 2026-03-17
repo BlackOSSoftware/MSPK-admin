@@ -27,8 +27,16 @@ export const useChartRealtime = ({
              return;
         }
 
-        const price = parseFloat(latestTick.price);
-        const volume = parseFloat(latestTick.volume || 0);
+        const price = Number(latestTick.price ?? latestTick.last_price ?? latestTick.last ?? latestTick.ltp);
+        const volume = Number(
+            latestTick.volume ??
+            latestTick.total_volume ??
+            latestTick.v ??
+            latestTick.vol ??
+            latestTick.lastVolume ??
+            latestTick.last_quantity ??
+            0
+        );
         if (!price) return;
 
         const now = Math.floor(Date.now() / 1000);

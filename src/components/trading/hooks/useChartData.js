@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import client from '../../../api/client';
 import { calculateHeikenAshi } from '../../../utils/chartUtils';
-import { getCachedHistory, setCachedHistory } from '../../../utils/historyCache';
+
+const TARGET_HISTORY_COUNT = 500;
 
 export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef, volSeriesRef }) => {
     const currentSymbolRef = useRef(null);
@@ -45,9 +46,6 @@ export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef
         // But for safety, we usually reset refs. 
         // We will do a smart clean below.
 
-        // Cache Key
-        const cacheKey = `${symbol.symbol}_${timeframe}`;
-
         // --- INSTANT LOAD CHECK ---
         // Import cache synchronously if possible or assume available globally 
         // (importing inside useEffect is async, so we depend on module singleton)
@@ -62,10 +60,10 @@ export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef
             
             // 1. Sync Check (Memory)
             if (!isScroll && !toTime) {
-                const memData = chartCache.getCandlesSync(symbol.symbol, timeframe);
+                const memData = chartCache.getCandlesSync(symbol.symbol, timeframe, { count: TARGET_HISTORY_COUNT });
                 if (memData) {
                     // INSTANT HIT!
-                    console.log(`[CHART_INSTANT] Memory Hit for ${cacheKey}`);
+                    console.log(`[CHART_INSTANT] Memory Hit for ${symbol.symbol}_${timeframe}_${TARGET_HISTORY_COUNT}`);
                     // Ensure refs are cleared from previous symbol if needed
                     if (allHistoryRef.current[0] && allHistoryRef.current[0].symbol !== symbol.symbol) {
                          // Soft reset
@@ -99,23 +97,8 @@ export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef
                 // Determine fetch properties
                 const now = Math.floor(Date.now() / 1000);
                 const end = toTime || Math.floor(now / 30) * 30;
-                
-                // CHECK CACHE (Only for initial load, not scroll)
-                if (!isScroll) {
-                    const cached = getCachedHistory(cacheKey);
-                    if (cached) {
-                        console.log(`[CHART_CACHE] Hit for ${cacheKey}`);
-                        applyData(cached.data, cached.volData, false);
-                        loadingRef.current = false;
-                        setIsLoading(false);
-                        return;
-                    }
-                }
 
-                // Determine fetch size
-                // Stage 1: MINIMAL Load (Very fast TTI)
-                // Stage 2: FULL Load (Background fill)
-                
+                // Determine fetch size for scroll-back only.
                 let baseDays = 10;
                 if (timeframe === '1') baseDays = 0.5;
                 else if (timeframe === '3') baseDays = 2;
@@ -125,9 +108,7 @@ export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef
                 else if (timeframe === '60') baseDays = 30;
                 else if (timeframe === 'D') baseDays = 365;
 
-                // For initial load, we do a very small fetch first
-                const minimalDays = isScroll ? (baseDays * 10) : (baseDays / 5);
-                const startMinimal = end - (minimalDays * 24 * 60 * 60);
+                const startLookback = end - ((baseDays * 10) * 24 * 60 * 60);
 
                 // USE CENTRAL CACHE MANAGER
                 const { default: chartCache } = await import('../../../utils/ChartDataCache');
@@ -135,13 +116,13 @@ export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef
                 let data = [];
                 if (!isScroll) {
                     try {
-                        data = await chartCache.getCandles(symbol.symbol, timeframe, startMinimal, end);
+                        data = await chartCache.getCandles(symbol.symbol, timeframe, null, end, { count: TARGET_HISTORY_COUNT });
                     } catch (e) {
                         console.error("Cache Fetch Failed", e);
                     }
                 } else {
                     const res = await client.get('/market/history', {
-                        params: { symbol: symbol.symbol, resolution: timeframe, from: startMinimal, to: end },
+                        params: { symbol: symbol.symbol, resolution: timeframe, from: startLookback, to: end, count: TARGET_HISTORY_COUNT },
                         signal
                     });
                     if (res.data) {
@@ -162,23 +143,6 @@ export const useChartData = ({ symbol, timeframe, chartType, chartRef, seriesRef
                     const { finalData, volData, rawData } = processRawData(data, timeframe, chartType);
                     if (signal.aborted) return;
                     applyData(finalData, volData, isScroll, rawData);
-                    
-                    // --- STAGE 2: Background Fill (Only if initial load and not scroll) ---
-                    if (!isScroll && data.length > 0) {
-                        setTimeout(async () => {
-                            if (signal.aborted) return;
-                            const startFull = end - (baseDays * 24 * 60 * 60);
-                            try {
-                                const fullData = await chartCache.getCandles(symbol.symbol, timeframe, startFull, end);
-                                if (signal.aborted || symbol.symbol !== currentSymbolRef.current) return;
-                                if (fullData && fullData.length > data.length) {
-                                    const { finalData: fData, volData: vData, rawData: rData } = processRawData(fullData, timeframe, chartType);
-                                    applyData(fData, vData, false, rData);
-                                    console.log(`[CHART_LOAD] Background Stage 2 Complete for ${symbol.symbol}`);
-                                }
-                            } catch (e) { console.warn("Background load failed", e); }
-                        }, 500); // Small delay to let UI breathe
-                    }
                 } else if (Array.isArray(data) && data.length === 0 && !isScroll) {
                     if (seriesRef.current) seriesRef.current.setData([]);
                     if (volSeriesRef.current) volSeriesRef.current.setData([]);

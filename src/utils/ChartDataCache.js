@@ -3,6 +3,13 @@ import client from '../api/client';
 const DB_NAME = 'MspkChartCache';
 const STORE_NAME = 'candles';
 const DB_VERSION = 1;
+const DEFAULT_HISTORY_COUNT = 500;
+
+const normalizeHistoryCount = (value) => {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_HISTORY_COUNT;
+    return Math.max(parsed, DEFAULT_HISTORY_COUNT);
+};
 
 // --- IndexedDB Wrapper ---
 const dbPromise = new Promise((resolve, reject) => {
@@ -151,6 +158,10 @@ class ChartDataCache {
         }
     }
 
+    _buildCacheKey(symbol, timeframe, count = DEFAULT_HISTORY_COUNT) {
+        return `${symbol}_${timeframe}_${normalizeHistoryCount(count)}`;
+    }
+
     _addToMemory(key, data) {
         if (this.memoryCache.has(key)) {
             // Refresh LRU
@@ -184,8 +195,8 @@ class ChartDataCache {
     /**
      * Get Candles - Synchronous Memory Check Supported
      */
-    getCandlesSync(symbol, timeframe) {
-        const key = `${symbol}_${timeframe}`;
+    getCandlesSync(symbol, timeframe, options = {}) {
+        const key = this._buildCacheKey(symbol, timeframe, options?.count);
         if (this.memoryCache.has(key)) {
              const item = this.memoryCache.get(key);
              if (Date.now() - item.timestamp < this.MEMORY_TTL) {
@@ -196,11 +207,12 @@ class ChartDataCache {
         return null;
     }
 
-    async getCandles(symbol, timeframe, from, to) {
-        const key = `${symbol}_${timeframe}`; 
+    async getCandles(symbol, timeframe, from, to, options = {}) {
+        const count = normalizeHistoryCount(options?.count);
+        const key = this._buildCacheKey(symbol, timeframe, count); 
         
         // 1. Check Memory
-        const memData = this.getCandlesSync(symbol, timeframe);
+        const memData = this.getCandlesSync(symbol, timeframe, { count });
         if (memData) return memData;
 
         // 2. Check Disk
@@ -219,8 +231,12 @@ class ChartDataCache {
         // 3. Fetch API (Cache Miss)
         this.stats.misses++;
         try {
+            const params = { symbol, resolution: timeframe, count };
+            if (from !== undefined && from !== null && from !== '') params.from = from;
+            if (to !== undefined && to !== null && to !== '') params.to = to;
+
             const res = await client.get('/market/history', {
-                params: { symbol, resolution: timeframe, from, to }
+                params
             });
             
             if (res.data) {
@@ -277,7 +293,8 @@ class ChartDataCache {
             payload: {
                 symbols: uniqueTargets,
                 timeframe,
-                token
+                token,
+                count: DEFAULT_HISTORY_COUNT
             }
         });
     }
@@ -289,7 +306,7 @@ class ChartDataCache {
         if (!this.worker || !symbol) return;
         
         // Check memory first - if exists, don't bother worker
-        if (this.getCandlesSync(symbol, timeframe)) return;
+        if (this.getCandlesSync(symbol, timeframe, { count: DEFAULT_HISTORY_COUNT })) return;
 
         // Debounce/Throttling could be added here if hover is erratic, 
         // but worker handles it fine.
@@ -299,7 +316,8 @@ class ChartDataCache {
             payload: {
                 symbols: [symbol],
                 timeframe,
-                token
+                token,
+                count: DEFAULT_HISTORY_COUNT
             }
         });
     }
@@ -307,8 +325,8 @@ class ChartDataCache {
     async _handleWorkerMessage(e) {
         const { type, payload } = e.data;
         if (type === 'PREFETCH_SUCCESS') {
-            const { symbol, timeframe, data } = payload;
-            const key = `${symbol}_${timeframe}`;
+            const { symbol, timeframe, count, data } = payload;
+            const key = this._buildCacheKey(symbol, timeframe, count);
             const processed = data.map(d => ({
                  time: d.time,
                  open: d.open,
