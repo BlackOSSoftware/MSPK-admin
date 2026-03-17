@@ -20,7 +20,7 @@ const STANDARD_FEATURES = [
     { id: 'Hero Zero Trades', label: 'Hero Zero Trades', category: 'Special' },
 ];
 
-const ALLOWED_SEGMENTS = ['EQUITY', 'FNO', 'COMMODITY', 'CURRENCY', 'CRYPTO', 'FOREX', 'OPTIONS'];
+const ALLOWED_SEGMENTS = ['ALL', 'EQUITY', 'FNO', 'COMMODITY', 'CURRENCY', 'CRYPTO', 'FOREX', 'OPTIONS'];
 
 const EditUser = () => {
     const navigate = useNavigate();
@@ -145,6 +145,9 @@ const EditUser = () => {
                     .map(seg => String(seg).toUpperCase())
                     .filter(Boolean);
                 const invalidSegments = normalizedSegments.filter(seg => !ALLOWED_SEGMENTS.includes(seg));
+                const expandedSegments = normalizedSegments.includes('ALL')
+                    ? allSegmentValues
+                    : normalizedSegments.filter((seg) => seg !== 'ALL');
 
                 customPayload = {
                     name: data.customPlanName,
@@ -160,8 +163,8 @@ const EditUser = () => {
                     return;
                 }
 
-                if (normalizedSegments.length > 0) {
-                    customPayload.segments = normalizedSegments;
+                if (expandedSegments.length > 0) {
+                    customPayload.segments = expandedSegments;
                 }
 
                 if (featuresList.length > 0) {
@@ -193,10 +196,25 @@ const EditUser = () => {
 
     const userRole = watch('role');
     const isAdminBeingEdited = userRole === 'admin';
-    const segmentOptions = ALLOWED_SEGMENTS.map((code) => {
-        const match = marketSegments.find(seg => String(seg.code || '').toUpperCase() === code);
-        return { label: match?.name || code, value: code };
-    });
+    const segmentOptions = [
+        { label: 'All', value: 'ALL' },
+        ...ALLOWED_SEGMENTS.filter((code) => code !== 'ALL').map((code) => {
+            const match = marketSegments.find(seg => String(seg.code || '').toUpperCase() === code);
+            return { label: match?.name || code, value: code };
+        })
+    ];
+    const allSegmentValues = segmentOptions.filter((opt) => opt.value !== 'ALL').map((opt) => opt.value);
+
+    const normalizeSegmentSelection = (vals = []) => {
+        const normalized = Array.from(new Set(vals.map((v) => String(v).toUpperCase())));
+        if (normalized.includes('ALL')) {
+            return normalized.length > 1
+                ? normalized.filter((v) => v !== 'ALL')
+                : ['ALL'];
+        }
+        if (normalized.length === allSegmentValues.length) return ['ALL'];
+        return normalized.filter((v) => v !== 'ALL');
+    };
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto space-y-6">
@@ -420,12 +438,16 @@ const EditUser = () => {
                                                 render={({ field }) => (
                                                     <SearchableSelect
                                                         options={segmentOptions}
-                                                        value={(field.value || []).filter(v => ALLOWED_SEGMENTS.includes(String(v).toUpperCase()))}
+                                                        value={normalizeSegmentSelection(
+                                                            (field.value || []).filter(v =>
+                                                                ALLOWED_SEGMENTS.includes(String(v).toUpperCase())
+                                                            )
+                                                        )}
                                                         onChange={(vals) => {
                                                             const cleaned = (vals || [])
                                                                 .map(v => String(v).toUpperCase())
                                                                 .filter(v => ALLOWED_SEGMENTS.includes(v));
-                                                            field.onChange(cleaned);
+                                                            field.onChange(normalizeSegmentSelection(cleaned));
                                                         }}
                                                         placeholder="Select segments..."
                                                         searchable={false}
