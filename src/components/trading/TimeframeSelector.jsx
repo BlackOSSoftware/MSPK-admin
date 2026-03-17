@@ -12,7 +12,6 @@ const ALL_TIMEFRAMES = [
     { label: '4h', value: '240', desc: '4 Hours' },
     { label: 'D', value: 'D', desc: '1 Day' },
     { label: 'W', value: 'W', desc: '1 Week' },
-    { label: 'M', value: 'M', desc: '1 Month' },
 ];
 
 const DEFAULT_FAVORITES = ['1', '5', '15', '60', 'D'];
