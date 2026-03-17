@@ -13,7 +13,13 @@ import { getSegments } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 
 const CreateUser = () => {
-    const { register, handleSubmit, formState: { errors } } = useForm();
+    const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
+        defaultValues: {
+            role: 'user',
+            planId: 'none',
+            subBrokerId: 'none',
+        },
+    });
     const navigate = useNavigate();
     const toast = useToast();
     const [loading, setLoading] = useState(false);
@@ -22,6 +28,8 @@ const CreateUser = () => {
     const [subBrokers, setSubBrokers] = useState([]);
     const [segments, setSegments] = useState([]);
     const [selectedSegments, setSelectedSegments] = useState([]);
+    const selectedRole = watch('role') || 'user';
+    const isAdminAccount = selectedRole === 'admin';
 
     useEffect(() => {
         const loadData = async () => {
@@ -49,29 +57,45 @@ const CreateUser = () => {
         loadData();
     }, []);
 
+    useEffect(() => {
+        // Keep admin creation intentionally simple.
+        if (!isAdminAccount) return;
+        setSelectedSegments([]);
+        setValue('planId', 'none');
+        setValue('subBrokerId', 'none');
+    }, [isAdminAccount, setValue]);
+
     const onSubmit = async (data) => {
         setLoading(true);
         try {
+            const role = data.role === 'admin' ? 'admin' : 'user';
+
             // Formatting payload
             const payload = {
                 ...data,
-                role: 'user', // Default role
-                planId: data.planId === 'none' ? undefined : data.planId,
-                subBrokerId: data.subBrokerId === 'none' ? undefined : data.subBrokerId,
-                ...(selectedSegments.length > 0 ? { segments: selectedSegments } : {})
+                role,
+                planId: role === 'user' && data.planId !== 'none' ? data.planId : undefined,
+                subBrokerId: role === 'user' && data.subBrokerId !== 'none' ? data.subBrokerId : undefined,
+                ...(role === 'user' && selectedSegments.length > 0 ? { segments: selectedSegments } : {})
             };
 
             await createUser(payload);
-            toast.success("Client created successfully!");
+            toast.success(role === 'admin' ? 'Admin created successfully!' : 'Client created successfully!');
             navigate('/users/all');
         } catch (error) {
             console.error("Create failed", error);
             const msg = error.response?.data?.message || error.message;
-            toast.error(`Failed to create client: ${msg}`);
+            toast.error(`${isAdminAccount ? 'Failed to create admin' : 'Failed to create client'}: ${msg}`);
         } finally {
             setLoading(false);
         }
     };
+
+    const headerKicker = isAdminAccount ? 'Admin Access' : 'Client Onboarding';
+    const headerTitle = isAdminAccount ? 'Add New Admin' : 'Add New Client';
+    const headerDescription = isAdminAccount
+        ? 'Create another admin login for the console'
+        : 'Create access, assign plan, and link partner';
 
     return (
         <div className="max-w-5xl mx-auto space-y-3 sm:space-y-6">
@@ -79,9 +103,9 @@ const CreateUser = () => {
                 <div className="absolute inset-0 rounded-2xl ring-1 ring-primary/10 pointer-events-none" />
                 <div className="relative p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">Client Onboarding</p>
-                        <h1 className="text-base sm:text-2xl font-bold text-foreground">Add New Client</h1>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Create access, assign plan, and link partner</p>
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">{headerKicker}</p>
+                        <h1 className="text-base sm:text-2xl font-bold text-foreground">{headerTitle}</h1>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{headerDescription}</p>
                     </div>
                     <Button variant="outline" onClick={() => navigate('/users/all')} className="gap-2 h-8 sm:h-9 text-[10px] sm:text-[11px] btn-cancel">
                         <X size={14} /> Cancel
@@ -96,6 +120,21 @@ const CreateUser = () => {
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] sm:text-[11px] font-medium text-muted-foreground block">Account Type</label>
+                            <select
+                                {...register("role")}
+                                className="w-full h-8 sm:h-10 px-3 rounded-md bg-secondary/50 border border-input text-[10px] sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            >
+                                <option value="user">Client / User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                                {isAdminAccount
+                                    ? 'Admins can access this console. Plans and segments are not required.'
+                                    : 'Clients are app users. You can optionally assign plan and segments.'}
+                            </p>
+                        </div>
                         <Input
                             label="Full Name"
                             placeholder="e.g. Rajesh Kumar"
@@ -104,7 +143,7 @@ const CreateUser = () => {
                         />
                         <Input
                             label="Email Address"
-                            placeholder="client@example.com"
+                            placeholder={isAdminAccount ? "admin@example.com" : "client@example.com"}
                             {...register("email", { required: "Email is required" })}
                             error={errors.email?.message}
                         />
@@ -113,11 +152,13 @@ const CreateUser = () => {
                             placeholder="+91 9876543210"
                             {...register("phone")}
                         />
-                        <Input
-                            label="TradingView ID (Optional)"
-                            placeholder="e.g. trader_123"
-                            {...register("tradingViewId")}
-                        />
+                        {!isAdminAccount && (
+                            <Input
+                                label="TradingView ID (Optional)"
+                                placeholder="e.g. trader_123"
+                                {...register("tradingViewId")}
+                            />
+                        )}
                         <Input
                             label="Password"
                             type="password"
@@ -128,10 +169,11 @@ const CreateUser = () => {
                     </div>
                 </Card>
 
-                <Card className="p-3 sm:p-6 space-y-3 sm:space-y-6">
-                    <h2 className="text-xs sm:text-lg font-semibold flex items-center gap-2 border-b border-border/60 pb-2">
-                        <MapPin size={16} className="text-primary" /> Trading Configuration
-                    </h2>
+                {!isAdminAccount && (
+                    <Card className="p-3 sm:p-6 space-y-3 sm:space-y-6">
+                        <h2 className="text-xs sm:text-lg font-semibold flex items-center gap-2 border-b border-border/60 pb-2">
+                            <MapPin size={16} className="text-primary" /> Trading Configuration
+                        </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                         <Input
@@ -207,15 +249,16 @@ const CreateUser = () => {
                             </div>
                         </div>
 
-                    </div>
-                </Card>
+                        </div>
+                    </Card>
+                )}
 
                 <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
                     <Button variant="outline" type="button" onClick={() => navigate('/users/all')} className="h-8 sm:h-9 text-[10px] sm:text-[11px] btn-cancel">
                         Cancel
                     </Button>
                     <Button variant="primary" type="submit" disabled={loading} className="h-8 sm:h-9 text-[10px] sm:text-[11px] min-w-[120px]">
-                        {loading ? 'Creating...' : 'Create Client'}
+                        {loading ? 'Creating...' : (isAdminAccount ? 'Create Admin' : 'Create Client')}
                     </Button>
                 </div>
             </form>
