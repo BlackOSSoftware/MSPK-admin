@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   GripVertical,
   RefreshCw,
@@ -24,16 +24,6 @@ import {
 } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 
-const SEGMENT_FOLDER_OPTIONS = [
-  { label: 'Equity', value: 'EQUITY' },
-  { label: 'FNO', value: 'FNO' },
-  { label: 'Indices', value: 'INDICES' },
-  { label: 'Commodity', value: 'COMMODITY' },
-  { label: 'Comex', value: 'COMEX' },
-  { label: 'Currency', value: 'CURRENCY' },
-  { label: 'Crypto', value: 'CRYPTO' },
-];
-
 const normalizeSymbols = (values = []) =>
   Array.from(
     new Set(
@@ -43,33 +33,6 @@ const normalizeSymbols = (values = []) =>
     )
   );
 
-const buildSelectorFromSegment = (segment) => {
-  const normalized = String(segment || '').trim().toUpperCase();
-  if (!normalized) return {};
-
-  if (normalized === 'COMEX') {
-    return { bucket: 'COMEX' };
-  }
-
-  if (normalized === 'CURRENCY') {
-    return {
-      bucket: 'FOREX',
-      segments: ['CURRENCY', 'FOREX'],
-      exchanges: ['FOREX', 'CDS', 'BCD'],
-    };
-  }
-
-  if (normalized === 'COMMODITY') {
-    return { segments: ['COMMODITY', 'MCX'], exchanges: ['MCX'] };
-  }
-
-  if (normalized === 'CRYPTO') {
-    return { segments: ['CRYPTO'], exchanges: ['CRYPTO', 'BINANCE'] };
-  }
-
-  return { segments: [normalized] };
-};
-
 const resolveTemplateSegmentLabel = (template) => {
   if (!template) return 'Unknown';
   const selector = template.selector || {};
@@ -78,8 +41,8 @@ const resolveTemplateSegmentLabel = (template) => {
   if (bucket === 'FOREX') return 'Currency';
   const segments = Array.isArray(selector.segments) ? selector.segments : [];
   const primary = segments[0] ? String(segments[0]).trim().toUpperCase() : '';
-  const match = SEGMENT_FOLDER_OPTIONS.find((option) => option.value === primary);
-  return match?.label || (primary ? primary : 'All');
+  if (!bucket && segments.length === 0) return 'Manual';
+  return primary ? primary : 'Manual';
 };
 
 const DefaultWatchlist = () => {
@@ -93,7 +56,8 @@ const DefaultWatchlist = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderSegment, setNewFolderSegment] = useState('EQUITY');
+  const lastSavedSymbolsRef = useRef(new Map());
+  const autosaveTimerRef = useRef(null);
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -103,6 +67,11 @@ const DefaultWatchlist = () => {
         ? [...data].sort((left, right) => (left.order ?? 0) - (right.order ?? 0))
         : [];
       setTemplates(sorted);
+      const nextSaved = new Map();
+      sorted.forEach((item) => {
+        nextSaved.set(item._id, normalizeSymbols(item.preferredSymbols || []));
+      });
+      lastSavedSymbolsRef.current = nextSaved;
       if (sorted.length > 0 && !activeTemplateId) {
         setActiveTemplateId(sorted[0]._id);
       } else if (sorted.length === 0) {
@@ -201,6 +170,7 @@ const DefaultWatchlist = () => {
       await updateWatchlistTemplate(activeTemplate._id, {
         preferredSymbols,
       });
+      lastSavedSymbolsRef.current.set(activeTemplate._id, [...preferredSymbols]);
       toast.success('Folder symbols saved');
       await loadTemplates();
     } catch (error) {
@@ -210,6 +180,35 @@ const DefaultWatchlist = () => {
       setIsSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (!activeTemplate) return;
+    const lastSaved = lastSavedSymbolsRef.current.get(activeTemplate._id) || [];
+    if (JSON.stringify(lastSaved) === JSON.stringify(preferredSymbols)) return;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+    autosaveTimerRef.current = setTimeout(async () => {
+      setIsSaving(true);
+      try {
+        await updateWatchlistTemplate(activeTemplate._id, { preferredSymbols });
+        lastSavedSymbolsRef.current.set(activeTemplate._id, [...preferredSymbols]);
+        toast.success('Folder auto-saved');
+      } catch (error) {
+        console.error('Auto-save failed', error);
+        toast.error('Auto-save failed');
+      } finally {
+        setIsSaving(false);
+      }
+    }, 600);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [activeTemplate, preferredSymbols, toast]);
 
   const createFolder = async () => {
     const name = String(newFolderName || '').trim();
@@ -224,14 +223,13 @@ const DefaultWatchlist = () => {
       const created = await createWatchlistTemplate({
         name,
         order: maxOrder + 10,
-        symbolLimit: 25,
         preferredSymbols: [],
-        selector: buildSelectorFromSegment(newFolderSegment),
       });
       toast.success('Folder created');
       setNewFolderName('');
       setTemplates((prev) => [...prev, created]);
       setActiveTemplateId(created._id);
+      lastSavedSymbolsRef.current.set(created._id, []);
     } catch (error) {
       console.error('Failed to create folder', error);
       toast.error('Failed to create folder');
@@ -251,6 +249,7 @@ const DefaultWatchlist = () => {
       const remaining = templates.filter((item) => item._id !== activeTemplate._id);
       setTemplates(remaining);
       setActiveTemplateId(remaining[0]?._id || '');
+      lastSavedSymbolsRef.current.delete(activeTemplate._id);
     } catch (error) {
       console.error('Failed to delete folder', error);
       toast.error('Failed to delete folder');
@@ -261,21 +260,21 @@ const DefaultWatchlist = () => {
     {
       label: 'Folders',
       value: templates.length,
-      note: 'Each folder becomes a segment watchlist for every user.',
+      note: 'Each folder becomes a default watchlist for every user.',
       icon: Layers,
     },
     {
       label: 'Selected Folder',
       value: activeTemplate?.name || 'None',
       note: activeTemplate
-        ? `Segment: ${resolveTemplateSegmentLabel(activeTemplate)}`
+        ? `Type: ${resolveTemplateSegmentLabel(activeTemplate)}`
         : 'Create a folder to begin.',
       icon: ShieldCheck,
     },
     {
       label: 'Default Behavior',
       value: 'All + Folders',
-      note: 'Users see All plus every admin folder, and can customize symbols later.',
+      note: 'Users see All plus every admin folder. Admin symbols are locked; users can add extras.',
       icon: Sparkles,
     },
   ];
@@ -295,8 +294,8 @@ const DefaultWatchlist = () => {
                 Default Watchlist Folders
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                Create segment folders, add default symbols, and publish the exact structure every user will see on first load.
-                Users can still add or remove symbols from each folder later.
+                Create folders, add default symbols, and publish the exact structure every user will see on first load.
+                Users can add extra symbols, but admin symbols stay locked.
               </p>
             </div>
 
@@ -362,7 +361,7 @@ const DefaultWatchlist = () => {
 
           <div className="mt-5 space-y-4">
             <div className="rounded-[28px] border border-border/70 bg-[linear-gradient(180deg,rgba(148,163,184,0.08),rgba(148,163,184,0.03))] p-4">
-              <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr_auto]">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                 <input
                   type="text"
                   value={newFolderName}
@@ -370,24 +369,13 @@ const DefaultWatchlist = () => {
                   placeholder="Folder name"
                   className="h-11 rounded-2xl border border-border/70 bg-secondary/15 px-4 text-sm text-foreground shadow-inner focus:border-primary/40 focus:outline-none"
                 />
-                <select
-                  value={newFolderSegment}
-                  onChange={(event) => setNewFolderSegment(event.target.value)}
-                  className="h-11 rounded-2xl border border-border/70 bg-secondary/15 px-4 text-sm text-foreground shadow-inner focus:border-primary/40 focus:outline-none"
-                >
-                  {SEGMENT_FOLDER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
                 <Button className="h-11 gap-2" onClick={createFolder} disabled={isCreating}>
                   <Plus size={14} />
                   {isCreating ? 'Creating...' : 'Create'}
                 </Button>
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
-                Each folder becomes a dedicated segment watchlist for users. All + these folders show by default.
+                Each folder becomes a default watchlist for users. All + these folders show by default.
               </p>
             </div>
 
