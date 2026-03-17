@@ -668,7 +668,7 @@ const CalendarPage = () => {
             const matchesType = eventType ? selectedEventTypes.includes(eventType) : true;
 
             return matchesSearch && matchesImpact && matchesCurrency && matchesType;
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [searchTerm, selectedImpacts, selectedCurrencies, selectedEventTypes, events]);
 
     // Grouping by Date for headers
@@ -763,7 +763,7 @@ const CalendarPage = () => {
                     {isLoading ? (
                         Array.from({ length: 15 }).map((_, i) => <SkeletonRow key={i} />)
                     ) : Object.keys(groupedEvents).length > 0 ? (
-                        Object.keys(groupedEvents).sort((a, b) => b.localeCompare(a)).map(dateIso => (
+                        Object.keys(groupedEvents).sort((a, b) => a.localeCompare(b)).map(dateIso => (
                             <div key={dateIso}>
                                 {/* Sticky Date Header */}
                                 <div className="bg-muted px-4 py-2 text-xs font-bold text-primary border-y border-border sticky top-0 backdrop-blur-sm z-10 w-full flex items-center gap-2">
