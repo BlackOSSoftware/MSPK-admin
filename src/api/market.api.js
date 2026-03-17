@@ -48,6 +48,28 @@ export const syncInstruments = async () => {
     return response.data;
 };
 
+export const getWatchlistTemplates = async (params = {}) => {
+    const usp = new URLSearchParams(params).toString();
+    const query = usp ? `?${usp}` : '';
+    const response = await client.get(`/market/watchlist-templates${query}`);
+    return response.data;
+};
+
+export const createWatchlistTemplate = async (payload) => {
+    const response = await client.post('/market/watchlist-templates', payload);
+    return response.data;
+};
+
+export const updateWatchlistTemplate = async (id, payload) => {
+    const response = await client.patch(`/market/watchlist-templates/${id}`, payload);
+    return response.data;
+};
+
+export const deleteWatchlistTemplate = async (id) => {
+    const response = await client.delete(`/market/watchlist-templates/${id}`);
+    return response.data;
+};
+
 export const verifyBrokerLogin = async (provider, authCode) => {
     // Fyers sends 'auth_code' in the query string
     const response = await client.get(`/market/login/${provider}?auth_code=${authCode}`);
