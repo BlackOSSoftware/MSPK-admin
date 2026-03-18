@@ -8,6 +8,7 @@ let wsInstance = null;
 const listeners = new Map();
 const sendQueue = [];
 let reconnectTimer = null;
+let reconnectSuppressed = false;
 
 const normalizeToken = (value) => {
     const token = String(value || '')
@@ -21,6 +22,29 @@ const normalizeToken = (value) => {
 
 const isLikelyJwt = (token) => token.split('.').length === 3;
 
+const SERVER_AUTH_CLOSE_CODE = 1008;
+const CLIENT_AUTH_CLOSE_CODE = 4001;
+
+const isAuthSocketIssue = (code, reason = '') => {
+    const normalizedReason = String(reason || '').trim().toLowerCase();
+    if (code === SERVER_AUTH_CLOSE_CODE || code === CLIENT_AUTH_CLOSE_CODE) return true;
+    return /session expired|authentication failed|invalid connection url|user not found/.test(normalizedReason);
+};
+
+const clearAdminSession = () => {
+    try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('session_id');
+    } catch {
+        // ignore storage errors
+    }
+
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+    }
+};
+
 const getSocketUrl = () => {
     const token = normalizeToken(localStorage.getItem('token'));
     if (!token || !isLikelyJwt(token)) return null;
@@ -28,6 +52,7 @@ const getSocketUrl = () => {
 };
 
 const scheduleReconnect = () => {
+    if (reconnectSuppressed) return;
     window.clearTimeout(reconnectTimer);
     reconnectTimer = window.setTimeout(() => {
         initSocket();
@@ -37,6 +62,7 @@ const scheduleReconnect = () => {
 const initSocket = () => {
     // If we're on a browser, handle the connection
     if (typeof window === 'undefined') return;
+    if (reconnectSuppressed) return;
 
     if (wsInstance && (wsInstance.readyState === WebSocket.OPEN || wsInstance.readyState === WebSocket.CONNECTING)) {
         return;
@@ -51,6 +77,7 @@ const initSocket = () => {
 
     wsInstance.onopen = () => {
         console.log('socket connected');
+        reconnectSuppressed = false;
         window.clearTimeout(reconnectTimer);
         // Flush queue
         while (sendQueue.length > 0) {
@@ -63,12 +90,17 @@ const initSocket = () => {
         }
     };
 
-    wsInstance.onclose = () => {
+    wsInstance.onclose = (event) => {
         console.log('socket disconnected');
         if (listeners.has('disconnect')) {
             listeners.get('disconnect').forEach(callback => callback());
         }
         wsInstance = null;
+        if (isAuthSocketIssue(event?.code, event?.reason)) {
+            reconnectSuppressed = true;
+            clearAdminSession();
+            return;
+        }
         scheduleReconnect();
     };
 
@@ -83,6 +115,17 @@ const initSocket = () => {
             
             const data = JSON.parse(event.data);
             const { type, payload } = data;
+
+            if (type === 'error' && /session expired|authentication failed/i.test(String(payload || ''))) {
+                reconnectSuppressed = true;
+                try {
+                    wsInstance?.close(CLIENT_AUTH_CLOSE_CODE, 'Session expired');
+                } catch {
+                    // ignore close errors
+                }
+                clearAdminSession();
+                return;
+            }
             
             // Latency tracking if timestamp exists
             if (payload && payload.timestamp) {
@@ -134,6 +177,7 @@ export const socketWrapper = {
             actualPayload = payload?.toString().toLowerCase();
         }
         const msg = { type, payload: actualPayload };
+        if (reconnectSuppressed) return;
         if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
             wsInstance.send(JSON.stringify(msg));
         } else {

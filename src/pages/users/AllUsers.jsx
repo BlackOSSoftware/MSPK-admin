@@ -24,7 +24,7 @@ const UsersList = () => {
     const [subBrokerFilter, setSubBrokerFilter] = useState('All');
     const [currentPage, setCurrentPage] = useState(1);
     const [usersPerPage, setUsersPerPage] = useState(20);
-    const toast = useToast();
+    const { error: toastError, success: toastSuccess } = useToast();
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState(null);
@@ -45,23 +45,34 @@ const UsersList = () => {
         return params;
     }, [filter, subBrokerFilter, searchTerm]);
 
-    const loadData = useCallback(async (mode = 'initial') => {
+    const loadUsers = useCallback(async (mode = 'initial') => {
         try {
             if (mode === 'initial') setIsLoading(true);
             else setIsRefreshing(true);
 
             const { fetchUsers } = await import('../../api/users.api');
-            const { fetchSubBrokers } = await import('../../api/subbrokers.api');
-
-            const [usersRes, sbRes] = await Promise.all([
-                fetchUsers(buildQueryParams()),
-                fetchSubBrokers()
-            ]);
+            const usersRes = await fetchUsers(buildQueryParams());
 
             const payload = usersRes.data || {};
             setUsers(payload.results || []);
             setStats(payload.stats || { total: 0, active: 0, inactive: 0, blocked: 0 });
+        } catch (e) {
+            console.error('Failed to load users data', e);
+            toastError(mode === 'initial' ? 'Failed to load users.' : 'Failed to refresh users.');
+        } finally {
+            if (mode === 'initial') setIsLoading(false);
+            else setIsRefreshing(false);
+        }
+    }, [buildQueryParams, toastError]);
 
+    useEffect(() => {
+        loadUsers('initial');
+    }, [loadUsers]);
+
+    const loadSubBrokerOptions = useCallback(async () => {
+        try {
+            const { fetchSubBrokers } = await import('../../api/subbrokers.api');
+            const sbRes = await fetchSubBrokers();
             const sbOptions = (sbRes.data || []).map((sb) => ({
                 value: sb.id,
                 label: `${sb.name} (${sb.clientId})`
@@ -73,17 +84,14 @@ const UsersList = () => {
                 ...sbOptions
             ]);
         } catch (e) {
-            console.error('Failed to load users data', e);
-            toast.error(mode === 'initial' ? 'Failed to load users.' : 'Failed to refresh users.');
-        } finally {
-            if (mode === 'initial') setIsLoading(false);
-            else setIsRefreshing(false);
+            console.error('Failed to load sub brokers', e);
+            toastError('Failed to load brokers.');
         }
-    }, [buildQueryParams, toast]);
+    }, [toastError]);
 
     useEffect(() => {
-        loadData('initial');
-    }, [loadData]);
+        loadSubBrokerOptions();
+    }, [loadSubBrokerOptions]);
 
     const handleAction = async (action, user) => {
         if (action === 'view') {
@@ -121,18 +129,18 @@ const UsersList = () => {
 
             if (type === 'delete') {
                 await deleteUser(user.id);
-                toast.success(`Client ${user.name} deleted successfully`);
+                toastSuccess(`Client ${user.name} deleted successfully`);
             } else if (type === 'block') {
                 await blockUser(user.id);
-                toast.success(`Client status updated for ${user.name}`);
+                toastSuccess(`Client status updated for ${user.name}`);
             }
 
             setDialogOpen(false);
-            loadData('refresh');
+            loadUsers('refresh');
         } catch (error) {
             console.error('Action failed', error);
             const msg = error.response?.data?.message || error.message;
-            toast.error(`Action failed: ${msg}`);
+            toastError(`Action failed: ${msg}`);
             setDialogOpen(false);
         }
     };
@@ -142,10 +150,10 @@ const UsersList = () => {
         try {
             const { exportUsers } = await import('../../api/users.api');
             await exportUsers(buildQueryParams());
-            toast.success('Users export downloaded successfully');
+            toastSuccess('Users export downloaded successfully');
         } catch (error) {
             console.error('Export failed', error);
-            toast.error('Failed to export users');
+            toastError('Failed to export users');
         } finally {
             setIsExporting(false);
         }
@@ -287,7 +295,7 @@ const UsersList = () => {
                         <Button variant="outline" size="sm" onClick={() => navigate('/users/create')} className="h-8 w-full min-w-0 text-[10px] gap-1.5 rounded-lg px-2 font-bold justify-center btn-cancel min-[360px]:text-[11px] lg:w-auto">
                             <Plus size={12} /> New Client
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => loadData('refresh')} disabled={isRefreshing} className="h-8 w-full min-w-0 text-[10px] gap-1.5 rounded-lg px-2 font-bold justify-center btn-cancel min-[360px]:text-[11px] lg:w-auto">
+                        <Button variant="outline" size="sm" onClick={() => loadUsers('refresh')} disabled={isRefreshing} className="h-8 w-full min-w-0 text-[10px] gap-1.5 rounded-lg px-2 font-bold justify-center btn-cancel min-[360px]:text-[11px] lg:w-auto">
                             <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} /> Refresh
                         </Button>
                     </div>

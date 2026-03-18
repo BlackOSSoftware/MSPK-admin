@@ -402,6 +402,7 @@ const TradingLayout = ({ hideCharts = false }) => {
         try {
             // Load ONLY watchlist symbols for the sidebar
             let raw = await getSymbols({ watchlist: 'true' });
+            const currentSelected = selectedSymbolRef.current;
 
             // Sort based on persisted order
             if (watchlistOrder.length > 0) {
@@ -450,12 +451,21 @@ const TradingLayout = ({ hideCharts = false }) => {
 
             setMarketData(grouped);
 
-            // If nothing selected yet, select first
-            if (!selectedSymbol && raw.length > 0) setSelectedSymbol(raw[0]);
+            setSelectedSymbol((prev) => {
+                const previousSymbol = prev?.symbol || currentSelected?.symbol;
+                if (previousSymbol) {
+                    const existing = raw.find((item) => symbolsMatch(item.symbol, previousSymbol));
+                    if (existing) {
+                        return prev && symbolsMatch(prev.symbol, existing.symbol) ? prev : existing;
+                    }
+                }
+
+                return raw.length > 0 ? raw[0] : null;
+            });
         } catch (e) {
             console.error("Failed to load symbols", e);
         }
-    }, [watchlistOrder, selectedSymbol]);
+    }, [watchlistOrder]);
 
     const handleWatchlistReorder = (newOrder) => {
         setWatchlistOrder(newOrder);
@@ -539,7 +549,9 @@ const TradingLayout = ({ hideCharts = false }) => {
         if (symbolParam) {
             const matchInWatchlist = resolveBestSymbolCandidate(symbolParam, symbols);
             if (matchInWatchlist) {
-                setSelectedSymbol(matchInWatchlist);
+                setSelectedSymbol((prev) =>
+                    symbolsMatch(prev?.symbol, matchInWatchlist.symbol) ? prev : matchInWatchlist
+                );
             } else {
                 // Not in watchlist, fetch complete symbol info
                 const fetchAndSelect = async () => {
@@ -554,7 +566,11 @@ const TradingLayout = ({ hideCharts = false }) => {
                         }
 
                         const resolved = resolveBestSymbolCandidate(symbolParam, candidates);
-                        if (resolved) setSelectedSymbol(resolved);
+                        if (resolved) {
+                            setSelectedSymbol((prev) =>
+                                symbolsMatch(prev?.symbol, resolved.symbol) ? prev : resolved
+                            );
+                        }
                     } catch (e) { console.error("Link fetch failed", e); }
                 };
                 fetchAndSelect();
@@ -567,31 +583,33 @@ const TradingLayout = ({ hideCharts = false }) => {
     }, [searchParams, symbols]);
 
     // -- Helpers --
-    const refreshSignals = React.useCallback(async () => {
-        if (!selectedSymbol) return;
+    const refreshSignals = React.useCallback(async (symbolOverride = null) => {
+        const symbol = symbolOverride || selectedSymbolRef.current?.symbol;
+        if (!symbol) return;
         try {
             const { fetchSignals } = await import('../../api/signals.api');
-            const res = await fetchSignals({ symbol: selectedSymbol.symbol, limit: 120 });
+            const res = await fetchSignals({ symbol, limit: 120 });
             const signalsData = res.data?.results || res.results || (Array.isArray(res.data) ? res.data : []);
             setSymbolSignals(Array.isArray(signalsData) ? signalsData : []);
         } catch (error) {
             console.error("Failed to fetch signals", error);
             setSymbolSignals([]);
         }
-    }, [selectedSymbol]);
+    }, []);
 
     // -- Strategies State --
     const [symbolStrategies, setSymbolStrategies] = useState([]);
 
-    const loadStrategies = async () => {
-        if (!selectedSymbol) return;
+    const loadStrategies = async (symbolOverride = null) => {
+        const symbol = symbolOverride || selectedSymbolRef.current?.symbol;
+        if (!symbol) return;
         try {
             const { getStrategies } = await import('../../api/strategies.api');
             const allStrategies = await getStrategies();
             // Filter strictly for current symbol
             // Normalize: Remove 'NSE:', 'BSE:', 'MCX:' prefixes
             const normalize = (s) => s ? s.toUpperCase().split(':').pop() : '';
-            const currentSym = normalize(selectedSymbol.symbol);
+            const currentSym = normalize(symbol);
 
             const relevant = allStrategies.filter(s => {
                 const stratSym = normalize(s.symbol);
@@ -618,15 +636,16 @@ const TradingLayout = ({ hideCharts = false }) => {
 
     // 2. Fetch Signals & Strategies
     useEffect(() => {
-        if (!selectedSymbol) return;
+        const symbol = selectedSymbol?.symbol;
+        if (!symbol) return;
 
         // 2a. Fetch Signals
         setSymbolSignals([]);
-        refreshSignals();
+        refreshSignals(symbol);
 
         // 2b. Fetch Strategies
-        loadStrategies();
-    }, [selectedSymbol]);
+        loadStrategies(symbol);
+    }, [selectedSymbol?.symbol, refreshSignals]);
 
     // ... (Socket effect below needs update)
 
