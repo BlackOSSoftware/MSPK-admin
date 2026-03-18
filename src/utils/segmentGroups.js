@@ -59,8 +59,8 @@ export const getSegmentGroup = (symbolLike = {}) => {
     ['FOREX', 'CDS', 'BCD'].includes(exchange) ||
     isForexPair(symbol)
   ) return 'CURRENCY';
-  if (['INDICES', 'INDEX', 'NSEIX'].includes(segment) || exchange === 'NSEIX' || isIndexLike(symbol, name)) return 'INDICES';
   if (['FNO', 'FO', 'NFO', 'OPTIONS', 'OPTION', 'FUTURES'].includes(segment) || exchange === 'NFO') return 'FNO';
+  if (['INDICES', 'INDEX', 'NSEIX'].includes(segment) || exchange === 'NSEIX' || isIndexLike(symbol, name)) return 'INDICES';
   if (['EQUITY', 'EQ', 'CM', 'NSE', 'BSE'].includes(segment) || ['NSE', 'BSE'].includes(exchange)) return 'EQUITY';
   if (isComexSegment && !isComexCommodityHint && !isComexExchange) return exchange || 'OTHER';
   return segment || exchange || 'OTHER';
