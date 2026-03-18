@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Plus, Check, TrendingUp, Globe, Bitcoin, Box, Activity } from 'lucide-react';
-import { getSymbols, updateSymbol } from '../../api/market.api';
+import { getSymbols, searchInstruments, updateSymbol } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 import SymbolLogo from './SymbolLogo';
 import { getSegmentGroup } from '../../utils/segmentGroups';
@@ -27,44 +27,89 @@ const mapSegmentToTab = (segment) => {
     return 'OTHERS';
 };
 
-const DEDUPE_SUFFIX_PATTERN = /(\.PR|\.X)$/i;
+const SEARCH_ALIAS_SUFFIX_PATTERN = /(?:\.PR|\.P|\.X|\.LV|\.PERP|PERP)$/i;
+const STABLE_QUOTE_SUFFIX_PATTERN = /(USDT|USDC|BUSD)$/i;
 
 const getSymbolAliasBase = (symbol = '') => {
-    const normalized = String(symbol || '').trim().toUpperCase();
+    let normalized = String(symbol || '').trim().toUpperCase().split(':').pop() || '';
     if (!normalized) return '';
-    return normalized.replace(DEDUPE_SUFFIX_PATTERN, '');
+
+    let previous = '';
+    while (normalized && normalized !== previous) {
+        previous = normalized;
+        normalized = normalized.replace(SEARCH_ALIAS_SUFFIX_PATTERN, '');
+    }
+
+    return normalized.replace(STABLE_QUOTE_SUFFIX_PATTERN, 'USD');
 };
 
 const getSymbolDedupeKey = (symbolLike = {}) => {
     const symbolBase = getSymbolAliasBase(symbolLike.symbol);
     if (!symbolBase) return '';
-    const name = String(symbolLike.name || symbolLike.description || '').trim().toUpperCase();
-    const segment = getSegmentGroup(symbolLike);
-    const exchange = String(symbolLike.exchange || '').trim().toUpperCase();
-    return `${segment}|${exchange}|${symbolBase}|${name}`;
+    return symbolBase;
 };
 
 const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('ALL');
     const [allSymbols, setAllSymbols] = useState([]);
+    const [searchResults, setSearchResults] = useState([]);
     const [filteredSymbols, setFilteredSymbols] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [isLoadingInventory, setIsLoadingInventory] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
     const inputRef = useRef(null);
     const toast = useToast();
+    const loading = isLoadingInventory || isSearching;
 
     // Load all master symbols on open
     useEffect(() => {
         if (isOpen) {
             setSearchTerm('');
+            setSearchResults([]);
             loadSymbols();
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        if (!isOpen) return undefined;
+
+        const trimmed = String(searchTerm || '').trim();
+        if (trimmed.length < 2) {
+            setSearchResults([]);
+            setIsSearching(false);
+            return undefined;
+        }
+
+        let active = true;
+        const timer = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const results = await searchInstruments(trimmed);
+                if (!active) return;
+                setSearchResults(Array.isArray(results) ? results : []);
+            } catch (error) {
+                if (!active) return;
+                console.error(error);
+                setSearchResults([]);
+            } finally {
+                if (active) {
+                    setIsSearching(false);
+                }
+            }
+        }, 250);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
+    }, [isOpen, searchTerm]);
+
     // Filtering Logic (Search + Tabs)
     useEffect(() => {
-        let result = allSymbols;
+        const trimmed = String(searchTerm || '').trim();
+        const useLiveSearch = trimmed.length >= 2;
+        let result = useLiveSearch ? searchResults : allSymbols;
 
         // 1. Tab Filter
         if (activeTab !== 'ALL') {
@@ -72,8 +117,8 @@ const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
         }
 
         // 2. Search Filter
-        if (searchTerm) {
-            const lower = searchTerm.toLowerCase();
+        if (!useLiveSearch && trimmed) {
+            const lower = trimmed.toLowerCase();
             result = result.filter(s =>
                 s.symbol.toLowerCase().includes(lower) ||
                 (s.name && s.name.toLowerCase().includes(lower))
@@ -90,18 +135,18 @@ const SymbolSearchModal = ({ isOpen, onClose, onSelect, mode = 'VIEW' }) => {
         }
 
         setFilteredSymbols(deduped.slice(0, 100)); // Limit for performance
-    }, [searchTerm, activeTab, allSymbols]);
+    }, [searchTerm, activeTab, allSymbols, searchResults]);
 
     const loadSymbols = async () => {
-        setLoading(true);
+        setIsLoadingInventory(true);
         try {
-            const data = await getSymbols(); // Fetch Master Inventory
+            const data = await getSymbols({ isActive: true }); // Fetch active inventory only
             setAllSymbols(data);
             setFilteredSymbols(data.slice(0, 50));
         } catch (error) {
             console.error(error);
         } finally {
-            setLoading(false);
+            setIsLoadingInventory(false);
         }
     };
 
