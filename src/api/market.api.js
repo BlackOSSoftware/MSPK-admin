@@ -108,6 +108,11 @@ export const generateSymbolId = async (id) => {
     return response.data;
 };
 
+export const updateTradingViewStatus = async (id, tradingViewAdded) => {
+    const response = await client.patch(`/market/symbols/${id}/tradingview-status`, { tradingViewAdded });
+    return response.data;
+};
+
 export const deleteSymbol = async (id) => {
     const response = await client.delete(`/market/symbols/${id}`);
     return response.data;

@@ -17,7 +17,16 @@ import { socket } from '../../api/socket';
 import TableHeaderCell from '../ui/TableHeaderCell';
 import { getSegmentGroup } from '../../utils/segmentGroups';
 
-const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor, isLoading }) => {
+const MarketTable = ({
+    symbols,
+    onEdit,
+    onDelete,
+    onGenerateId,
+    onToggleTradingView,
+    generatingIdFor,
+    togglingTradingViewFor,
+    isLoading,
+}) => {
     const [ltpData, setLtpData] = useState({});
 
     useEffect(() => {
@@ -61,6 +70,7 @@ const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor,
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Tag} label="Segment" align="center" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={Layers} label="Lot Size" align="center" />
                             <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={CheckCircle} label="Status" align="center" />
+                            <TableHeaderCell className="px-5 py-3 border-r border-border text-center bg-muted/90 backdrop-blur-sm" icon={CheckCircle} label="TradingView" align="center" />
                             <TableHeaderCell className="px-5 py-3 text-center bg-muted/90 backdrop-blur-sm" icon={Settings} label="Actions" align="center" />
                         </tr>
                     </thead>
@@ -85,6 +95,7 @@ const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor,
                                     <td className="px-5 py-4 border-r border-border"><div className="h-3 w-20 bg-white/5 rounded mx-auto" /></td>
                                     <td className="px-5 py-4 border-r border-border"><div className="h-3 w-8 bg-white/5 rounded mx-auto" /></td>
                                     <td className="px-5 py-4 border-r border-border"><div className="h-5 w-16 bg-white/5 rounded mx-auto" /></td>
+                                    <td className="px-5 py-4 border-r border-border"><div className="h-8 w-24 bg-white/5 rounded mx-auto" /></td>
                                     <td className="px-5 py-4"><div className="h-4 w-20 bg-white/5 rounded mx-auto" /></td>
                                 </tr>
                             ))
@@ -96,6 +107,8 @@ const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor,
                                 const precision = isHighPrecision ? 5 : 2;
                                 const hasSymbolId = Boolean(symbol.symbolId);
                                 const isGenerating = generatingIdFor === symbol._id;
+                                const isTogglingTradingView = togglingTradingViewFor === symbol._id;
+                                const isTradingViewAdded = Boolean(symbol.tradingViewAdded);
 
                                 return (
                                     <tr
@@ -153,6 +166,19 @@ const MarketTable = ({ symbols, onEdit, onDelete, onGenerateId, generatingIdFor,
                                                 {symbol.isActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
                                                 {symbol.isActive ? 'Active' : 'Inactive'}
                                             </span>
+                                        </td>
+                                        <td className="px-5 py-3 text-center border-r border-border">
+                                            <button
+                                                onClick={() => onToggleTradingView && onToggleTradingView(symbol)}
+                                                disabled={!onToggleTradingView || isTogglingTradingView}
+                                                className={`min-w-[102px] rounded-lg border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isTradingViewAdded
+                                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/15'
+                                                    : 'border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15'
+                                                    }`}
+                                                title={isTradingViewAdded ? 'Mark as not added in TradingView' : 'Mark as added in TradingView'}
+                                            >
+                                                {isTogglingTradingView ? 'Saving...' : isTradingViewAdded ? 'TV Added' : 'TV Not Added'}
+                                            </button>
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             <div className="flex items-center justify-center gap-2">

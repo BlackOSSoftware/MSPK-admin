@@ -16,7 +16,7 @@ import MarketTable from '../../components/tables/MarketTable';
 import Button from '../../components/ui/Button';
 import DataFeedConfig from './DataFeedConfig';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import { deleteSymbol, generateSymbolId, getSegments, getSymbols } from '../../api/market.api';
+import { deleteSymbol, generateSymbolId, getSegments, getSymbols, updateTradingViewStatus } from '../../api/market.api';
 import useToast from '../../hooks/useToast';
 import TablePageFooter from '../../components/ui/TablePageFooter';
 
@@ -35,6 +35,7 @@ const DEFAULT_SUMMARY = {
     inactive: 0,
     withSymbolId: 0,
     withoutSymbolId: 0,
+    tradingViewAdded: 0,
     matched: 0,
 };
 
@@ -61,6 +62,7 @@ const ManageSymbols = () => {
     const [idFilter, setIdFilter] = useState('all');
     const [reloadToken, setReloadToken] = useState(0);
     const [generatingIdFor, setGeneratingIdFor] = useState('');
+    const [togglingTradingViewFor, setTogglingTradingViewFor] = useState('');
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, data: null });
 
     const segmentOptions = useMemo(() => {
@@ -172,6 +174,24 @@ const ManageSymbols = () => {
             toast.error(msg);
         } finally {
             setGeneratingIdFor('');
+        }
+    };
+
+    const handleToggleTradingView = async (symbol) => {
+        if (!symbol?._id) return;
+
+        const nextState = !Boolean(symbol.tradingViewAdded);
+        setTogglingTradingViewFor(symbol._id);
+        try {
+            await updateTradingViewStatus(symbol._id, nextState);
+            toast.success(nextState ? `${symbol.symbol} marked as TV added` : `${symbol.symbol} marked as TV not added`);
+            setReloadToken((value) => value + 1);
+        } catch (error) {
+            console.error('Failed to update TradingView status', error);
+            const msg = error.response?.data?.message || 'Failed to update TradingView status';
+            toast.error(msg);
+        } finally {
+            setTogglingTradingViewFor('');
         }
     };
 
@@ -292,6 +312,9 @@ const ManageSymbols = () => {
                                         <span className="text-muted-foreground/50">|</span>
                                         <span className="text-muted-foreground font-medium">Ready IDs:</span>
                                         <span className="text-foreground font-bold">{summary.withSymbolId}</span>
+                                        <span className="text-muted-foreground/50">|</span>
+                                        <span className="text-muted-foreground font-medium">TV Added:</span>
+                                        <span className="text-foreground font-bold">{summary.tradingViewAdded}</span>
                                     </div>
                                 </div>
 
@@ -378,7 +401,9 @@ const ManageSymbols = () => {
                                     onEdit={(symbol) => navigate('/market/edit', { state: { symbol } })}
                                     onDelete={handleDeleteClick}
                                     onGenerateId={handleGenerateSymbolId}
+                                    onToggleTradingView={handleToggleTradingView}
                                     generatingIdFor={generatingIdFor}
+                                    togglingTradingViewFor={togglingTradingViewFor}
                                     isLoading={loadingSymbols}
                                 />
 
