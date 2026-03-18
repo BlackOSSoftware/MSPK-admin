@@ -4,6 +4,7 @@ import {
     XCircle,
     Trash2,
     Edit,
+    Copy,
     TrendingUp,
     Activity,
     Globe,
@@ -16,6 +17,7 @@ import {
 import { socket } from '../../api/socket';
 import TableHeaderCell from '../ui/TableHeaderCell';
 import { getSegmentGroup } from '../../utils/segmentGroups';
+import useToast from '../../hooks/useToast';
 
 const MarketTable = ({
     symbols,
@@ -28,6 +30,7 @@ const MarketTable = ({
     isLoading,
 }) => {
     const [ltpData, setLtpData] = useState({});
+    const toast = useToast();
 
     useEffect(() => {
         if (!symbols || symbols.length === 0) return;
@@ -54,6 +57,37 @@ const MarketTable = ({
             uniqueSymbols.forEach((symbol) => socket.emit('unsubscribe', symbol));
         };
     }, [symbols]);
+
+    const handleCopySymbolId = async (event, symbol) => {
+        event.stopPropagation();
+
+        const value = String(symbol?.symbolId || '').trim();
+        if (!value) {
+            toast.error('Symbol ID missing');
+            return;
+        }
+
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(value);
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = value;
+                textArea.setAttribute('readonly', '');
+                textArea.style.position = 'absolute';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            }
+
+            toast.success(`${symbol.symbol} ID copied`);
+        } catch (error) {
+            console.error('Failed to copy symbol ID', error);
+            toast.error('Unable to copy symbol ID');
+        }
+    };
 
     return (
         <div className="terminal-panel w-full h-full overflow-hidden border border-border/70 bg-card/90 rounded-2xl relative flex flex-col">
@@ -126,7 +160,18 @@ const MarketTable = ({
                                             <div className="max-w-[260px]">
                                                 {hasSymbolId ? (
                                                     <>
-                                                        <span className="block text-[10px] text-foreground break-all">{symbol.symbolId}</span>
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="block min-w-0 flex-1 text-[10px] text-foreground break-all">{symbol.symbolId}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(event) => void handleCopySymbolId(event, symbol)}
+                                                                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-sky-500 transition-all hover:bg-sky-500/15"
+                                                                title="Copy webhook ID"
+                                                            >
+                                                                <Copy size={10} />
+                                                                Copy
+                                                            </button>
+                                                        </div>
                                                         <span className="block text-[9px] text-muted-foreground mt-1">Mongo: {symbol._id}</span>
                                                     </>
                                                 ) : (
