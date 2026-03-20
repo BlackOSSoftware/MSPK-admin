@@ -38,6 +38,7 @@ import CreateSignal from '../pages/signals/CreateSignal';
 import SignalCategories from '../pages/signals/SignalCategories';
 import SignalHistory from '../pages/signals/SignalHistory';
 import GlobalAccess from '../pages/signals/GlobalAccess';
+import SignalReport from '../pages/signals/SignalReport';
 
 // Market Data
 import ManageSymbols from '../pages/market/ManageSymbols';
@@ -134,6 +135,7 @@ const AppRouter = () => {
                     <Route path="signals/categories" element={<SignalCategories />} />
                     <Route path="signals/history" element={<SignalHistory />} />
                     <Route path="signals/access" element={<GlobalAccess />} />
+                    <Route path="signals/report" element={<SignalReport />} />
 
                     {/* Market Data */}
                     {/* Market Data */}

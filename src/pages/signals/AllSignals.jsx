@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, History, List, Plus, Search, Settings, TrendingUp, XCircle } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { clsx } from 'clsx';
 import SignalTable from '../../components/tables/SignalTable';
 import Button from '../../components/ui/Button';
@@ -8,6 +8,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import TablePageFooter from '../../components/ui/TablePageFooter';
 import useToast from '../../hooks/useToast';
 import SignalConfiguration from './SignalConfiguration';
+import SignalDetailsDrawer from './SignalDetailsDrawer';
 
 const FEED_FILTERS = ['All', 'Active', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit', 'Closed'];
 const HISTORY_FILTERS = ['All', 'Closed', 'Target Hit', 'Partial Profit Book', 'Stoploss Hit'];
@@ -42,12 +43,16 @@ const EMPTY_REPORT_SUMMARY = {
     stoplossHit: 0,
     lotSizeMissing: 0,
 };
-
-const formatInr = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return '--';
-    return numeric.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+const EMPTY_DETAIL_STATS = {
+    totalSignals: 0,
+    activeSignals: 0,
+    closedSignals: 0,
+    targetHit: 0,
+    stoplossHit: 0,
+    successRate: 0,
+    partialProfit: 0,
 };
+const EMPTY_DETAIL_PAGINATION = { page: 1, limit: 100, totalPages: 1, totalResults: 0 };
 
 const mapSegmentFilterToApi = (value) => {
     if (value === 'FOREX') return 'CURRENCY';
@@ -58,6 +63,7 @@ const mapSegmentFilterToApi = (value) => {
 const AllSignals = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const toast = useToast();
 
     const [activeTab, setActiveTab] = useState(normalizeTab(searchParams.get('tab') || 'feed'));
@@ -92,6 +98,15 @@ const AllSignals = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState(null);
     const [dialogConfig, setDialogConfig] = useState({ title: '', message: '', variant: 'primary', confirmText: 'Confirm' });
+    const [selectedSignal, setSelectedSignal] = useState(null);
+    const [signalDetail, setSignalDetail] = useState(null);
+    const [detailRows, setDetailRows] = useState([]);
+    const [detailStats, setDetailStats] = useState(EMPTY_DETAIL_STATS);
+    const [detailReportSummary, setDetailReportSummary] = useState(EMPTY_REPORT_SUMMARY);
+    const [detailPagination, setDetailPagination] = useState(EMPTY_DETAIL_PAGINATION);
+    const [detailError, setDetailError] = useState('');
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
+    const detailRequestRef = useRef(0);
 
     useEffect(() => {
         const tab = searchParams.get('tab');
@@ -224,6 +239,73 @@ const AllSignals = () => {
         loadSignals(nextPage);
     };
 
+    const closeSignalDetails = useCallback(() => {
+        setSelectedSignal(null);
+        setSignalDetail(null);
+        setDetailRows([]);
+        setDetailStats(EMPTY_DETAIL_STATS);
+        setDetailReportSummary(EMPTY_REPORT_SUMMARY);
+        setDetailPagination(EMPTY_DETAIL_PAGINATION);
+        setDetailError('');
+        setIsDetailLoading(false);
+    }, []);
+
+    const openSignalDetails = useCallback(async (signal) => {
+        if (!signal?.id) return;
+
+        const requestId = detailRequestRef.current + 1;
+        detailRequestRef.current = requestId;
+
+        setSelectedSignal(signal);
+        setSignalDetail(null);
+        setDetailRows([]);
+        setDetailStats(EMPTY_DETAIL_STATS);
+        setDetailReportSummary(EMPTY_REPORT_SUMMARY);
+        setDetailPagination(EMPTY_DETAIL_PAGINATION);
+        setDetailError('');
+        setIsDetailLoading(true);
+
+        try {
+            const { fetchSignal, fetchSignals } = await import('../../api/signals.api');
+            const historyParams = {
+                symbol: signal.sourceSymbol || signal.symbol,
+                timeframe: signal.timeframe,
+                includeReport: 1,
+                page: 1,
+                limit: 100,
+                sortBy: 'latest-event',
+            };
+
+            const [detailResponse, historyResponse] = await Promise.all([
+                fetchSignal(signal.id),
+                fetchSignals(historyParams),
+            ]);
+
+            if (detailRequestRef.current !== requestId) return;
+
+            setSignalDetail(detailResponse?.data || signal);
+            setDetailRows(Array.isArray(historyResponse?.data?.results) ? historyResponse.data.results : []);
+            setDetailStats(historyResponse?.data?.stats || EMPTY_DETAIL_STATS);
+            setDetailReportSummary(historyResponse?.data?.report?.summary || EMPTY_REPORT_SUMMARY);
+            setDetailPagination(historyResponse?.data?.pagination || EMPTY_DETAIL_PAGINATION);
+        } catch (error) {
+            console.error('Failed to load signal details', error);
+            if (detailRequestRef.current !== requestId) return;
+            setSignalDetail(signal);
+            setDetailError('Signal detail load nahi ho paya. Table data dikh raha hai, history retry ki ja sakti hai.');
+        } finally {
+            if (detailRequestRef.current === requestId) {
+                setIsDetailLoading(false);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === 'config') {
+            closeSignalDetails();
+        }
+    }, [activeTab, closeSignalDetails]);
+
     const handleAction = async (action, signal, payload) => {
         if (action === 'delete') {
             setPendingAction({ type: 'delete', signal });
@@ -306,11 +388,30 @@ const AllSignals = () => {
         }
     };
 
-    const handleRowClick = (signal) => {
-        const encodedSymbol = encodeURIComponent(String(signal.symbol || '').trim());
-        const strategyParam = signal.strategyId ? `&strategyId=${encodeURIComponent(signal.strategyId)}` : '';
-        navigate(`/market/data?symbol=${encodedSymbol}${strategyParam}`);
-    };
+    const handleRowClick = useCallback((signal) => {
+        const signalId = signal?.id || signal?._id;
+        if (!signalId) return;
+
+        navigate(`/signals/report?id=${encodeURIComponent(String(signalId))}`, {
+            state: {
+                from: `${location.pathname}${location.search}`,
+            },
+        });
+    }, [location.pathname, location.search, navigate]);
+
+    const handleOpenReportFromDetail = useCallback(() => {
+        const activeSignal = signalDetail || selectedSignal;
+        if (!activeSignal) return;
+
+        const signalId = activeSignal.id || activeSignal._id;
+        if (!signalId) return;
+
+        navigate(`/signals/report?id=${encodeURIComponent(String(signalId))}`, {
+            state: {
+                from: `${location.pathname}${location.search}`,
+            },
+        });
+    }, [location.pathname, location.search, navigate, selectedSignal, signalDetail]);
 
     const currentFilters = activeTab === 'history' ? HISTORY_FILTERS : FEED_FILTERS;
     const emptyStateTitle = activeTab === 'history' ? 'No archived signals found' : 'No signals found';
@@ -684,6 +785,21 @@ const AllSignals = () => {
                 message={dialogConfig.message}
                 confirmText={dialogConfig.confirmText}
                 confirmVariant={dialogConfig.variant}
+            />
+
+            <SignalDetailsDrawer
+                isOpen={Boolean(selectedSignal)}
+                signal={selectedSignal}
+                detailSignal={signalDetail}
+                history={detailRows}
+                stats={detailStats}
+                reportSummary={detailReportSummary}
+                pagination={detailPagination}
+                isLoading={isDetailLoading}
+                error={detailError}
+                onClose={closeSignalDetails}
+                onOpenReport={handleOpenReportFromDetail}
+                onSelectSignal={openSignalDetails}
             />
         </div>
     );

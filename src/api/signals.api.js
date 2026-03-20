@@ -4,6 +4,10 @@ export const fetchSignals = async (params) => {
   return client.get('/signals', { params });
 };
 
+export const fetchSignal = async (id) => {
+  return client.get(`/signals/${id}`);
+};
+
 export const exportSignalReport = async (params) => {
   const response = await client.get('/signals/report/export', {
     params,
