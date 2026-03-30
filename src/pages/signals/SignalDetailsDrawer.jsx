@@ -53,7 +53,7 @@ const SignalDetailsDrawer = ({
                             error={error}
                             onSelectSignal={onSelectSignal}
                             badgeLabel="Signal Detail"
-                            description="Same symbol aur timeframe ki puri summary, hit ratio, points outcome aur timeline."
+                            description="Complete summary for the same symbol and timeframe, including hit ratio, points outcome, and timeline."
                             actions={
                                 <>
                                     <Button

@@ -135,7 +135,7 @@ const SignalReportView = ({
     error,
     onSelectSignal,
     badgeLabel = 'Signal Report',
-    description = 'Selected signal ki full history aur performance summary.',
+    description = 'Full history and performance summary for the selected signal.',
     actions = null,
     className = '',
 }) => {
@@ -148,7 +148,12 @@ const SignalReportView = ({
     const resolvedStats = stats || {};
     const resolvedSummary = reportSummary || {};
     const currentSignalId = activeSignal.id || activeSignal._id || signal.id || signal._id;
-    const totalSignals = Number(resolvedSummary.totalSignals || resolvedStats.totalSignals || totalHistoryCount || 0);
+    const totalSignals = Number(
+        resolvedSummary.totalSignals ||
+        resolvedStats.totalSignals ||
+        totalHistoryCount ||
+        (activeSignal ? 1 : 0)
+    );
     const activeSignals = Number(resolvedStats.activeSignals || resolvedSummary.activeSignals || 0);
     const closedSignals = Number(resolvedSummary.closedSignals || resolvedStats.closedSignals || 0);
     const targetHit = Number(resolvedSummary.targetHit || resolvedStats.targetHit || 0);
@@ -328,12 +333,12 @@ const SignalReportView = ({
                                 Quick Read
                             </div>
                             <p className="mt-2 text-sm text-muted-foreground">
-                                {totalSignals || 0} signals {activeSignal.symbol || 'is script'} par aaye hain
-                                {activeSignal.timeframe ? ` (${activeSignal.timeframe})` : ''}. TP hit {targetHit}, partial {partialProfit}, aur SL {stoplossHit} raha. Net outcome{' '}
+                                {totalSignals || 0} signals have been recorded for {activeSignal.symbol || 'this script'}
+                                {activeSignal.timeframe ? ` (${activeSignal.timeframe})` : ''}. Target hits: {targetHit}, partial exits: {partialProfit}, stoploss exits: {stoplossHit}. Net outcome{' '}
                                 <span className={clsx('font-bold', getPointTone(resolvedSummary.netPoints))}>
                                     {Number.isFinite(Number(resolvedSummary.netPoints)) ? formatPoints(resolvedSummary.netPoints) : '---'}
                                 </span>{' '}
-                                points hai.
+                                points.
                             </p>
                         </div>
                     </section>
@@ -347,7 +352,7 @@ const SignalReportView = ({
                                 Signal Timeline
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Kisi bhi row par click karke us exact signal ki puri report dekh sakte ho.
+                                Click any row to open the full report for that exact signal instance.
                             </p>
                         </div>
 
@@ -365,7 +370,7 @@ const SignalReportView = ({
                     <div className="mt-4 space-y-2">
                         {history.length === 0 && !isLoading ? (
                             <div className="rounded-xl border border-border/60 bg-muted/[0.06] px-4 py-6 text-center text-sm text-muted-foreground">
-                                Is symbol/timeframe ka koi extra history abhi available nahi hai.
+                                No additional history is currently available for this symbol/timeframe.
                             </div>
                         ) : null}
 

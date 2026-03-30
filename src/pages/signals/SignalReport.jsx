@@ -68,14 +68,30 @@ const SignalReport = () => {
             setSelectedSignal(resolvedSignal);
             setDetailSignal(resolvedSignal);
 
-            const historyResponse = await fetchSignals({
-                symbol: resolvedSignal.sourceSymbol || resolvedSignal.symbol,
+            const primarySymbol = resolvedSignal.symbol || resolvedSignal.sourceSymbol;
+            const alternateSymbol = resolvedSignal.sourceSymbol && resolvedSignal.sourceSymbol !== resolvedSignal.symbol
+                ? resolvedSignal.sourceSymbol
+                : (resolvedSignal.symbol && resolvedSignal.symbol !== resolvedSignal.sourceSymbol ? resolvedSignal.symbol : null);
+            let historyResponse = await fetchSignals({
+                symbol: primarySymbol,
                 timeframe: resolvedSignal.timeframe,
                 includeReport: 1,
                 page: 1,
                 limit: 200,
                 sortBy: 'latest-event',
             });
+
+            const initialRows = Array.isArray(historyResponse?.data?.results) ? historyResponse.data.results : [];
+            if (initialRows.length === 0 && alternateSymbol) {
+                historyResponse = await fetchSignals({
+                    symbol: alternateSymbol,
+                    timeframe: resolvedSignal.timeframe,
+                    includeReport: 1,
+                    page: 1,
+                    limit: 200,
+                    sortBy: 'latest-event',
+                });
+            }
 
             if (requestRef.current !== requestId) return;
 
@@ -92,7 +108,7 @@ const SignalReport = () => {
                 setDetailSignal(fallbackSignal);
             }
 
-            setDetailError('Signal report load nahi ho paya. Thodi der baad retry karo.');
+            setDetailError('Signal report could not be loaded. Please retry in a moment.');
         } finally {
             if (requestRef.current === requestId) {
                 setIsLoading(false);
@@ -124,7 +140,7 @@ const SignalReport = () => {
                     <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Signals</p>
                     <h1 className="mt-1 text-2xl font-black tracking-tight text-foreground">Signal Performance Report</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Signal click par ab direct full report milegi, market watchlist page nahi.
+                        Clicking a signal now opens the full performance report directly.
                     </p>
                 </div>
 
@@ -155,7 +171,7 @@ const SignalReport = () => {
                 <div className="rounded-3xl border border-border/70 bg-card p-8 text-center shadow-[0_18px_60px_-28px_rgba(0,0,0,0.45)]">
                     <div className="text-lg font-black text-foreground">No signal selected</div>
                     <p className="mt-2 text-sm text-muted-foreground">
-                        Signal list se kisi signal par click karke full report khol sakte ho.
+                        Select a signal from the list to open the complete report view.
                     </p>
                 </div>
             ) : !selectedSignal && isLoading ? (
@@ -171,7 +187,7 @@ const SignalReport = () => {
                 <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center shadow-[0_18px_60px_-28px_rgba(0,0,0,0.45)]">
                     <div className="text-lg font-black text-red-200">Signal report unavailable</div>
                     <p className="mt-2 text-sm text-red-100/80">
-                        Requested signal load nahi ho paya. Signal list se dobara open karke try karo.
+                        The requested signal could not be loaded. Please reopen it from the signal list.
                     </p>
                 </div>
             ) : (
@@ -186,7 +202,7 @@ const SignalReport = () => {
                     error={detailError}
                     onSelectSignal={handleHistorySelect}
                     badgeLabel="Detailed Report"
-                    description="Kitne signals aaye, kitne target hit hue, kitna point gain ya loss hua aur poori timeline ek jagah."
+                    description="Complete signal lifecycle with outcome counts, points impact, and full timeline in one place."
                 />
             )}
         </div>

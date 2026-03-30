@@ -267,8 +267,12 @@ const AllSignals = () => {
 
         try {
             const { fetchSignal, fetchSignals } = await import('../../api/signals.api');
+            const primarySymbol = signal.symbol || signal.sourceSymbol;
+            const alternateSymbol = signal.sourceSymbol && signal.sourceSymbol !== signal.symbol
+                ? signal.sourceSymbol
+                : (signal.symbol && signal.symbol !== signal.sourceSymbol ? signal.symbol : null);
             const historyParams = {
-                symbol: signal.sourceSymbol || signal.symbol,
+                symbol: primarySymbol,
                 timeframe: signal.timeframe,
                 includeReport: 1,
                 page: 1,
@@ -283,16 +287,25 @@ const AllSignals = () => {
 
             if (detailRequestRef.current !== requestId) return;
 
+            let effectiveHistoryResponse = historyResponse;
+            const initialRows = Array.isArray(historyResponse?.data?.results) ? historyResponse.data.results : [];
+            if (initialRows.length === 0 && alternateSymbol) {
+                effectiveHistoryResponse = await fetchSignals({
+                    ...historyParams,
+                    symbol: alternateSymbol,
+                });
+            }
+
             setSignalDetail(detailResponse?.data || signal);
-            setDetailRows(Array.isArray(historyResponse?.data?.results) ? historyResponse.data.results : []);
-            setDetailStats(historyResponse?.data?.stats || EMPTY_DETAIL_STATS);
-            setDetailReportSummary(historyResponse?.data?.report?.summary || EMPTY_REPORT_SUMMARY);
-            setDetailPagination(historyResponse?.data?.pagination || EMPTY_DETAIL_PAGINATION);
+            setDetailRows(Array.isArray(effectiveHistoryResponse?.data?.results) ? effectiveHistoryResponse.data.results : []);
+            setDetailStats(effectiveHistoryResponse?.data?.stats || EMPTY_DETAIL_STATS);
+            setDetailReportSummary(effectiveHistoryResponse?.data?.report?.summary || EMPTY_REPORT_SUMMARY);
+            setDetailPagination(effectiveHistoryResponse?.data?.pagination || EMPTY_DETAIL_PAGINATION);
         } catch (error) {
             console.error('Failed to load signal details', error);
             if (detailRequestRef.current !== requestId) return;
             setSignalDetail(signal);
-            setDetailError('Signal detail load nahi ho paya. Table data dikh raha hai, history retry ki ja sakti hai.');
+            setDetailError('Signal details could not be loaded. Table data is available and timeline history can be retried.');
         } finally {
             if (detailRequestRef.current === requestId) {
                 setIsDetailLoading(false);
