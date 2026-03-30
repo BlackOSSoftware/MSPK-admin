@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -19,6 +19,7 @@ const schema = yup.object({
 
 const QuickSignalModal = ({ isOpen, onClose, symbol, type, currentPrice, timeframe, onSuccess }) => {
     const toast = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { register, handleSubmit, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
@@ -31,7 +32,37 @@ const QuickSignalModal = ({ isOpen, onClose, symbol, type, currentPrice, timefra
     if (!isOpen) return null;
 
     const onSubmit = async (data) => {
-        toast.error('Manual signal publishing is disabled. Only TradingView webhook signals are allowed.');
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                symbol: symbol?.symbol,
+                segment: symbol?.segment || 'CASH',
+                type: type, // BUY or SELL
+                entryPrice: data.entry,
+                stopLoss: data.stoploss,
+                targets: {
+                    target1: data.target1,
+                    target2: data.target2 || null,
+                    target3: data.target3 || null
+                },
+                notes: `Quick Signal via Chart`,
+                isFree: data.isFree,
+                timeframe: timeframe
+            };
+
+            const { createSignal } = await import('../../api/signals.api');
+            await createSignal(payload);
+
+            toast.success('Signal Published!');
+            if (onSuccess) onSuccess();
+            onClose();
+
+        } catch (e) {
+            console.error(e);
+            toast.error(e.response?.data?.message || 'Failed');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -112,8 +143,8 @@ const QuickSignalModal = ({ isOpen, onClose, symbol, type, currentPrice, timefra
                         <Button type="button" variant="outline" className="flex-1 btn-cancel" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button type="submit" variant="primary" disabled className={`flex-1 ${type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
-                            Publish Disabled
+                        <Button type="submit" variant="primary" disabled={isSubmitting} className={`flex-1 ${type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                            {isSubmitting ? 'Publishing...' : 'Confirm & Publish'}
                         </Button>
                     </div>
 

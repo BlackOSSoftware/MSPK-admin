@@ -28,6 +28,7 @@ const schema = yup.object({
 const CreateSignal = () => {
     const navigate = useNavigate();
     const toast = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [segments, setSegments] = useState([]);
     const [symbols, setSymbols] = useState([]);
     const [segmentSymbols, setSegmentSymbols] = useState([]);
@@ -119,7 +120,32 @@ const CreateSignal = () => {
     }, [symbolSearchTerm, selectedSegment, segmentSymbols]);
 
     const onSubmit = async (data) => {
-        toast.error('Manual signal publishing is disabled. Only TradingView webhook signals are allowed.');
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                symbol: data.symbol,
+                segment: data.segment,
+                type: data.type,
+                entryPrice: data.entry,
+                stopLoss: data.stoploss,
+                targets: {
+                    target1: data.target1,
+                    target2: data.target2 || null, // Ensure null if empty
+                    target3: data.target3 || null
+                },
+                notes: data.notes,
+                isFree: data.isFree
+            };
+
+            await import('../../api/signals.api').then(m => m.createSignal(payload));
+            toast.success('Signal published successfully');
+            navigate('/signals/all');
+        } catch (e) {
+            console.error(e);
+            toast.error(e.response?.data?.message || 'Failed to create signal');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -127,11 +153,8 @@ const CreateSignal = () => {
             <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                     <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        Manual Publishing Disabled
+                        Post New Signal
                     </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Signals can only be created by TradingView webhooks.
-                    </p>
                 </div>
                 <Button variant="outline" onClick={() => navigate('/signals/all')} className="gap-2 btn-cancel">
                     <X size={16} /> Cancel
@@ -282,8 +305,8 @@ const CreateSignal = () => {
                     <Button className="btn-cancel btn-primary-soft" type="button" variant="outline" onClick={() => navigate('/signals/all')}>
                         Cancel
                     </Button>
-                    <Button type="submit" variant="primary" disabled className="min-w-[150px] gap-2 shadow-lg shadow-primary/20 btn-primary-soft">
-                        <Target size={16} /> Publish Disabled
+                    <Button type="submit" variant="primary" disabled={isSubmitting} className="min-w-[150px] gap-2 shadow-lg shadow-primary/20 btn-primary-soft">
+                        {isSubmitting ? 'Publishing...' : <><Target size={16} /> Publish Signal</>}
                     </Button>
                 </div>
             </form>
