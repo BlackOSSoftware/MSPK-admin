@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Target, X, Plus, Shield, Globe, Lock } from 'lucide-react';
-import api from '../../api/client';
+import { Target, X, Plus, Shield, Globe, Lock } from 'lucide-react';
 import { getSegments } from '../../api/market.api';
 
 const ManualSignalPanel = ({ currentSymbol, currentPrice, currentSegment, onClose }) => {
-    const [loading, setLoading] = useState(false);
     const [segments, setSegments] = useState([]);
     const [signal, setSignal] = useState({
         type: 'BUY',
@@ -48,39 +46,7 @@ const ManualSignalPanel = ({ currentSymbol, currentPrice, currentSegment, onClos
     };
 
     const handleSubmit = async () => {
-        if (!signal.entryPrice || !signal.stopLoss || !signal.targets[0]) {
-            alert('Please fill Entry, SL and at least Target 1');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            // Convert targets array to object {1: val, 2: val}
-            const targetsObj = {};
-            signal.targets.forEach((t, i) => {
-                if (t) targetsObj[`target${i + 1}`] = t;
-            });
-
-            const payload = {
-                type: signal.type,
-                symbol: signal.symbol,
-                entryPrice: signal.entryPrice,
-                stopLoss: signal.stopLoss,
-                targets: targetsObj,
-                notes: signal.notes,
-                segment: signal.segment,
-                isFree: signal.isFree
-                // Status defaults to 'Active' in backend model
-            };
-
-            await api.post('/signals/manual', payload);
-            if (onClose) onClose();
-        } catch (error) {
-            console.error('Failed to create signal', error);
-            alert(error.response?.data?.message || 'Failed to create signal');
-        } finally {
-            setLoading(false);
-        }
+        alert('Manual signal publishing is disabled. Only TradingView webhook signals are allowed.');
     };
 
     return (
@@ -205,11 +171,11 @@ const ManualSignalPanel = ({ currentSymbol, currentPrice, currentSegment, onClos
 
                 <button
                     onClick={handleSubmit}
-                    disabled={loading}
+                    disabled
                     className="w-full py-2.5 rounded bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-bold hover:from-blue-500 hover:to-blue-400 transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                 >
-                    {loading ? <Loader2 size={14} className="animate-spin" /> : <Target size={14} />}
-                    PUBLISH
+                    <Target size={14} />
+                    PUBLISH DISABLED
                 </button>
             </div>
         </div>

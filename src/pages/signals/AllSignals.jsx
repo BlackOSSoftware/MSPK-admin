@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Download, History, List, Plus, Search, Settings, TrendingUp, XCircle } from 'lucide-react';
+import { Download, History, List, Search, Settings, TrendingUp, XCircle } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { clsx } from 'clsx';
 import SignalTable from '../../components/tables/SignalTable';
@@ -557,14 +557,6 @@ const AllSignals = () => {
                                         <Download size={12} /> {isExporting ? 'Exporting...' : 'Export CSV'}
                                     </Button>
 
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => navigate('/signals/create')}
-                                        className="btn-cancel h-8 gap-1.5 rounded-lg text-[11px] font-bold"
-                                    >
-                                        <Plus size={12} /> New Signal
-                                    </Button>
                                 </div>
                             </div>
 
