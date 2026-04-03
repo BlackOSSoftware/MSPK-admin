@@ -1,6 +1,4 @@
-// Use the same base URL as API client, but remove /v1 suffix for socket
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/v1';
-const baseUrl = apiBase.replace('/v1', '').replace('http', 'ws');
 
 import monitor from '../utils/monitoring/MonitoringService';
 
@@ -48,7 +46,15 @@ const clearAdminSession = () => {
 const getSocketUrl = () => {
     const token = normalizeToken(localStorage.getItem('token'));
     if (!token || !isLikelyJwt(token)) return null;
-    return `${baseUrl}/?token=${encodeURIComponent(token)}&autoSubscribe=false`;
+    const url = new URL(apiBase);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const normalizedPath = url.pathname.replace(/\/+$/, '');
+    url.pathname = normalizedPath || '/';
+    url.search = '';
+    url.hash = '';
+    url.searchParams.set('token', token);
+    url.searchParams.set('autoSubscribe', 'false');
+    return url.toString();
 };
 
 const scheduleReconnect = () => {
