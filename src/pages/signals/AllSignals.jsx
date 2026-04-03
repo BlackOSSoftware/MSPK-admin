@@ -267,10 +267,11 @@ const AllSignals = () => {
 
         try {
             const { fetchSignal, fetchSignals } = await import('../../api/signals.api');
-            const primarySymbol = signal.symbol || signal.sourceSymbol;
-            const alternateSymbol = signal.sourceSymbol && signal.sourceSymbol !== signal.symbol
-                ? signal.sourceSymbol
-                : (signal.symbol && signal.symbol !== signal.sourceSymbol ? signal.symbol : null);
+            const primarySymbol = signal.symbol || signal.originalSymbol || signal.sourceSymbol;
+            const alternateSymbol =
+                signal.sourceSymbol && signal.sourceSymbol !== primarySymbol
+                    ? signal.sourceSymbol
+                    : (signal.originalSymbol && signal.originalSymbol !== primarySymbol ? signal.originalSymbol : null);
             const historyParams = {
                 symbol: primarySymbol,
                 timeframe: signal.timeframe,

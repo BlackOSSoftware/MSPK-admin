@@ -203,7 +203,7 @@ const AddSymbol = () => {
                                 />
                             </div>
                             <p className="text-[10px] text-muted-foreground">
-                                Format will be <span className="font-mono">SEGMENT-SYMBOL-MONGOID</span>. Isi ID ko webhook payload mein use karna hai after symbol create ho jaye.
+                                Front-month futures ke liye stable format <span className="font-mono">SEGMENT-EXCHANGE-ROOT-CURRENT</span> milega. Baaki symbols legacy <span className="font-mono">SEGMENT-SYMBOL-MONGOID</span> format me rahenge.
                             </p>
                         </div>
                     </div>

@@ -161,9 +161,9 @@ const Settings = () => {
                                 <div className="rounded-2xl border border-border bg-card/40 p-4 sm:p-5">
                                     <div className="max-w-3xl space-y-2">
                                         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Instrument sync</div>
-                                        <h4 className="text-base sm:text-lg font-semibold text-foreground">Sync current-month F&O instruments</h4>
+                                        <h4 className="text-base sm:text-lg font-semibold text-foreground">Sync front-month F&O instruments</h4>
                                         <p className="text-sm leading-6 text-muted-foreground">
-                                            This pulls the latest Zerodha instruments and keeps only current-month FNO contracts in the database.
+                                            This pulls the latest Zerodha instruments and keeps only the active front-month FNO contracts in the database.
                                         </p>
                                     </div>
                                     <div className="mt-4 flex justify-end">

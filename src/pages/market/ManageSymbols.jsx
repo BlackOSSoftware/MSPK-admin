@@ -256,7 +256,7 @@ const ManageSymbols = () => {
                                 </div>
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono hidden sm:block">
-                                Webhook ID format: SEGMENT-SYMBOL-MONGOID
+                                Futures auto-roll: SEGMENT-EXCHANGE-ROOT-CURRENT
                             </div>
                         </div>
 

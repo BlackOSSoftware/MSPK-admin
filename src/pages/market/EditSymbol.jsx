@@ -173,7 +173,7 @@ const EditSymbol = () => {
                                 </Button>
                             </div>
                             <p className="text-[10px] text-muted-foreground">
-                                Isi ID ko webhook payload mein symbol ke roop mein bhejna hai. Save karne par segment/symbol change hoga to ID auto-refresh ho jayegi.
+                                Isi ID ko webhook payload mein symbol ke roop mein bhejna hai. Front-month futures IDs stable rehenge aur next contract par auto-rollover karenge.
                             </p>
                         </div>
                     </div>

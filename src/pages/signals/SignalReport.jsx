@@ -68,10 +68,11 @@ const SignalReport = () => {
             setSelectedSignal(resolvedSignal);
             setDetailSignal(resolvedSignal);
 
-            const primarySymbol = resolvedSignal.symbol || resolvedSignal.sourceSymbol;
-            const alternateSymbol = resolvedSignal.sourceSymbol && resolvedSignal.sourceSymbol !== resolvedSignal.symbol
-                ? resolvedSignal.sourceSymbol
-                : (resolvedSignal.symbol && resolvedSignal.symbol !== resolvedSignal.sourceSymbol ? resolvedSignal.symbol : null);
+            const primarySymbol = resolvedSignal.symbol || resolvedSignal.originalSymbol || resolvedSignal.sourceSymbol;
+            const alternateSymbol =
+                resolvedSignal.sourceSymbol && resolvedSignal.sourceSymbol !== primarySymbol
+                    ? resolvedSignal.sourceSymbol
+                    : (resolvedSignal.originalSymbol && resolvedSignal.originalSymbol !== primarySymbol ? resolvedSignal.originalSymbol : null);
             let historyResponse = await fetchSignals({
                 symbol: primarySymbol,
                 timeframe: resolvedSignal.timeframe,
